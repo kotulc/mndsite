@@ -7,10 +7,11 @@
  * Node shapes (see docs/specifications/metadata.md for the full contract):
  *   root    { name, type:'root',    url:'/', children }
  *   folder  { name, type:'folder',  url, slug, children }
- *   page    { name, type:'page',    url, slug, date, created, word_count,
+ *   page    { name, type:'page',    url, slug, date, created, hash, word_count,
  *             reading_time, links, content, children:[section] }
  *   section { name, type:'section', level, content, children:[section] }
  */
+const crypto = require('crypto')
 
 
 const MIN_LEVEL = 2   // the page title is an h1; sections start at ## (h2)
@@ -43,6 +44,13 @@ function extract_links(content) {
   for (const m of content.matchAll(/(?<!\!)\[[^\]]*\]\(([^)\s]+)/g)) links.add(m[1])
   for (const m of content.matchAll(/\bhttps?:\/\/[^\s)\]]+/g)) links.add(m[0])
   return [...links]
+}
+
+
+function content_hash(text) {
+  /** Short content hash for change detection between builds (extract.js skips
+   *  re-extracting a page when this matches the previous build's graph). */
+  return crypto.createHash('sha256').update(text).digest('hex').slice(0, 16)
 }
 
 
@@ -90,6 +98,7 @@ function build_page({ slug, title, url, content, date, created }) {
     slug,
     date:         date || '',
     created:      created || '',
+    hash:         content_hash(content),
     word_count:   word_count(body),
     reading_time: reading_time(body),
     links:        extract_links(content),
@@ -120,6 +129,6 @@ function flatten_pages(node, acc = []) {
 
 
 module.exports = {
-  MIN_LEVEL, MAX_LEVEL, plain_text, word_count, reading_time, extract_links,
+  MIN_LEVEL, MAX_LEVEL, plain_text, word_count, reading_time, extract_links, content_hash,
   section_tree, build_page, folder_node, root_node, flatten_pages,
 }

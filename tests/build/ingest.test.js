@@ -286,6 +286,7 @@ describe('site graph output', () => {
     expect(page.reading_time).toBeGreaterThanOrEqual(1)
     expect(page.children.map(s => s.name)).toContain('Fields')
     expect(Array.isArray(page.links)).toBe(true)
+    expect(typeof page.hash).toBe('string')
   })
 
   test('test_pages_have_no_frontmatter', () => {

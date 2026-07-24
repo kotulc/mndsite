@@ -15,6 +15,7 @@ extract:
   on_build: true
   max_comparisons: 128
   top_n_related: 3
+  extract_descriptions: true
 
 content: ./docs
 output: ./dist

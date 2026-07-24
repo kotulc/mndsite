@@ -2,35 +2,26 @@
  * NLP metadata extraction via a local taggly service (github.com/kotulc/taggly).
  * Walks the structural site graph bottom-up (leaf sections -> sections -> page) and
  * layers NLP metadata onto every page and section node:
- *   - desc, concepts, topics, keywords   (via /tag and /desc)
- *   - polarity, spam, toxicity           (via /polar, /spam, /tox)
- * Leaf content is scored directly; parent nodes aggregate their children (desc is the
- * /desc of combined child descriptions, scores are averaged, tag lists are unioned).
- * Related pages are then scored per page via /score. All output lands in the graph.
+ *   - tags:    concept groups (via /ext), entities (via /ent), keywords (via /key)
+ *   - metrics: polarity, spam, toxicity (via /polar, /spam, /tox)
+ * Leaf content is scored directly; parent nodes aggregate their children (tag groups
+ * union+dedupe, metrics average). Each tag group is trimmed to its configured size via
+ * /rank (MMR-selected against the node's own content) rather than a raw top_n cut.
+ * Page descriptions (via /desc) are optional and computed once per page directly from
+ * its full text — not aggregated from sections, and not used for ranking.
+ * Related pages are scored per page via /rank over each page's combined tag terms.
+ * Pages whose content hash matches the previous build are skipped and carry their
+ * previous tags/metrics/desc forward unchanged. All output lands in the graph.
  * Enabled by extract.url in mdsite.yaml; runs only via --extract or extract.on_build.
  */
 const { flatten_pages, plain_text } = require('./graph')
 
 
-// Default taggly query parameters per command (mirrors the service's own defaults).
-// Every call sends these explicitly; override via extract.taggly in mdsite.yaml.
-const TAGGLY_DEFAULTS = {
-  tag:   { concepts: 'concepts, entities, topics', max_ngram: 2, top_n: 10, rank: false, score: false, normalize: true },
-  desc:  {},
-  polar: {},
-  spam:  { threshold: 0.5 },
-  tox:   { threshold: 0.5 },
-}
-
-// Input length caps: generation/embedding models take more, classifiers reject long inputs
-const DESC_MAX   = 8000   // /tag, /desc
-const METRIC_MAX = 1500   // /polar, /spam, /tox
-
-// Empty NLP fields for nodes with no scorable content (keeps a stable schema)
-const EMPTY_META = {
-  desc: '', concepts: [], topics: [], keywords: [],
-  polarity: { negative: 0, neutral: 0, positive: 0 }, spam: 0, toxicity: 0,
-}
+// Input length caps: taggly's extraction/classifier models silently degrade (empty
+// results, no error) or reject requests above roughly 512 tokens of input.
+const TEXT_MAX = 1500   // /ext, /ent, /key, /polar, /spam, /tox, /rank query
+const DESC_MAX  = 8000  // /desc (generative, tolerates far more input)
+const RANK_DIVERSITY = 0.5
 
 
 function query_string(params) {
@@ -40,27 +31,14 @@ function query_string(params) {
 }
 
 
-async function taggly(cfg, cmd, content) {
-  /** POST content to a taggly command with its configured query params. */
-  const params = cfg.taggly[cmd] || {}
-  const res = await fetch(`${cfg.url}/${cmd}${query_string(params)}`, {
+async function taggly(cfg, cmd, body, params) {
+  /** POST a JSON body to a taggly command with query params; returns the parsed response. */
+  const res = await fetch(`${cfg.url}/${cmd}${query_string(params || {})}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content }),
+    body: JSON.stringify(body),
   })
   if (!res.ok) throw new Error(`taggly /${cmd} responded HTTP ${res.status}`)
-  return res.json()
-}
-
-
-async function taggly_score(cfg, query, candidates) {
-  /** POST a query and candidate list to /score; returns a similarity score per candidate. */
-  const res = await fetch(`${cfg.url}/score`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, candidates }),
-  })
-  if (!res.ok) throw new Error(`taggly /score responded HTTP ${res.status}`)
   return res.json()
 }
 
@@ -76,35 +54,54 @@ async function check_service(url) {
 }
 
 
-async function leaf_meta(cfg, text) {
-  /** Compute NLP metadata directly from a node's own content. */
-  const prose = plain_text(text)
-  const tag = await taggly(cfg, 'tag', prose.slice(0, DESC_MAX))
-  return {
-    desc:      (await taggly(cfg, 'desc',  prose.slice(0, DESC_MAX))).description,
-    concepts:  tag.tags.concepts || [],
-    topics:    tag.tags.topics   || [],
-    keywords:  tag.tags.keywords || [],
-    polarity:  (await taggly(cfg, 'polar', prose.slice(0, METRIC_MAX))).scores,
-    spam:      (await taggly(cfg, 'spam',  prose.slice(0, METRIC_MAX))).score,
-    toxicity:  (await taggly(cfg, 'tox',   prose.slice(0, METRIC_MAX))).score,
-  }
+async function rank_select(call, prose, terms, top_n, max_comparisons) {
+  /** Trim a term list to top_n via MMR ranking against the source text, comparing at
+   *  most max_comparisons candidates; passes through unchanged when already within
+   *  the limit (skips the extra taggly call). */
+  if (terms.length <= top_n) return terms
+  const { ranked } = await call('rank',
+    { query: prose, candidates: terms.slice(0, max_comparisons) },
+    { top_n, diversity: RANK_DIVERSITY })
+  return ranked
 }
 
 
-async function aggregate(cfg, metas) {
-  /** Combine child metadata into a parent: desc re-summarizes combined child descs,
-   *  tag lists union (deduped, first-seen order), scores average. */
-  const descs = metas.map(m => m.desc).filter(Boolean)
-  return {
-    desc:      descs.length ? (await taggly(cfg, 'desc', descs.join('\n\n'))).description : '',
-    concepts:  union(metas.map(m => m.concepts)),
-    topics:    union(metas.map(m => m.topics)),
-    keywords:  union(metas.map(m => m.keywords)),
-    polarity:  mean_scores(metas.map(m => m.polarity)),
-    spam:      mean_scores(metas.map(m => m.spam)),
-    toxicity:  mean_scores(metas.map(m => m.toxicity)),
+async function node_tags(call, cfg, text) {
+  /** Extract this node's own tag groups: /ext concept groups, /ent entities, /key
+   *  keywords, each trimmed to its configured size via rank_select. */
+  const prose = plain_text(text).slice(0, TEXT_MAX)
+  if (!prose) return null
+  const tags = {}
+
+  if (cfg.extract_concepts.length) {
+    const { concepts } = await call('ext', { content: prose },
+      { concepts: cfg.extract_concepts.join(', '), max_ngram: 2, normalize: true })
+    for (const [group, terms] of Object.entries(concepts)) {
+      tags[group] = await rank_select(call, prose, terms, cfg.max_concepts, cfg.max_comparisons)
+    }
   }
+
+  const { entities } = await call('ent', { content: prose }, { top_n: cfg.max_comparisons, max_ngram: 2, normalize: true })
+  tags.entities = await rank_select(call, prose, entities, cfg.max_entities, cfg.max_comparisons)
+
+  const { keywords } = await call('key', { content: prose }, { top_n: cfg.max_comparisons, ngram_max: 1, normalize: true })
+  tags.keywords = await rank_select(call, prose, keywords, cfg.max_keywords, cfg.max_comparisons)
+
+  return tags
+}
+
+
+async function node_metrics(call, cfg, text) {
+  /** Score this node's own content: polarity/spam/toxicity, each individually gated. */
+  const prose = plain_text(text).slice(0, TEXT_MAX)
+  if (!prose) return null
+  const metrics = {}
+
+  if (cfg.score_polarity) metrics.polarity = (await call('polar', { content: prose })).scores
+  if (cfg.score_spam)     metrics.spam     = (await call('spam',  { content: prose })).score
+  if (cfg.score_toxicity) metrics.toxicity = (await call('tox',   { content: prose })).score
+
+  return metrics
 }
 
 
@@ -124,61 +121,124 @@ function mean_scores(values) {
 }
 
 
-function meta_of(node) {
-  /** Extract the NLP subset of a node for aggregation. */
-  const { desc, concepts, topics, keywords, polarity, spam, toxicity } = node
-  return { desc, concepts, topics, keywords, polarity, spam, toxicity }
+function aggregate_tags(metas) {
+  /** Union each tag group across children (deduped, first-seen order). */
+  const groups = new Set(metas.flatMap(m => Object.keys(m.tags || {})))
+  return Object.fromEntries([...groups].map(g => [g, union(metas.map(m => (m.tags || {})[g] || []))]))
 }
 
 
-async function extract_node(node, cfg, on_call) {
-  /** Bottom-up: enrich all child sections, then set this node's metadata from its own
-   *  content plus its children's metadata (single-source nodes pass through unchanged). */
-  for (const child of node.children || []) await extract_node(child, cfg, on_call)
+function aggregate_metrics(metas) {
+  /** Mean each metric key across children. */
+  const keys = new Set(metas.flatMap(m => Object.keys(m.metrics || {})))
+  return Object.fromEntries([...keys].map(k => [k, mean_scores(metas.map(m => m.metrics[k]).filter(v => v !== undefined))]))
+}
+
+
+async function extract_node(node, call, cfg) {
+  /** Bottom-up: enrich all child sections, then set this node's tags/metrics from its
+   *  own content plus its children's (single-source nodes pass through unchanged). */
+  for (const child of node.children || []) await extract_node(child, call, cfg)
 
   const metas = []
-  if (node.content && node.content.trim()) { metas.push(await leaf_meta(cfg, node.content)); on_call?.() }
-  for (const child of node.children || []) metas.push(meta_of(child))
+  if (node.content && node.content.trim()) {
+    const [tags, metrics] = await Promise.all([node_tags(call, cfg, node.content), node_metrics(call, cfg, node.content)])
+    metas.push({ tags, metrics })
+  }
+  for (const child of node.children || []) {
+    if (child.tags || child.metrics) metas.push({ tags: child.tags, metrics: child.metrics })
+  }
 
-  if (!metas.length) Object.assign(node, EMPTY_META)
-  else if (metas.length === 1) Object.assign(node, metas[0])
-  else { Object.assign(node, await aggregate(cfg, metas)); on_call?.() }
-}
-
-
-async function compute_related(pages, cfg) {
-  /** Score each page's description against the others and attach the top related pages. */
-  for (const page of pages) {
-    const others = pages.filter(p => p !== page && p.desc).slice(0, cfg.max_comparisons)
-    if (!page.desc || !others.length) { page.related = []; continue }
-    const { scores } = await taggly_score(cfg, page.desc, others.map(p => p.desc))
-    page.related = others
-      .map((p, i) => ({ name: p.name, url: p.url, score: Math.round(scores[i] * 1e4) / 1e4 }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, cfg.top_n_related)
+  if (metas.length === 1) {
+    if (metas[0].tags)    node.tags    = metas[0].tags
+    if (metas[0].metrics) node.metrics = metas[0].metrics
+  } else if (metas.length > 1) {
+    node.tags    = aggregate_tags(metas)
+    node.metrics = aggregate_metrics(metas)
   }
 }
 
 
-async function extract_graph(root, cfg, log = () => {}) {
-  /** Enrich every page (and its sections) with NLP metadata, then compute related pages. */
+function page_text(node) {
+  /** Concatenate a page's own content and all descendant section content. */
+  return [node.content || '', ...(node.children || []).map(page_text)].join('\n\n')
+}
+
+
+async function page_desc(call, page) {
+  /** Generate a page's description directly from its full text (not from tags/sections). */
+  const prose = plain_text(page_text(page)).slice(0, DESC_MAX)
+  page.desc = prose ? (await call('desc', { content: prose })).description : ''
+}
+
+
+function tags_string(node) {
+  /** Flatten a node's tag groups into one comparable string for related-page ranking. */
+  return Object.values(node.tags || {}).flat().join(', ')
+}
+
+
+async function compute_related(pages, call, cfg) {
+  /** Rank each page's peers by shared tag terms and attach the top related pages. */
+  for (const page of pages) {
+    const query = tags_string(page)
+    const others = pages.filter(p => p !== page && tags_string(p)).slice(0, cfg.max_comparisons)
+    if (!query || !others.length) { page.related = []; continue }
+
+    const candidates = others.map(tags_string)
+    const { ranked } = await call('rank', { query, candidates }, { top_n: cfg.top_n_related, diversity: RANK_DIVERSITY })
+    page.related = ranked
+      .map(str => others[candidates.indexOf(str)])
+      .filter(Boolean)
+      .map(p => ({ name: p.name, url: p.url }))
+  }
+}
+
+
+function copy_forward(prior, node) {
+  /** Copy a matched previous page's tags/metrics/desc/updated onto its rebuilt node,
+   *  recursing into children (safe: identical content hash implies identical structure). */
+  if (prior.tags)    node.tags    = prior.tags
+  if (prior.metrics) node.metrics = prior.metrics
+  if (prior.desc !== undefined) node.desc = prior.desc
+  node.updated = prior.updated
+  const prior_children = prior.children || []
+  ;(node.children || []).forEach((child, i) => { if (prior_children[i]) copy_forward(prior_children[i], child) })
+}
+
+
+async function extract_graph(root, cfg, log = () => {}, previous = {}) {
+  /** Enrich every page (and its sections) with tags/metrics, optionally a description,
+   *  then compute related pages. Pages with an unchanged content hash are skipped. */
   const pages = flatten_pages(root)
-  let calls = 0
-  const on_call = () => { calls++ }
+  let calls = 0, skipped = 0
+  const call = (cmd, body, params) => { calls++; return taggly(cfg, cmd, body, params) }
 
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i]
+    const prior = previous[page.url]
+
+    if (prior && prior.hash === page.hash) {
+      copy_forward(prior, page)
+      skipped++
+      log(`page ${i + 1}/${pages.length}: ${page.url} (unchanged, skipped)`)
+      continue
+    }
+
     log(`page ${i + 1}/${pages.length}: ${page.url}`)
-    await extract_node(page, cfg, on_call)
+    await extract_node(page, call, cfg)
+    if (cfg.extract_descriptions) await page_desc(call, page)
+    page.updated = new Date().toISOString()
   }
 
-  log(`scoring related pages (${pages.length} pages, ${calls} taggly calls so far)`)
-  await compute_related(pages, cfg)
-  log(`done (${pages.length} pages enriched)`)
+  log(`scoring related pages (${pages.length} pages, ${skipped} unchanged, ${calls} taggly calls so far)`)
+  await compute_related(pages, call, cfg)
+  log(`done (${pages.length} pages, ${skipped} unchanged, ${calls} taggly calls)`)
 }
 
 
 module.exports = {
-  TAGGLY_DEFAULTS, check_service, extract_graph, extract_node, leaf_meta,
-  aggregate, compute_related, mean_scores, union, query_string,
+  check_service, extract_graph, extract_node, node_tags, node_metrics, page_desc,
+  aggregate_tags, aggregate_metrics, compute_related, rank_select, mean_scores, union,
+  tags_string, query_string,
 }

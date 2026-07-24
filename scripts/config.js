@@ -7,7 +7,6 @@ const fs   = require('fs')
 const path = require('path')
 const yaml = require('js-yaml')
 const { resolve_theme } = require('./theme')
-const { TAGGLY_DEFAULTS } = require('./extract')
 
 
 const DEFAULTS = {
@@ -22,7 +21,10 @@ const DEFAULTS = {
   extract:        {
     url: '', on_build: false, strict: true,
     max_comparisons: 128, top_n_related: 3,
-    taggly: TAGGLY_DEFAULTS,
+    extract_descriptions: false,
+    extract_concepts: ['categories', 'topics', 'concepts'],
+    max_concepts: 8, max_keywords: 32, max_entities: 8,
+    score_polarity: true, score_toxicity: true, score_spam: true,
   },
   flatten:        [],
   nav_order:      {},
@@ -55,20 +57,21 @@ function load_config(yaml_path) {
 
 
 function resolve_extract(raw) {
-  /** Merge the extract block over defaults, deep-merging per-command taggly params. */
-  const base = DEFAULTS.extract
-  const cfg  = { ...base, ...(raw || {}) }
+  /** Merge the extract block over defaults and coerce numeric/boolean/list fields. */
+  const cfg = { ...DEFAULTS.extract, ...(raw || {}) }
   cfg.max_comparisons = parseInt(cfg.max_comparisons, 10)
   cfg.top_n_related   = parseInt(cfg.top_n_related, 10)
+  cfg.max_concepts    = parseInt(cfg.max_concepts, 10)
+  cfg.max_keywords    = parseInt(cfg.max_keywords, 10)
+  cfg.max_entities    = parseInt(cfg.max_entities, 10)
+  cfg.extract_descriptions = !!cfg.extract_descriptions
+  cfg.score_polarity  = cfg.score_polarity !== false
+  cfg.score_toxicity  = cfg.score_toxicity !== false
+  cfg.score_spam      = cfg.score_spam !== false
 
-  const taggly = { ...base.taggly }
-  for (const [cmd, params] of Object.entries((raw && raw.taggly) || {})) {
-    if (!(cmd in base.taggly)) {
-      throw new Error(`mdsite.yaml: unknown extract.taggly command '${cmd}' (valid: ${Object.keys(base.taggly).join(', ')})`)
-    }
-    taggly[cmd] = { ...base.taggly[cmd], ...params }
+  if (!Array.isArray(cfg.extract_concepts)) {
+    throw new Error(`mdsite.yaml: extract.extract_concepts must be a list of strings`)
   }
-  cfg.taggly = taggly
   return cfg
 }
 

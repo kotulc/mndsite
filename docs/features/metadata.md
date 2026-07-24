@@ -33,9 +33,9 @@ The theme renders these page-node fields below the title:
 |-------|--------|--------|
 | `date` | frontmatter `date` | Formatted date below title; enables date-based sorting |
 | `reading_time` | derived | Displays as "N min read" |
-| `topics` | extraction | Category chips below the title |
-| `keywords` | extraction | Tag chips below the title |
-| `desc` | extraction | Per-page SEO meta description |
+| `tags.categories` | extraction | Category chips below the title |
+| `tags.keywords` | extraction | Tag chips below the title |
+| `desc` | extraction, opt-in (`extract_descriptions: true`) | Per-page SEO meta description |
 
 Frontmatter that steers structure and identity:
 
@@ -51,7 +51,7 @@ date: 2026-01-15    # publish date
 **`PageHeader`** renders the formatted date and reading time on a single line,
 separated by a center dot. Returns null when neither field is present.
 
-**`TagList`** renders topics (as categories) and keywords (as tags) as chips.
+**`TagList`** renders `tags.categories` and `tags.keywords` as chips.
 Both arrays are optional; the component returns null when both are empty.
 
 **`SiteFooter`** renders the page footer (copyright, build timestamp, credits).
@@ -60,8 +60,8 @@ Edit `components/SiteFooter.jsx` directly to customize the footer across all pag
 ## Metrics
 
 With [extraction](/configuration#extraction) enabled, every page and section node also
-carries `polarity`, `spam`, and `toxicity` scores (computed per section, averaged upward)
-plus a `related` list, all inside `public/site-meta.json`. Components can fetch the graph
-at `${basePath}/site-meta.json`.
+carries a `metrics` object (`polarity`, `spam`, `toxicity` — computed per section, averaged
+upward) and each page gets a `related` list, all inside `public/site-meta.json`. Components
+can fetch the graph at `${basePath}/site-meta.json`.
 See the [Metadata Contract](/specifications/metadata) spec for the schema.
 

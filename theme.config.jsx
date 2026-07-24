@@ -26,13 +26,14 @@ function use_page_meta() {
 
 
 function PageMeta() {
-  /** Renders date, reading time (unless disabled), and topic/keyword chips. */
+  /** Renders date, reading time (unless disabled), and category/keyword chips. */
   const meta = use_page_meta()
   const mins = siteConfig.reading_time === false ? null : meta.reading_time
+  const tags = meta.tags || {}
   return (
     <>
       <PageHeader date={meta.date} reading_time={mins} />
-      <TagList categories={meta.topics} tags={meta.keywords} />
+      <TagList categories={tags.categories} tags={tags.keywords} />
     </>
   )
 }

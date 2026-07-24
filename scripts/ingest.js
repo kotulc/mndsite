@@ -6,7 +6,8 @@
  *   - Strips frontmatter from output pages — metadata lives in the site graph, not frontmatter
  *   - Ensures each page has an h1 (title from frontmatter, first heading, or slug)
  *   - Builds a folder/page/section node graph mirroring the content tree (scripts/graph.js)
- *   - Optionally layers NLP metadata onto the graph via taggly (scripts/extract.js)
+ *   - Optionally layers NLP metadata onto the graph via taggly (scripts/extract.js),
+ *     skipping pages whose content hash matches the previous build's site-meta.json
  *   - Auto-generates index.mdx (redirect to first sorted page) when none exists
  *   - Copies images/ subdirectories to public/images/<rel-path>/ and rewrites refs
  *   - Strips corrupt EXIF segments from copied JPEGs
@@ -301,7 +302,7 @@ function emit_feed(dest_dir, sorted, rel, dir_title) {
     .filter(n => n.slug !== 'index' && fs.existsSync(path.join(dest_dir, `${n.slug}.mdx`)))
     .map(n => ({
       url: n.url, title: n.name, date: n.date,
-      categories: n.topics || [], tags: n.keywords || [],
+      categories: (n.tags && n.tags.categories) || [], tags: (n.tags && n.tags.keywords) || [],
       reading_time: n.reading_time,
       content: extract_content(fs.readFileSync(path.join(dest_dir, `${n.slug}.mdx`), 'utf8')),
     }))
@@ -364,6 +365,20 @@ function sync_assets(assets_dir) {
 
 // --- Pipeline entry ---
 
+function load_previous_pages(extract_on) {
+  /** Read the previous build's site graph (if any) into a url -> page node map, so
+   *  extraction can skip pages whose content hash hasn't changed. Ignores a missing
+   *  or corrupt previous graph — every page is simply treated as changed. */
+  if (!extract_on || !fs.existsSync(SITE_META)) return {}
+  try {
+    const prev = JSON.parse(fs.readFileSync(SITE_META, 'utf8'))
+    return Object.fromEntries(graph.flatten_pages(prev).map(p => [p.url, p]))
+  } catch {
+    return {}
+  }
+}
+
+
 async function run(config) {
   /** Execute the full ingest pipeline: mirror files, build the site graph, optionally extract. */
   _config = config
@@ -382,6 +397,8 @@ async function run(config) {
     }
   }
 
+  const previous = load_previous_pages(extract_on)
+
   fs.rmSync(PAGES,   { recursive: true, force: true })
   fs.rmSync(PUB_IMG, { recursive: true, force: true })
   fs.rmSync(SITE_META, { force: true })
@@ -391,7 +408,7 @@ async function run(config) {
 
   if (config.extract?.url) {
     console.log(`  Extracting metadata via taggly at ${config.extract.url} (${pages.length} pages)`)
-    await extract.extract_graph(site_graph, config.extract, msg => console.log(`  [extract] ${msg}`))
+    await extract.extract_graph(site_graph, config.extract, msg => console.log(`  [extract] ${msg}`), previous)
   }
 
   fs.writeFileSync(SITE_META, JSON.stringify(site_graph, null, 2) + '\n')

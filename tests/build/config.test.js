@@ -61,34 +61,47 @@ describe('load_config — theme resolution', () => {
 
 describe('load_config — extract block', () => {
   test('test_extract_defaults_applied', () => {
-    /** Config without an extract block resolves to disabled strict extraction with taggly defaults. */
+    /** Config without an extract block resolves to disabled strict extraction with defaults. */
     const cfg = load_config(write_yaml('title: t'))
-    expect(cfg.extract).toMatchObject({
+    expect(cfg.extract).toEqual({
       url: '', on_build: false, strict: true, max_comparisons: 128, top_n_related: 3,
+      extract_descriptions: false,
+      extract_concepts: ['categories', 'topics', 'concepts'],
+      max_concepts: 8, max_keywords: 32, max_entities: 8,
+      score_polarity: true, score_toxicity: true, score_spam: true,
     })
-    expect(cfg.extract.taggly.tag).toMatchObject({ top_n: 10, normalize: true })
-    expect(cfg.extract.taggly.spam).toEqual({ threshold: 0.5 })
   })
 
   test('test_extract_partial_block_merges_defaults', () => {
-    /** An extract block with only url keeps default limits and taggly params. */
+    /** An extract block with only url keeps every other default. */
     const cfg = load_config(write_yaml('title: t\nextract:\n  url: http://127.0.0.1:8000'))
     expect(cfg.extract.url).toBe('http://127.0.0.1:8000')
     expect(cfg.extract.top_n_related).toBe(3)
-    expect(cfg.extract.taggly.tag.top_n).toBe(10)
+    expect(cfg.extract.max_keywords).toBe(32)
+    expect(cfg.extract.extract_concepts).toEqual(['categories', 'topics', 'concepts'])
   })
 
-  test('test_extract_taggly_params_override', () => {
-    /** A taggly param override deep-merges over the command's defaults. */
-    const cfg = load_config(write_yaml('title: t\nextract:\n  taggly:\n    tag: { top_n: 5 }'))
-    expect(cfg.extract.taggly.tag.top_n).toBe(5)
-    expect(cfg.extract.taggly.tag.normalize).toBe(true)  // untouched default retained
+  test('test_extract_numeric_and_bool_fields_override', () => {
+    /** Numeric limits, the description toggle, and score toggles all override cleanly. */
+    const cfg = load_config(write_yaml([
+      'title: t', 'extract:', '  max_concepts: 4', '  extract_descriptions: true', '  score_spam: false',
+    ].join('\n')))
+    expect(cfg.extract.max_concepts).toBe(4)
+    expect(cfg.extract.extract_descriptions).toBe(true)
+    expect(cfg.extract.score_spam).toBe(false)
+    expect(cfg.extract.score_polarity).toBe(true)   // untouched default retained
   })
 
-  test('test_extract_unknown_taggly_command_throws', () => {
-    /** An unknown taggly command name fails config loading with the valid names. */
-    const p = write_yaml('title: t\nextract:\n  taggly:\n    sentiment: {}')
-    expect(() => load_config(p)).toThrow(/unknown extract\.taggly command 'sentiment'.*tag, desc/)
+  test('test_extract_empty_concepts_list_allowed', () => {
+    /** An empty extract_concepts list is valid — it disables /ext, not an error. */
+    const cfg = load_config(write_yaml('title: t\nextract:\n  extract_concepts: []'))
+    expect(cfg.extract.extract_concepts).toEqual([])
+  })
+
+  test('test_extract_concepts_non_array_throws', () => {
+    /** extract_concepts must be a list; a scalar value fails config loading. */
+    const p = write_yaml('title: t\nextract:\n  extract_concepts: concepts')
+    expect(() => load_config(p)).toThrow(/extract_concepts must be a list/)
   })
 })
 

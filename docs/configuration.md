@@ -36,9 +36,16 @@ consumed by Next.js and Nextra.
 | `extract.url` | string | `""` | Base URL of a running [taggly](https://github.com/kotulc/taggly) instance; empty disables extraction |
 | `extract.on_build` | boolean | `false` | Extract on every build; otherwise only with the `--extract` flag |
 | `extract.strict` | boolean | `true` | Fail the build when the service is unreachable; `false` warns and skips |
-| `extract.max_comparisons` | integer | `128` | Cap on candidate pages compared when computing related pages |
+| `extract.max_comparisons` | integer | `128` | Cap on candidate terms/pages compared per `/rank` call |
 | `extract.top_n_related` | integer | `3` | Number of related pages attached to each page node |
-| `extract.taggly` | object | *(defaults)* | Per-command taggly query params — see [Extraction](#extraction) |
+| `extract.extract_descriptions` | boolean | `false` | Generate a page-level SEO `desc` via `/desc` (sections never get one) |
+| `extract.extract_concepts` | list | `[categories, topics, concepts]` | `/ext` concept groups to request; `[]` disables `/ext` entirely |
+| `extract.max_concepts` | integer | `8` | Max terms kept per `/ext` concept group (via `/rank`) |
+| `extract.max_keywords` | integer | `32` | Max `/key` keywords kept (via `/rank`) |
+| `extract.max_entities` | integer | `8` | Max `/ent` entities kept (via `/rank`) |
+| `extract.score_polarity` | boolean | `true` | Score `metrics.polarity` via `/polar` |
+| `extract.score_toxicity` | boolean | `true` | Score `metrics.toxicity` via `/tox` |
+| `extract.score_spam` | boolean | `true` | Score `metrics.spam` via `/spam` |
 | `theme.color` | string | `"default"` | Named accent palette — see [Theme](#theme) below |
 | `theme.typeset` | string | `"sans"` | Named body font stack — see [Theme](#theme) below |
 | `theme.navbar` | string | `""` | Navbar background: `"primary"` (theme tint) or any CSS color |
@@ -109,21 +116,25 @@ Leave empty to keep Nextra's default white/dark backgrounds.
 
 The `extract` block connects the build to a local [taggly](https://github.com/kotulc/taggly)
 NLP service that layers metadata onto the [site graph](/specifications/metadata): every page
-and section gets a `desc`, `concepts`/`topics`/`keywords`, and `polarity`/`spam`/`toxicity`
-scores, computed bottom-up (leaf sections scored directly, parents aggregated). Each page
-also gets a `related` list scored from page descriptions. All output lands in
-`public/site-meta.json` — never in frontmatter.
+and section gets `tags` (concept groups via `/ext`, entities via `/ent`, keywords via `/key`)
+and `metrics` (`polarity`/`spam`/`toxicity`), computed bottom-up (leaf sections scored
+directly, parents aggregated). Pages optionally get a `desc` and always get a `related` list
+scored from tag terms. All output lands in `public/site-meta.json` — never in frontmatter.
 
 ```yaml
 extract:
   url: http://127.0.0.1:8000
   on_build: false        # true: extract on every build
-  max_comparisons: 128   # cap on candidate pages for the related computation
+  max_comparisons: 128   # cap on candidate terms/pages compared per /rank call
   top_n_related: 3       # related pages attached per page
-  taggly:                # per-command params (all sent explicitly)
-    tag:  { concepts: "concepts, entities, topics", max_ngram: 2, top_n: 10, normalize: true }
-    spam: { threshold: 0.5 }
-    tox:  { threshold: 0.5 }
+  extract_descriptions: false        # true: generate a page-level SEO desc via /desc
+  extract_concepts: [categories, topics, concepts]   # /ext groups; [] disables /ext
+  max_concepts: 8        # max terms kept per /ext group
+  max_keywords: 32       # max /key keywords kept
+  max_entities: 8        # max /ent entities kept
+  score_polarity: true
+  score_toxicity: true
+  score_spam: true
 ```
 
 Extraction is opt-in per build — pass `--extract` to the CLI, or set `on_build: true`:
@@ -133,10 +144,15 @@ node scripts/cli.js build --config mdsite.yaml --extract
 ```
 
 Without either, the build makes no network calls — the structural graph (folders, pages,
-sections, word count, reading time, links, dates) is still written — and logs that
-extraction was skipped. `npm run ingest` and the watcher read `mdsite.yaml` when present,
-so `on_build: true` extracts there too; `--extract` is CLI-only. Extraction issues many
-taggly calls and runs noticeably longer, logging per-page progress.
+sections, word count, reading time, links, dates, content hash) is still written — and logs
+that extraction was skipped. `npm run ingest` and the watcher read `mdsite.yaml` when
+present, so `on_build: true` extracts there too; `--extract` is CLI-only.
+
+Pages are only re-extracted when their content hash changes since the previous build —
+unchanged pages copy their prior `tags`/`metrics`/`desc` forward with no taggly calls, so
+incremental builds stay fast. Changing `extract.*` settings doesn't invalidate that cache;
+delete `public/site-meta.json` to force a full re-extraction after a config change.
+Extraction logs per-page progress as it runs.
 See the [Metadata Contract](/specifications/metadata) spec for the full schema.
 
 ### Extraction in CI

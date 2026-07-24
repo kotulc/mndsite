@@ -73,6 +73,18 @@ describe('build_page', () => {
 })
 
 
+describe('content_hash (via build_page)', () => {
+  test('test_hash_changes_with_content_and_matches_identical_content', () => {
+    /** Change detection: same content hashes identically, different content differs. */
+    const a = build_page({ slug: 'p', title: 'P', url: '/p', content: '# P\n\nbody one\n' })
+    const b = build_page({ slug: 'p', title: 'P', url: '/p', content: '# P\n\nbody two\n' })
+    const c = build_page({ slug: 'p', title: 'P', url: '/p', content: '# P\n\nbody one\n' })
+    expect(a.hash).not.toBe(b.hash)
+    expect(a.hash).toBe(c.hash)
+  })
+})
+
+
 describe('extract_links', () => {
   test('test_extract_links_excludes_images', () => {
     /** Image refs (![...]) are not collected as links. */
