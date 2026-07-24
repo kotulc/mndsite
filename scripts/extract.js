@@ -2,32 +2,49 @@
  * NLP metadata extraction via a local taggly service (github.com/kotulc/taggly).
  * Walks the structural site graph bottom-up (leaf sections -> sections -> page) and
  * layers NLP metadata onto every page and section node:
- *   - tags:    concept groups (via /ext), entities (via /ent), keywords (via /key)
+ *   - tags:    concept groups (via /ext), entities (via /ent), keywords (via /key),
+ *              each capped to its configured size via taggly's own top_n (or a plain
+ *              slice for /ext, which has no top_n of its own)
  *   - metrics: polarity, spam, toxicity (via /polar, /spam, /tox)
  * Leaf content is scored directly; parent nodes aggregate their children (tag groups
- * union+dedupe, metrics average). Each tag group is trimmed to its configured size via
- * /rank (MMR-selected against the node's own content) rather than a raw top_n cut.
- * Page descriptions (via /desc) are optional and computed once per page directly from
- * its full text — not aggregated from sections, and not used for ranking.
- * Related pages are scored per page via /rank over each page's combined tag terms.
+ * union+dedupe, metrics average). Page descriptions (via /desc) are optional and
+ * computed once per page directly from its full text — not aggregated from sections.
+ * Related pages are scored per page via /score, comparing descriptions when available
+ * (extract_descriptions) and falling back to each page's combined tag terms otherwise.
  * Pages whose content hash matches the previous build are skipped and carry their
- * previous tags/metrics/desc forward unchanged. All output lands in the graph.
+ * previous tags/metrics/desc forward unchanged; changing the extract config invalidates
+ * this cache for every page. All output lands in the graph.
  * Enabled by extract.url in mdsite.yaml; runs only via --extract or extract.on_build.
  */
+const crypto = require('crypto')
 const { flatten_pages, plain_text } = require('./graph')
 
 
 // Input length caps: taggly's extraction/classifier models silently degrade (empty
 // results, no error) or reject requests above roughly 512 tokens of input.
-const TEXT_MAX = 1500   // /ext, /ent, /key, /polar, /spam, /tox, /rank query
-const DESC_MAX  = 8000  // /desc (generative, tolerates far more input)
-const RANK_DIVERSITY = 0.5
+const TEXT_MAX = 1500   // /ext, /ent, /key, /polar, /spam, /tox
+const DESC_MAX  = 8000  // /desc, /score (generative/embedding, tolerate far more input)
+
+// extract config fields that change what taggly computes — hashed to invalidate the
+// per-page content-hash cache when the user edits extraction settings
+const CONFIG_FIELDS = [
+  'extract_concepts', 'max_concepts', 'max_keywords', 'max_entities',
+  'score_polarity', 'score_toxicity', 'score_spam', 'extract_descriptions',
+]
 
 
 function query_string(params) {
   /** Build a ?a=b&c=d query string from a flat params object ({} -> ''). */
   const q = new URLSearchParams(params).toString()
   return q ? `?${q}` : ''
+}
+
+
+function config_hash(cfg) {
+  /** Hash the extract config fields that affect computed tags/metrics/desc, so a
+   *  settings change invalidates the content-hash cache even when pages didn't change. */
+  const relevant = Object.fromEntries(CONFIG_FIELDS.map(k => [k, cfg[k]]))
+  return crypto.createHash('sha256').update(JSON.stringify(relevant)).digest('hex').slice(0, 16)
 }
 
 
@@ -54,21 +71,10 @@ async function check_service(url) {
 }
 
 
-async function rank_select(call, prose, terms, top_n, max_comparisons) {
-  /** Trim a term list to top_n via MMR ranking against the source text, comparing at
-   *  most max_comparisons candidates; passes through unchanged when already within
-   *  the limit (skips the extra taggly call). */
-  if (terms.length <= top_n) return terms
-  const { ranked } = await call('rank',
-    { query: prose, candidates: terms.slice(0, max_comparisons) },
-    { top_n, diversity: RANK_DIVERSITY })
-  return ranked
-}
-
-
 async function node_tags(call, cfg, text) {
-  /** Extract this node's own tag groups: /ext concept groups, /ent entities, /key
-   *  keywords, each trimmed to its configured size via rank_select. */
+  /** Extract this node's own tag groups: /ext concept groups (plain-sliced to
+   *  max_concepts — /ext has no top_n of its own), /ent entities and /key keywords
+   *  (each capped via taggly's native top_n). */
   const prose = plain_text(text).slice(0, TEXT_MAX)
   if (!prose) return null
   const tags = {}
@@ -77,15 +83,15 @@ async function node_tags(call, cfg, text) {
     const { concepts } = await call('ext', { content: prose },
       { concepts: cfg.extract_concepts.join(', '), max_ngram: 2, normalize: true })
     for (const [group, terms] of Object.entries(concepts)) {
-      tags[group] = await rank_select(call, prose, terms, cfg.max_concepts, cfg.max_comparisons)
+      tags[group] = terms.slice(0, cfg.max_concepts)
     }
   }
 
-  const { entities } = await call('ent', { content: prose }, { top_n: cfg.max_comparisons, max_ngram: 2, normalize: true })
-  tags.entities = await rank_select(call, prose, entities, cfg.max_entities, cfg.max_comparisons)
+  const { entities } = await call('ent', { content: prose }, { top_n: cfg.max_entities, max_ngram: 2, normalize: true })
+  tags.entities = entities
 
-  const { keywords } = await call('key', { content: prose }, { top_n: cfg.max_comparisons, ngram_max: 1, normalize: true })
-  tags.keywords = await rank_select(call, prose, keywords, cfg.max_keywords, cfg.max_comparisons)
+  const { keywords } = await call('key', { content: prose }, { top_n: cfg.max_keywords, ngram_max: 1, normalize: true })
+  tags.keywords = keywords
 
   return tags
 }
@@ -173,24 +179,31 @@ async function page_desc(call, page) {
 
 
 function tags_string(node) {
-  /** Flatten a node's tag groups into one comparable string for related-page ranking. */
+  /** Flatten a node's tag groups into one comparable string for related-page scoring. */
   return Object.values(node.tags || {}).flat().join(', ')
 }
 
 
+function compare_text(page) {
+  /** A page's description when available, else its combined tag terms. */
+  return (page.desc || tags_string(page)).slice(0, DESC_MAX)
+}
+
+
 async function compute_related(pages, call, cfg) {
-  /** Rank each page's peers by shared tag terms and attach the top related pages. */
+  /** Score each page's peers by description (when available) or tag terms, and
+   *  attach the top related pages with their similarity score. */
   for (const page of pages) {
-    const query = tags_string(page)
-    const others = pages.filter(p => p !== page && tags_string(p)).slice(0, cfg.max_comparisons)
+    const query = compare_text(page)
+    const others = pages.filter(p => p !== page && compare_text(p)).slice(0, cfg.max_comparisons)
     if (!query || !others.length) { page.related = []; continue }
 
-    const candidates = others.map(tags_string)
-    const { ranked } = await call('rank', { query, candidates }, { top_n: cfg.top_n_related, diversity: RANK_DIVERSITY })
-    page.related = ranked
-      .map(str => others[candidates.indexOf(str)])
-      .filter(Boolean)
-      .map(p => ({ name: p.name, url: p.url }))
+    const candidates = others.map(compare_text)
+    const { scores } = await call('score', { query, candidates })
+    page.related = others
+      .map((p, i) => ({ name: p.name, url: p.url, score: Math.round(scores[i] * 1e4) / 1e4 }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, cfg.top_n_related)
   }
 }
 
@@ -207,16 +220,21 @@ function copy_forward(prior, node) {
 }
 
 
-async function extract_graph(root, cfg, log = () => {}, previous = {}) {
+async function extract_graph(root, cfg, log = () => {}, previous = {}, previous_config_hash = '') {
   /** Enrich every page (and its sections) with tags/metrics, optionally a description,
-   *  then compute related pages. Pages with an unchanged content hash are skipped. */
+   *  then compute related pages. Pages with an unchanged content hash are skipped,
+   *  unless the extract config itself changed since the previous build. */
+  const hash = config_hash(cfg)
+  const config_changed = !!previous_config_hash && hash !== previous_config_hash
+  if (config_changed) log('extract config changed since the last build — re-extracting every page')
+
   const pages = flatten_pages(root)
   let calls = 0, skipped = 0
   const call = (cmd, body, params) => { calls++; return taggly(cfg, cmd, body, params) }
 
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i]
-    const prior = previous[page.url]
+    const prior = config_changed ? null : previous[page.url]
 
     if (prior && prior.hash === page.hash) {
       copy_forward(prior, page)
@@ -233,12 +251,13 @@ async function extract_graph(root, cfg, log = () => {}, previous = {}) {
 
   log(`scoring related pages (${pages.length} pages, ${skipped} unchanged, ${calls} taggly calls so far)`)
   await compute_related(pages, call, cfg)
+  root.extract_config = hash
   log(`done (${pages.length} pages, ${skipped} unchanged, ${calls} taggly calls)`)
 }
 
 
 module.exports = {
   check_service, extract_graph, extract_node, node_tags, node_metrics, page_desc,
-  aggregate_tags, aggregate_metrics, compute_related, rank_select, mean_scores, union,
-  tags_string, query_string,
+  aggregate_tags, aggregate_metrics, compute_related, mean_scores, union,
+  tags_string, compare_text, config_hash, query_string,
 }

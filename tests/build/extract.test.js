@@ -1,13 +1,13 @@
 /**
- * Unit tests for NLP extraction: taggly query params, tag/metric extraction, rank-based
- * trimming, bottom-up aggregation, page descriptions, and related-page ranking. Node-level
- * helpers are tested against a stubbed `call` function; only extract_graph exercises the
- * real fetch-based taggly() client (mocked global.fetch) end-to-end.
+ * Unit tests for NLP extraction: taggly query params, tag/metric extraction, bottom-up
+ * aggregation, page descriptions, related-page scoring, and config-hash cache
+ * invalidation. Node-level helpers are tested against a stubbed `call` function; only
+ * extract_graph exercises the real fetch-based taggly() client (mocked global.fetch).
  */
 const {
   extract_graph, extract_node, node_tags, node_metrics, page_desc,
-  aggregate_tags, aggregate_metrics, compute_related, rank_select,
-  mean_scores, union, tags_string, query_string,
+  aggregate_tags, aggregate_metrics, compute_related, compare_text,
+  mean_scores, union, tags_string, config_hash, query_string,
 } = require('../../scripts/extract')
 const { build_page, root_node } = require('../../scripts/graph')
 
@@ -28,16 +28,12 @@ const RESPONSES = {
   polar: { scores: { negative: 0.1, neutral: 0.4, positive: 0.5 } },
   spam:  { score: 0.04 },
   tox:   { score: 0.002 },
+  score: { scores: [0.9, 0.1] },
 }
 
 function make_call(overrides = {}) {
-  /** A stubbed taggly caller: canned responses per command, with a default rank
-   *  behavior (passes the first top_n candidates through) unless overridden. */
-  return (cmd, body, params) => {
-    if (overrides[cmd]) return Promise.resolve(overrides[cmd])
-    if (cmd === 'rank') return Promise.resolve({ ranked: body.candidates.slice(0, params.top_n) })
-    return Promise.resolve(RESPONSES[cmd])
-  }
+  /** A stubbed taggly caller returning canned responses per command. */
+  return (cmd) => Promise.resolve(overrides[cmd] || RESPONSES[cmd])
 }
 
 
@@ -50,37 +46,30 @@ describe('query_string', () => {
 })
 
 
-describe('rank_select', () => {
-  test('test_rank_select_passes_through_when_within_limit', async () => {
-    /** No rank call is made when the raw result already fits the limit. */
-    const call = jest.fn()
-    const result = await rank_select(call, 'prose', ['a', 'b'], 5, 128)
-    expect(result).toEqual(['a', 'b'])
-    expect(call).not.toHaveBeenCalled()
-  })
-
-  test('test_rank_select_trims_via_rank_when_over_limit', async () => {
-    /** Over the limit, rank is called with the source text as query and top_n set. */
-    const call = jest.fn((cmd, body, params) => {
-      expect(cmd).toBe('rank')
-      expect(body.query).toBe('prose')
-      expect(params.top_n).toBe(2)
-      return Promise.resolve({ ranked: ['a', 'b'] })
-    })
-    const result = await rank_select(call, 'prose', ['a', 'b', 'c', 'd'], 2, 128)
-    expect(result).toEqual(['a', 'b'])
-  })
-})
-
-
 describe('node_tags', () => {
   test('test_node_tags_maps_ext_ent_key_groups', async () => {
-    /** ext concept groups, entities, and keywords all land under tags, each within limits. */
+    /** ext concept groups, entities, and keywords all land under tags. */
     const tags = await node_tags(make_call(), CFG, 'body text')
     expect(tags).toEqual({
       categories: ['c1'], topics: ['t1'], concepts: ['x1', 'x2'],
       entities: ['e1', 'e2'], keywords: ['k1', 'k2'],
     })
+  })
+
+  test('test_node_tags_sends_native_top_n_for_ent_and_key', async () => {
+    /** /ent and /key are called with max_entities/max_keywords as their own top_n —
+     *  no separate selection call. */
+    const call = jest.fn(make_call())
+    await node_tags(call, CFG, 'body text')
+    expect(call).toHaveBeenCalledWith('ent', expect.anything(), expect.objectContaining({ top_n: CFG.max_entities }))
+    expect(call).toHaveBeenCalledWith('key', expect.anything(), expect.objectContaining({ top_n: CFG.max_keywords }))
+  })
+
+  test('test_node_tags_slices_ext_groups_to_max_concepts', async () => {
+    /** /ext has no top_n of its own — each group is plain-sliced to max_concepts. */
+    const call = make_call({ ext: { concepts: { topics: ['a', 'b', 'c', 'd'] } } })
+    const tags = await node_tags(call, { ...CFG, max_concepts: 2 }, 'body text')
+    expect(tags.topics).toEqual(['a', 'b'])
   })
 
   test('test_node_tags_skips_ext_when_extract_concepts_empty', async () => {
@@ -182,36 +171,55 @@ describe('page_desc', () => {
 })
 
 
-describe('tags_string', () => {
+describe('tags_string / compare_text', () => {
   test('test_tags_string_flattens_all_groups', () => {
-    /** All tag groups flatten into one comma-joined string for rank comparison. */
+    /** All tag groups flatten into one comma-joined string. */
     expect(tags_string({ tags: { topics: ['a'], keywords: ['b', 'c'] } })).toBe('a, b, c')
     expect(tags_string({})).toBe('')
+  })
+
+  test('test_compare_text_prefers_desc_over_tags', () => {
+    /** A page's description is used for comparison when present. */
+    expect(compare_text({ desc: 'the desc', tags: { keywords: ['x'] } })).toBe('the desc')
+  })
+
+  test('test_compare_text_falls_back_to_tags_without_desc', () => {
+    /** Without a description, the combined tag terms are used instead. */
+    expect(compare_text({ desc: '', tags: { keywords: ['x', 'y'] } })).toBe('x, y')
   })
 })
 
 
 describe('compute_related', () => {
-  test('test_compute_related_ranks_by_tag_terms', async () => {
-    /** Pages are compared by their combined tag terms via rank, not description. */
+  test('test_compute_related_prefers_desc_scores_and_ranks', async () => {
+    /** Pages with descriptions are compared by desc; results carry a similarity score. */
+    const pages = [
+      { name: 'A', url: '/a', desc: 'da' },
+      { name: 'B', url: '/b', desc: 'db' },
+      { name: 'C', url: '/c', desc: 'dc' },
+    ]
+    const call = jest.fn((cmd) => { expect(cmd).toBe('score'); return Promise.resolve(RESPONSES.score) })
+    await compute_related(pages, call, { max_comparisons: 128, top_n_related: 1 })
+    expect(call.mock.calls[0][1]).toEqual({ query: 'da', candidates: ['db', 'dc'] })
+    expect(pages[0].related).toEqual([{ name: 'B', url: '/b', score: 0.9 }])
+  })
+
+  test('test_compute_related_falls_back_to_tags_without_desc', async () => {
+    /** Pages without descriptions compare by their combined tag terms instead. */
     const pages = [
       { name: 'A', url: '/a', tags: { keywords: ['x'] } },
       { name: 'B', url: '/b', tags: { keywords: ['y'] } },
-      { name: 'C', url: '/c', tags: { keywords: ['z'] } },
     ]
-    const call = jest.fn((cmd, body, params) => {
-      expect(cmd).toBe('rank')
-      expect(params.top_n).toBe(1)
-      return Promise.resolve({ ranked: [body.candidates[0]] })
-    })
+    const call = jest.fn(() => Promise.resolve({ scores: [0.5] }))
     await compute_related(pages, call, { max_comparisons: 128, top_n_related: 1 })
-    expect(pages[0].related).toEqual([{ name: 'B', url: '/b' }])
+    expect(call.mock.calls[0][1]).toEqual({ query: 'x', candidates: ['y'] })
+    expect(pages[0].related).toEqual([{ name: 'B', url: '/b', score: 0.5 }])
   })
 
-  test('test_compute_related_empty_without_tags', async () => {
-    /** A page with no tags gets an empty related list and makes no rank call. */
+  test('test_compute_related_empty_without_desc_or_tags', async () => {
+    /** A page with neither desc nor tags gets an empty related list and makes no call. */
     const call = jest.fn()
-    const pages = [{ name: 'A', url: '/a', tags: {} }, { name: 'B', url: '/b', tags: { keywords: ['y'] } }]
+    const pages = [{ name: 'A', url: '/a' }, { name: 'B', url: '/b', desc: 'db' }]
     await compute_related(pages, call, { max_comparisons: 128, top_n_related: 1 })
     expect(pages[0].related).toEqual([])
     expect(call).not.toHaveBeenCalled()
@@ -231,30 +239,39 @@ describe('mean_scores / union', () => {
 })
 
 
+describe('config_hash', () => {
+  test('test_config_hash_stable_for_identical_relevant_fields', () => {
+    /** Two configs differing only in irrelevant fields (url, strict) hash the same. */
+    expect(config_hash(CFG)).toBe(config_hash({ ...CFG, url: 'http://other', strict: false }))
+  })
+
+  test('test_config_hash_changes_with_relevant_field', () => {
+    /** Changing a field that affects computed output changes the hash. */
+    expect(config_hash(CFG)).not.toBe(config_hash({ ...CFG, max_keywords: 99 }))
+  })
+})
+
+
 describe('extract_graph', () => {
   function mock_fetch() {
     global.fetch = jest.fn((url, opts) => {
       const cmd = url.split('/').pop().split('?')[0]
-      if (cmd === 'rank') {
-        const { candidates } = JSON.parse(opts.body)
-        const top_n = Number(new URL(url).searchParams.get('top_n')) || candidates.length
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ranked: candidates.slice(0, top_n) }) })
-      }
       return Promise.resolve({ ok: true, json: () => Promise.resolve(RESPONSES[cmd]) })
     })
   }
   afterEach(() => { delete global.fetch })
 
   test('test_extract_graph_enriches_pages_and_related', async () => {
-    /** End-to-end over a small graph: pages get tags/metrics/desc and related links. */
+    /** End-to-end over a small graph: pages get tags/metrics/desc and related scores. */
     mock_fetch()
     const page = (slug) => build_page({ slug, title: slug, url: `/${slug}`, content: `# ${slug}\n\nintro\n\n## S\n\nbody\n` })
     const graph = root_node({ name: 'Site', children: [page('a'), page('b')] })
     await extract_graph(graph, CFG, () => {})
     expect(graph.children[0].tags.keywords).toEqual(['k1', 'k2'])
     expect(graph.children[0].desc).toBe('A summary.')
-    expect(graph.children[0].related[0].url).toBe('/b')
+    expect(graph.children[0].related[0]).toMatchObject({ url: '/b', score: 0.9 })
     expect(graph.children[0].updated).toEqual(expect.any(String))
+    expect(graph.extract_config).toBe(config_hash(CFG))
   })
 
   test('test_extract_graph_skips_pages_with_unchanged_hash', async () => {
@@ -265,10 +282,25 @@ describe('extract_graph', () => {
     const previous = {
       '/a': { ...page, tags: { keywords: ['cached'] }, metrics: { spam: 0.5 }, desc: 'cached desc', updated: '2020-01-01T00:00:00.000Z' },
     }
-    await extract_graph(graph, CFG, () => {}, previous)
+    await extract_graph(graph, CFG, () => {}, previous, config_hash(CFG))
     expect(graph.children[0].tags).toEqual({ keywords: ['cached'] })
     expect(graph.children[0].desc).toBe('cached desc')
     expect(graph.children[0].updated).toBe('2020-01-01T00:00:00.000Z')
     expect(fetch).not.toHaveBeenCalled()   // single page, no peers to compare for related
+  })
+
+  test('test_extract_graph_reextracts_all_when_config_changed', async () => {
+    /** A changed extract config invalidates the content-hash cache for every page,
+     *  even when content itself is unchanged. */
+    mock_fetch()
+    const page = build_page({ slug: 'a', title: 'a', url: '/a', content: '# a\n\nintro\n' })
+    const graph = root_node({ name: 'Site', children: [page] })
+    const previous = {
+      '/a': { ...page, tags: { keywords: ['cached'] }, metrics: { spam: 0.5 }, desc: 'cached desc', updated: '2020-01-01T00:00:00.000Z' },
+    }
+    await extract_graph(graph, CFG, () => {}, previous, 'a-different-config-hash')
+    expect(graph.children[0].tags.keywords).toEqual(['k1', 'k2'])   // freshly extracted, not cached
+    expect(graph.children[0].desc).toBe('A summary.')
+    expect(fetch).toHaveBeenCalled()
   })
 })

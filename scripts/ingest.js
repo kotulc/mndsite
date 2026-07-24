@@ -365,16 +365,20 @@ function sync_assets(assets_dir) {
 
 // --- Pipeline entry ---
 
-function load_previous_pages(extract_on) {
-  /** Read the previous build's site graph (if any) into a url -> page node map, so
-   *  extraction can skip pages whose content hash hasn't changed. Ignores a missing
-   *  or corrupt previous graph — every page is simply treated as changed. */
-  if (!extract_on || !fs.existsSync(SITE_META)) return {}
+function load_previous(extract_on) {
+  /** Read the previous build's site graph (if any) into a url -> page node map plus its
+   *  extract config hash, so extraction can skip pages whose content hash hasn't
+   *  changed. Ignores a missing or corrupt previous graph — every page is treated
+   *  as changed. */
+  if (!extract_on || !fs.existsSync(SITE_META)) return { pages: {}, config_hash: '' }
   try {
     const prev = JSON.parse(fs.readFileSync(SITE_META, 'utf8'))
-    return Object.fromEntries(graph.flatten_pages(prev).map(p => [p.url, p]))
+    return {
+      pages: Object.fromEntries(graph.flatten_pages(prev).map(p => [p.url, p])),
+      config_hash: prev.extract_config || '',
+    }
   } catch {
-    return {}
+    return { pages: {}, config_hash: '' }
   }
 }
 
@@ -397,7 +401,7 @@ async function run(config) {
     }
   }
 
-  const previous = load_previous_pages(extract_on)
+  const previous = load_previous(extract_on)
 
   fs.rmSync(PAGES,   { recursive: true, force: true })
   fs.rmSync(PUB_IMG, { recursive: true, force: true })
@@ -408,7 +412,7 @@ async function run(config) {
 
   if (config.extract?.url) {
     console.log(`  Extracting metadata via taggly at ${config.extract.url} (${pages.length} pages)`)
-    await extract.extract_graph(site_graph, config.extract, msg => console.log(`  [extract] ${msg}`), previous)
+    await extract.extract_graph(site_graph, config.extract, msg => console.log(`  [extract] ${msg}`), previous.pages, previous.config_hash)
   }
 
   fs.writeFileSync(SITE_META, JSON.stringify(site_graph, null, 2) + '\n')

@@ -36,7 +36,7 @@ consumed by Next.js and Nextra.
 | `extract.url` | string | `""` | Base URL of a running [taggly](https://github.com/kotulc/taggly) instance; empty disables extraction |
 | `extract.on_build` | boolean | `false` | Extract on every build; otherwise only with the `--extract` flag |
 | `extract.strict` | boolean | `true` | Fail the build when the service is unreachable; `false` warns and skips |
-| `extract.max_comparisons` | integer | `128` | Cap on candidate terms/pages compared per `/rank` call |
+| `extract.max_comparisons` | integer | `128` | Cap on candidate pages compared per `/score` related-page call |
 | `extract.top_n_related` | integer | `3` | Number of related pages attached to each page node |
 | `extract.extract_descriptions` | boolean | `false` | Generate a page-level SEO `desc` via `/desc` (sections never get one) |
 | `extract.extract_concepts` | list | `[categories, topics, concepts]` | `/ext` concept groups to request; `[]` disables `/ext` entirely |
@@ -116,22 +116,24 @@ Leave empty to keep Nextra's default white/dark backgrounds.
 
 The `extract` block connects the build to a local [taggly](https://github.com/kotulc/taggly)
 NLP service that layers metadata onto the [site graph](/specifications/metadata): every page
-and section gets `tags` (concept groups via `/ext`, entities via `/ent`, keywords via `/key`)
-and `metrics` (`polarity`/`spam`/`toxicity`), computed bottom-up (leaf sections scored
-directly, parents aggregated). Pages optionally get a `desc` and always get a `related` list
-scored from tag terms. All output lands in `public/site-meta.json` — never in frontmatter.
+and section gets `tags` (concept groups via `/ext`, entities via `/ent`, keywords via `/key`,
+each capped by `max_concepts`/`max_entities`/`max_keywords`) and `metrics`
+(`polarity`/`spam`/`toxicity`), computed bottom-up (leaf sections scored directly, parents
+aggregated). Pages optionally get a `desc`, and every page always gets a `related` list —
+scored via `/score` against other pages' descriptions when available, or their tag terms
+otherwise. All output lands in `public/site-meta.json` — never in frontmatter.
 
 ```yaml
 extract:
   url: http://127.0.0.1:8000
   on_build: false        # true: extract on every build
-  max_comparisons: 128   # cap on candidate terms/pages compared per /rank call
+  max_comparisons: 128   # cap on candidate pages compared per /score related-page call
   top_n_related: 3       # related pages attached per page
   extract_descriptions: false        # true: generate a page-level SEO desc via /desc
   extract_concepts: [categories, topics, concepts]   # /ext groups; [] disables /ext
-  max_concepts: 8        # max terms kept per /ext group
-  max_keywords: 32       # max /key keywords kept
-  max_entities: 8        # max /ent entities kept
+  max_concepts: 8        # max terms kept per /ext group (plain-sliced — /ext has no top_n)
+  max_keywords: 32       # max /key keywords kept (taggly's native top_n)
+  max_entities: 8        # max /ent entities kept (taggly's native top_n)
   score_polarity: true
   score_toxicity: true
   score_spam: true
@@ -150,8 +152,11 @@ present, so `on_build: true` extracts there too; `--extract` is CLI-only.
 
 Pages are only re-extracted when their content hash changes since the previous build —
 unchanged pages copy their prior `tags`/`metrics`/`desc` forward with no taggly calls, so
-incremental builds stay fast. Changing `extract.*` settings doesn't invalidate that cache;
-delete `public/site-meta.json` to force a full re-extraction after a config change.
+incremental builds stay fast. Changing any of `extract_concepts`, `max_concepts`,
+`max_keywords`, `max_entities`, `score_polarity`, `score_toxicity`, `score_spam`, or
+`extract_descriptions` invalidates that cache for every page automatically (the config
+itself is hashed and stored in the graph); `url`/`on_build`/`strict`/`max_comparisons`/
+`top_n_related` don't affect computed output, so changing only those keeps the cache.
 Extraction logs per-page progress as it runs.
 See the [Metadata Contract](/specifications/metadata) spec for the full schema.
 
