@@ -6,24 +6,33 @@ import GitHubLink from './components/GitHubLink'
 import FeedLink from './components/FeedLink'
 import ThemeToggle from './components/ThemeToggle'
 import siteConfig from './site.config'
-import pageMeta from './public/page-meta.json'
+import siteMeta from './public/site-meta.json'
+
+
+// Flatten the site graph into a url → page-node index once at module load
+function index_pages(node, acc = {}) {
+  if (node.type === 'page') acc[node.url] = node
+  for (const child of node.children || []) index_pages(child, acc)
+  return acc
+}
+const PAGE_INDEX = index_pages(siteMeta)
 
 
 function use_page_meta() {
-  /** Metadata record for the current page from the generated page-meta.json. */
+  /** Page node for the current route from the generated site graph. */
   const { route } = useRouter()
-  return pageMeta[route] || {}
+  return PAGE_INDEX[route] || {}
 }
 
 
 function PageMeta() {
-  /** Renders date, reading time (unless disabled), and tag chips. */
+  /** Renders date, reading time (unless disabled), and topic/keyword chips. */
   const meta = use_page_meta()
   const mins = siteConfig.reading_time === false ? null : meta.reading_time
   return (
     <>
       <PageHeader date={meta.date} reading_time={mins} />
-      <TagList categories={meta.categories} tags={meta.tags} />
+      <TagList categories={meta.topics} tags={meta.keywords} />
     </>
   )
 }
@@ -88,7 +97,7 @@ export default {
     const meta = use_page_meta()
     return {
       titleTemplate: `%s – ${siteConfig.title}`,
-      description: meta.description || siteConfig.description || undefined,
+      description: meta.desc || siteConfig.description || undefined,
     }
   },
   head: (

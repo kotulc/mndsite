@@ -18,15 +18,15 @@ jobs:
 
       - run: npm ci
 
-      # Optional NLP enrichment: set repo variable ENRICH=true to generate page
-      # metadata (description/tags/categories + metrics) via taggly during the build
+      # Optional NLP extraction: set repo variable ENRICH=true to build the site
+      # metadata graph (desc/topics/keywords/scores + related) via taggly during the build
       - uses: actions/cache@v4
         if: vars.ENRICH == 'true'
         with:
           path: ~/.cache/huggingface
           key: taggly-models
 
-      - name: Start taggly enrichment service
+      - name: Start taggly extraction service
         if: vars.ENRICH == 'true'
         run: |
           git clone --depth 1 https://github.com/kotulc/taggly /tmp/taggly
@@ -38,7 +38,7 @@ jobs:
         run: |
           FLAGS=""
           if [ -n "${{ vars.CONTENT_SOURCE }}" ]; then FLAGS="--content ${{ vars.CONTENT_SOURCE }}"; fi
-          if [ "${{ vars.ENRICH }}" = "true" ]; then FLAGS="$FLAGS --enrich"; fi
+          if [ "${{ vars.ENRICH }}" = "true" ]; then FLAGS="$FLAGS --extract"; fi
           node scripts/cli.js build --config mdsite.yaml $FLAGS
         env:
           BASE_PATH: ${{ vars.BASE_PATH }}

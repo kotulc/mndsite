@@ -1,43 +1,38 @@
 /**
  * Content ingestion pipeline.
- * Recursively mirrors any markdown source tree into the Next.js site content directory (pages/):
+ * Recursively mirrors any markdown source tree into the Next.js site content directory (pages/)
+ * and builds the structural site graph (public/site-meta.json):
  *   - Renames .md → .mdx (home.md or index.md at any level → index.mdx)
- *   - Strips frontmatter from output pages — all metadata (frontmatter, derived, and
- *     optional NLP enrichment) is written to public/page-meta.json keyed by page url
+ *   - Strips frontmatter from output pages — metadata lives in the site graph, not frontmatter
  *   - Ensures each page has an h1 (title from frontmatter, first heading, or slug)
+ *   - Builds a folder/page/section node graph mirroring the content tree (scripts/graph.js)
+ *   - Optionally layers NLP metadata onto the graph via taggly (scripts/extract.js)
  *   - Auto-generates index.mdx (redirect to first sorted page) when none exists
- *   - Copies images/ subdirectories to public/images/<rel-path>/
- *   - Rewrites relative image refs to absolute /images/<rel-path>/... URLs
+ *   - Copies images/ subdirectories to public/images/<rel-path>/ and rewrites refs
  *   - Strips corrupt EXIF segments from copied JPEGs
- *   - Auto-generates _meta.json at each level; sort order:
- *       nav_order config > date (newest-first) > alpha
- *   - For flatten[] directories: writes public/dir-feeds/<name>.json and generates
- *     a DirFeed index.mdx; individual pages remain deep-linkable but hidden in sidebar
+ *   - Auto-generates _meta.json at each level; sort order: nav_order > date > alpha
+ *   - For flatten[] directories: writes public/dir-feeds/<name>.json and a DirFeed page
  *
- * Usage: node scripts/ingest.js [source-dir]
- *        Default source-dir: docs/
- * Exports: parse_fm, sort_entries, extract_content, auto_index, norm_path, run
+ * Usage: node scripts/ingest.js [source-dir]   (default: docs/)
  */
 const fs = require('fs')
 const path = require('path')
 const yaml = require('js-yaml')
 const { strip_dir } = require('./fix-exif')
-const enrich = require('./enrich')
+const graph = require('./graph')
+const extract = require('./extract')
 
 
-const ROOT    = path.join(__dirname, '..')
-const PAGES   = path.join(ROOT, 'pages')
-const PUB_IMG = path.join(ROOT, 'public', 'images')
-const PUB_DIR = path.join(ROOT, 'public')
-const META    = path.join(PUB_DIR, 'page-meta.json')
+const ROOT      = path.join(__dirname, '..')
+const PAGES     = path.join(ROOT, 'pages')
+const PUB_IMG   = path.join(ROOT, 'public', 'images')
+const PUB_DIR   = path.join(ROOT, 'public')
+const SITE_META = path.join(PUB_DIR, 'site-meta.json')
 
 
 // Module-level config: set by run(config), falls back to site.config.js for local dev
 let _config = null
 function get_config() { return _config || require('../site.config') }
-
-// Per-page metadata collected during the walk, written to public/page-meta.json by run()
-let _page_meta = {}
 
 
 // --- Text helpers ---
@@ -61,16 +56,6 @@ function first_h1(content) {
   /** Return the first h1 heading text outside code fences, or ''. */
   const match = content.replace(/```[\s\S]*?```/g, '').match(/^#\s+(.+)$/m)
   return match ? match[1].trim() : ''
-}
-
-
-function reading_time(content) {
-  /** Estimate reading time in minutes from MDX content. */
-  const text = content.replace(/```[\s\S]*?```/g, '')
-                      .replace(/[#*`[\]()!|>]/g, ' ')
-                      .replace(/\s+/g, ' ').trim()
-  const words = text.split(' ').filter(w => w.length > 1).length
-  return Math.max(1, Math.round(words / 200))
 }
 
 
@@ -140,12 +125,12 @@ function norm_path(p) {
 
 // --- Sorting and navigation ---
 
-function auto_sort(entries) {
-  /** Sort entries: newest-first by date when any entry has a date, else alphabetical.
-   *  Undated entries always sort alphabetically after dated entries. */
-  const dated   = entries.filter(e => e.date)
-  const undated = entries.filter(e => !e.date)
-  if (!dated.length) return [...entries].sort((a, b) => a.slug.localeCompare(b.slug))
+function auto_sort(nodes) {
+  /** Sort nodes: newest-first by date when any has a date, else alphabetical by slug.
+   *  Undated nodes always sort alphabetically after dated ones. */
+  const dated   = nodes.filter(n => n.date)
+  const undated = nodes.filter(n => !n.date)
+  if (!dated.length) return [...nodes].sort((a, b) => a.slug.localeCompare(b.slug))
   return [
     ...dated.sort((a, b)   => b.date.localeCompare(a.date) || a.slug.localeCompare(b.slug)),
     ...undated.sort((a, b) => a.slug.localeCompare(b.slug)),
@@ -153,22 +138,21 @@ function auto_sort(entries) {
 }
 
 
-function sort_entries(entries, rel) {
-  /** Sort entries for a directory.
-   *  nav_order[rel] slug array: listed slugs pinned first in declared order, rest auto-sorted.
-   *  Auto-sort: newest-first if any entries have dates, alphabetical otherwise.
+function sort_entries(nodes, rel) {
+  /** Sort a directory's child nodes.
+   *  nav_order[rel] slug array pins listed slugs first in declared order, rest auto-sorted.
    *  index slug is always placed first. */
-  const idx  = entries.filter(e => e.slug === 'index')
-  const rest = entries.filter(e => e.slug !== 'index')
+  const idx  = nodes.filter(n => n.slug === 'index')
+  const rest = nodes.filter(n => n.slug !== 'index')
   const nav_map = Object.fromEntries(
     Object.entries(get_config().nav_order || {}).map(([k, v]) => [norm_path(k), v])
   )
-  const nav  = nav_map[rel]
+  const nav = nav_map[rel]
 
   if (Array.isArray(nav)) {
     const rank     = Object.fromEntries(nav.map((s, i) => [s, i]))
-    const pinned   = rest.filter(e => rank[e.slug] != null).sort((a, b) => rank[a.slug] - rank[b.slug])
-    const unpinned = rest.filter(e => rank[e.slug] == null)
+    const pinned   = rest.filter(n => rank[n.slug] != null).sort((a, b) => rank[a.slug] - rank[b.slug])
+    const unpinned = rest.filter(n => rank[n.slug] == null)
     return [...idx, ...pinned, ...auto_sort(unpinned)]
   }
 
@@ -195,14 +179,14 @@ function auto_index(dest_dir, sorted, rel) {
    *  Uses AutoRedirect component so Next.js handles basePath automatically.
    *  No-ops if index.mdx already exists or no leaf pages are found. */
   if (fs.existsSync(path.join(dest_dir, 'index.mdx'))) return
-  const first = sorted.find(e => fs.existsSync(path.join(dest_dir, `${e.slug}.mdx`)))
+  const first = sorted.find(n => fs.existsSync(path.join(dest_dir, `${n.slug}.mdx`)))
   if (!first) return
   const url      = rel ? `/${rel}/${first.slug}/` : `/${first.slug}/`
   const depth    = rel ? rel.split('/').length + 1 : 1
   const rel_path = '../'.repeat(depth) + 'components/AutoRedirect'
   fs.writeFileSync(path.join(dest_dir, 'index.mdx'), [
     `---`,
-    `title: ${first.title}`,
+    `title: ${first.name}`,
     `auto_redirect: true`,
     `---`,
     ``,
@@ -213,101 +197,7 @@ function auto_index(dest_dir, sorted, rel) {
 }
 
 
-// --- Per-page transform ---
-
-async function ingest_page(src_entry, dest, rel, slug, base, img_url) {
-  /** Transform one source file into a frontmatter-free .mdx, register its metadata in
-   *  _page_meta (frontmatter + derived + optional enrichment), and return a lean record. */
-  const raw = fs.readFileSync(src_entry, 'utf8')
-  const fm  = parse_fm(raw)
-  const url_base = slug === 'index'
-    ? (rel ? `/${rel}/` : '/')
-    : (rel ? `/${rel}/${slug}/` : `/${slug}/`)
-
-  let content = rewrite_md_links(rewrite_img_refs(strip_fm(raw), img_url), url_base)
-  const title = fm.title || slug_to_title(base)
-  if (slug !== 'index' && !first_h1(content)) content = `# ${title}\n\n${content}`
-  fs.writeFileSync(dest, content)
-
-  const parts = [...(rel ? rel.split('/') : []), ...(slug === 'index' ? [] : [slug])]
-  const url   = '/' + parts.join('/')
-
-  const record = {
-    slug,
-    title,
-    date:         fm.date ? String(fm.date).slice(0, 10) : '',
-    description:  fm.description || '',
-    categories:   Array.isArray(fm.categories) ? fm.categories : [],
-    tags:         Array.isArray(fm.tags)        ? fm.tags        : [],
-    reading_time: reading_time(content),
-    url:          url || '/',
-  }
-
-  // Full metadata: extra frontmatter keys + normalized record + optional enrichment
-  const { title: _t, date: _d, description: _de, categories: _c, tags: _tg, ...extras } = fm
-  const meta = { ...extras, ...record }
-
-  const cfg = get_config().enrich
-  if (cfg && cfg.url) {
-    try {
-      const text = extract_content(content)
-      Object.assign(meta, await enrich.enrich_fields(cfg, meta, text))
-      Object.assign(meta, await enrich.page_metrics(cfg, text) || {})
-    } catch (err) {
-      if (cfg.strict !== false) throw err
-      console.warn(`  Warning: enrichment failed for ${record.url}: ${err.message}`)
-    }
-  }
-
-  _page_meta[record.url] = meta
-  return { ...record, description: meta.description, categories: meta.categories, tags: meta.tags }
-}
-
-
-// --- Directory walk and emission ---
-
-async function ingest_dir(src_dir, dest_dir, rel) {
-  /** Recursively mirror src_dir → dest_dir, then emit nav or feed output for the level.
-   *  rel: path from SRC to src_dir using forward slashes ('' for root).
-   *  Returns { title } from the directory's index page (or the directory name). */
-  fs.mkdirSync(dest_dir, { recursive: true })
-  const img_url = copy_images(src_dir, rel)
-
-  const entries = []
-  let dir_title = slug_to_title(path.basename(src_dir))
-
-  for (const entry of fs.readdirSync(src_dir).sort()) {
-    const src_entry = path.join(src_dir, entry)
-    const stat = fs.statSync(src_entry)
-
-    if (entry === 'images') continue  // handled by copy_images
-
-    if (stat.isDirectory()) {
-      const sub_rel = rel ? `${rel}/${entry}` : entry
-      const { title } = await ingest_dir(src_entry, path.join(dest_dir, entry), sub_rel)
-      entries.push({ slug: entry, title, date: '' })
-      continue
-    }
-
-    const is_md  = entry.endsWith('.md')
-    const is_mdx = entry.endsWith('.mdx')
-    if (!is_md && !is_mdx) continue
-
-    const base = path.basename(entry, is_mdx ? '.mdx' : '.md')
-    const slug = (base === 'home' || base === 'index') ? 'index' : base
-    const dest = path.join(dest_dir, `${slug}.mdx`)
-    const record = await ingest_page(src_entry, dest, rel, slug, base, img_url)
-    entries.push(record)
-    if (slug === 'index') dir_title = record.title
-  }
-
-  const sorted = sort_entries(entries, rel)
-  if (is_flatten(rel)) emit_feed(dest_dir, sorted, rel, dir_title)
-  else emit_nav(dest_dir, sorted, rel)
-
-  return { title: dir_title }
-}
-
+// --- Directory walk: build graph + mirror files ---
 
 function copy_images(src_dir, rel) {
   /** Copy src_dir/images/ into public/images/<rel>/ and return the absolute image URL base. */
@@ -327,13 +217,77 @@ function copy_images(src_dir, rel) {
 }
 
 
+function ingest_page(src_entry, dest_dir, rel, slug, base, img_url) {
+  /** Transform one source file into a frontmatter-free .mdx and return its page node. */
+  const raw = fs.readFileSync(src_entry, 'utf8').replace(/\r\n?/g, '\n')
+  const fm  = parse_fm(raw)
+  const url_base = slug === 'index'
+    ? (rel ? `/${rel}/` : '/')
+    : (rel ? `/${rel}/${slug}/` : `/${slug}/`)
+
+  const dest = path.join(dest_dir, `${slug}.mdx`)
+  fs.writeFileSync(dest, rewrite_md_links(rewrite_img_refs(strip_fm(raw), img_url), url_base))
+
+  const title = fm.title || first_h1(fs.readFileSync(dest, 'utf8')) || slug_to_title(base)
+  if (slug !== 'index') ensure_h1(dest, title)
+
+  const parts = [...(rel ? rel.split('/') : []), ...(slug === 'index' ? [] : [slug])]
+  return graph.build_page({
+    slug,
+    title,
+    url:     '/' + parts.join('/') || '/',
+    content: fs.readFileSync(dest, 'utf8'),
+    date:    fm.date ? String(fm.date).slice(0, 10) : '',
+    created: fs.statSync(src_entry).mtime.toISOString().slice(0, 10),
+  })
+}
+
+
+function ingest_dir(src_dir, dest_dir, rel) {
+  /** Recursively mirror src_dir → dest_dir and return its folder (or root) graph node. */
+  fs.mkdirSync(dest_dir, { recursive: true })
+  const img_url = copy_images(src_dir, rel)
+  const nodes = []
+
+  for (const entry of fs.readdirSync(src_dir).sort()) {
+    const src_entry = path.join(src_dir, entry)
+    const stat = fs.statSync(src_entry)
+    if (entry === 'images') continue  // handled by copy_images
+
+    if (stat.isDirectory()) {
+      const sub_rel = rel ? `${rel}/${entry}` : entry
+      nodes.push(ingest_dir(src_entry, path.join(dest_dir, entry), sub_rel))
+      continue
+    }
+
+    const is_md  = entry.endsWith('.md')
+    const is_mdx = entry.endsWith('.mdx')
+    if (!is_md && !is_mdx) continue
+
+    const base = path.basename(entry, is_mdx ? '.mdx' : '.md')
+    const slug = (base === 'home' || base === 'index') ? 'index' : base
+    nodes.push(ingest_page(src_entry, dest_dir, rel, slug, base, img_url))
+  }
+
+  const sorted = sort_entries(nodes, rel)
+  const index  = sorted.find(n => n.slug === 'index')
+  const title  = index ? index.name : slug_to_title(path.basename(src_dir))
+
+  if (is_flatten(rel)) emit_feed(dest_dir, sorted, rel, title)
+  else emit_nav(dest_dir, sorted, rel)
+
+  if (!rel) return graph.root_node({ name: get_config().title, children: sorted })
+  return graph.folder_node({ name: title, url: `/${rel}`, slug: path.basename(src_dir), children: sorted })
+}
+
+
 function emit_nav(dest_dir, sorted, rel) {
   /** Emit navigation output for a regular directory: auto index redirect + _meta.json. */
   if (!fs.existsSync(path.join(dest_dir, 'index.mdx'))) auto_index(dest_dir, sorted, rel)
 
-  // If index.mdx exists but wasn't in sorted (auto-generated redirect), hide it from sidebar
-  const has_index  = sorted.some(e => e.slug === 'index')
-  const meta_pairs = sorted.map(e => [e.slug, e.title])
+  // If index.mdx exists but wasn't a source page (auto-generated redirect), hide it from the sidebar
+  const has_index  = sorted.some(n => n.slug === 'index')
+  const meta_pairs = sorted.map(n => [n.slug, n.name])
   if (!has_index && fs.existsSync(path.join(dest_dir, 'index.mdx'))) {
     meta_pairs.unshift(['index', { display: 'hidden', title: '' }])
   }
@@ -344,8 +298,13 @@ function emit_nav(dest_dir, sorted, rel) {
 function emit_feed(dest_dir, sorted, rel, dir_title) {
   /** Emit feed output for a flattened directory: dir-feed JSON, DirFeed page, hidden meta. */
   const feed_entries = sorted
-    .filter(e => e.slug !== 'index' && fs.existsSync(path.join(dest_dir, `${e.slug}.mdx`)))
-    .map(e => ({ ...e, content: extract_content(fs.readFileSync(path.join(dest_dir, `${e.slug}.mdx`), 'utf8')) }))
+    .filter(n => n.slug !== 'index' && fs.existsSync(path.join(dest_dir, `${n.slug}.mdx`)))
+    .map(n => ({
+      url: n.url, title: n.name, date: n.date,
+      categories: n.topics || [], tags: n.keywords || [],
+      reading_time: n.reading_time,
+      content: extract_content(fs.readFileSync(path.join(dest_dir, `${n.slug}.mdx`), 'utf8')),
+    }))
   const name = rel.replace(/\//g, '-') || 'root'
   fs.mkdirSync(path.join(PUB_DIR, 'dir-feeds'), { recursive: true })
   fs.writeFileSync(path.join(PUB_DIR, 'dir-feeds', `${name}.json`), JSON.stringify(feed_entries, null, 2) + '\n')
@@ -364,7 +323,7 @@ function emit_feed(dest_dir, sorted, rel, dir_title) {
   }
 
   // No index entry in meta — individual pages hidden, index.mdx not generated inside directory
-  const meta_pairs = sorted.filter(e => e.slug !== 'index').map(e => [e.slug, { display: 'hidden', title: '' }])
+  const meta_pairs = sorted.filter(n => n.slug !== 'index').map(n => [n.slug, { display: 'hidden', title: '' }])
   write_meta(path.join(dest_dir, '_meta.json'), meta_pairs)
 }
 
@@ -406,32 +365,37 @@ function sync_assets(assets_dir) {
 // --- Pipeline entry ---
 
 async function run(config) {
-  /** Execute the full ingest pipeline with the given config object. */
+  /** Execute the full ingest pipeline: mirror files, build the site graph, optionally extract. */
   _config = config
-  _page_meta = {}
   const src = config.content
+  const extract_on = !!config.extract?.url
 
   console.log(`\nIngesting from: ${src}`)
 
-  if (config.enrich?.url) {
+  if (extract_on) {
     try {
-      await enrich.check_service(config.enrich.url)
-      console.log(`  Enriching via taggly at ${config.enrich.url}`)
+      await extract.check_service(config.extract.url)
     } catch (err) {
-      if (config.enrich.strict !== false) throw err
-      console.warn(`  Warning: ${err.message} — skipping enrichment`)
-      config.enrich = { ...config.enrich, url: '' }
+      if (config.extract.strict !== false) throw err
+      console.warn(`  Warning: ${err.message} — skipping extraction`)
+      config.extract = { ...config.extract, url: '' }
     }
   }
 
   fs.rmSync(PAGES,   { recursive: true, force: true })
   fs.rmSync(PUB_IMG, { recursive: true, force: true })
-  fs.rmSync(META,    { force: true })
+  fs.rmSync(SITE_META, { force: true })
 
-  await ingest_dir(src, PAGES, '')
+  const site_graph = ingest_dir(src, PAGES, '')
+  const pages = graph.flatten_pages(site_graph)
 
-  fs.writeFileSync(META, JSON.stringify(_page_meta, null, 2) + '\n')
-  console.log(`  Wrote metadata for ${Object.keys(_page_meta).length} page(s) to public/page-meta.json`)
+  if (config.extract?.url) {
+    console.log(`  Extracting metadata via taggly at ${config.extract.url} (${pages.length} pages)`)
+    await extract.extract_graph(site_graph, config.extract, msg => console.log(`  [extract] ${msg}`))
+  }
+
+  fs.writeFileSync(SITE_META, JSON.stringify(site_graph, null, 2) + '\n')
+  console.log(`  Wrote site graph (${pages.length} pages) to public/site-meta.json`)
 
   const app_src = path.join(ROOT, '_app.jsx')
   if (fs.existsSync(app_src)) fs.copyFileSync(app_src, path.join(PAGES, '_app.jsx'))
@@ -451,12 +415,15 @@ async function run(config) {
 
 // --- Exports ---
 
-module.exports = { parse_fm, strip_fm, sort_entries, extract_content, auto_index, ensure_h1, first_h1, norm_path, slug_to_title, sync_assets, sync_components, run }
+module.exports = {
+  parse_fm, strip_fm, first_h1, sort_entries, extract_content, auto_index,
+  ensure_h1, norm_path, slug_to_title, sync_assets, sync_components, run,
+}
 
 
 // --- Main (direct invocation: npm run ingest [source-dir]) ---
-// Reads mdsite.yaml when present (site.config.js fallback), so enrich.on_build
-// applies here too; one-off enriched builds use the CLI --enrich flag instead.
+// Reads mdsite.yaml when present (site.config.js fallback), so extract.on_build
+// applies here too; one-off extraction runs use the CLI --extract flag instead.
 
 if (require.main === module) {
   const yaml_path = path.join(ROOT, 'mdsite.yaml')
@@ -465,9 +432,9 @@ if (require.main === module) {
     : { ...require('../site.config'), content: path.join(ROOT, 'docs') }
   if (process.argv[2]) cfg.content = path.resolve(process.argv[2])
 
-  if (cfg.enrich?.url && !cfg.enrich.on_build) {
-    console.log('Enrichment configured but skipped — set enrich.on_build or build with --enrich')
-    cfg.enrich = { ...cfg.enrich, url: '' }
+  if (cfg.extract?.url && !cfg.extract.on_build) {
+    console.log('Extraction configured but skipped — set extract.on_build or build with --extract')
+    cfg.extract = { ...cfg.extract, url: '' }
   }
   run(cfg).catch(err => { console.error(err.message); process.exit(1) })
 }

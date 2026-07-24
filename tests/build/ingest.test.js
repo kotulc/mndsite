@@ -255,26 +255,37 @@ describe('pages output ordering', () => {
 })
 
 
-// --- page metadata output (integration) ---
+// --- site graph output (integration) ---
 
-describe('page metadata output', () => {
-  const meta_path = path.join(__dirname, '../../public/page-meta.json')
+const { flatten_pages } = require('../../scripts/graph')
+describe('site graph output', () => {
+  const graph_path = path.join(__dirname, '../../public/site-meta.json')
+  const graph = () => JSON.parse(fs.readFileSync(graph_path, 'utf8'))
 
-  test('test_page_meta_written_without_enrichment', () => {
-    /** public/page-meta.json is written on every ingest, keyed by page url. */
-    const meta = JSON.parse(fs.readFileSync(meta_path, 'utf8'))
-    expect(meta['/getting-started']).toMatchObject({ slug: 'getting-started' })
-    expect(meta['/getting-started']).toHaveProperty('title')
-    expect(meta['/getting-started']).toHaveProperty('reading_time')
+  test('test_site_meta_root_is_site_title', () => {
+    /** The graph root is a root node named after the site title. */
+    const g = graph()
+    expect(g.type).toBe('root')
+    expect(g.name).toBe(require('../../site.config').title)
+    expect(Array.isArray(g.children)).toBe(true)
   })
 
-  test('test_page_meta_converts_frontmatter', () => {
-    /** Source frontmatter fields, including extra keys, land in page-meta.json. */
-    const meta = JSON.parse(fs.readFileSync(meta_path, 'utf8'))
-    const page = meta['/configuration']
-    expect(page.title).toBe('Configuration')
-    expect(page.categories).toContain('reference')
-    expect(page).toHaveProperty('readability')  // extra frontmatter key carried through
+  test('test_site_meta_mirrors_folders_and_pages', () => {
+    /** Folders appear as folder nodes containing page children. */
+    const g = graph()
+    const features = g.children.find(n => n.slug === 'features')
+    expect(features.type).toBe('folder')
+    expect(features.children.some(n => n.type === 'page')).toBe(true)
+  })
+
+  test('test_site_meta_page_structural_fields', () => {
+    /** Page nodes carry structural fields and a nested section tree (no taggly needed). */
+    const page = flatten_pages(graph()).find(p => p.url === '/configuration')
+    expect(page).toMatchObject({ type: 'page', slug: 'configuration' })
+    expect(page.word_count).toBeGreaterThan(0)
+    expect(page.reading_time).toBeGreaterThanOrEqual(1)
+    expect(page.children.map(s => s.name)).toContain('Fields')
+    expect(Array.isArray(page.links)).toBe(true)
   })
 
   test('test_pages_have_no_frontmatter', () => {
@@ -285,10 +296,9 @@ describe('page metadata output', () => {
     }
   })
 
-  test('test_first_h1_used_as_title', () => {
-    /** A page whose source has no frontmatter title derives its title from content or slug. */
-    const meta = JSON.parse(fs.readFileSync(meta_path, 'utf8'))
-    for (const record of Object.values(meta)) expect(record.title).toBeTruthy()
+  test('test_every_page_has_a_name', () => {
+    /** Every page node derives a non-empty title (frontmatter, first heading, or slug). */
+    for (const page of flatten_pages(graph())) expect(page.name).toBeTruthy()
   })
 })
 

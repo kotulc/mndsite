@@ -23,7 +23,7 @@ the generated file at their respective run times.
 | `toc` | boolean | `true` | Show right-side "On This Page" TOC column |
 | `reading_time` | boolean | `true` | Show reading time in page headers and feeds |
 | `theme` | object | see [Configuration](/configuration#theme) | Color palette, typeset, navbar/footer backgrounds |
-| `enrich` | object | see [Metadata Contract](metadata) | Optional taggly NLP enrichment |
+| `extract` | object | see [Metadata Contract](metadata) | Optional taggly NLP extraction into the site graph |
 | `nav_order` | object | `{}` | Slug array to pin specific pages first; remaining pages auto-sort by date or alphabetically |
 | `flatten` | string[] | `[]` | Directory paths to render as inline feeds; `'/'` = site root |
 | `content` / `output` | path | `./docs` / `./dist` | Source and output directories, resolved relative to the YAML file |

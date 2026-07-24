@@ -114,14 +114,14 @@ theme:
 flatten: []                  # list of section slugs to flatten (no subfolder in nav)
 nav_order: {}                # map of section slug → ordered list of page slugs
 
-# Optional — NLP enrichment via a local taggly instance (github.com/kotulc/taggly)
-# Output lands in public/page-meta.json; runs only with --enrich or on_build: true
-enrich:
-  url: ""                    # e.g. http://127.0.0.1:8000; empty disables enrichment
-  fields: [description, tags, categories]   # metadata generated when the source has none
-  metrics: []                # optional section scores + document mean: polarity, spam, toxicity
+# Optional — NLP extraction via a local taggly instance (github.com/kotulc/taggly)
+# Builds the site graph in public/site-meta.json; runs only with --extract or on_build: true
+extract:
+  url: ""                    # e.g. http://127.0.0.1:8000; empty disables extraction
+  on_build: false            # true: extract on every build (else only with --extract)
   strict: true               # fail the build if the service is unreachable
-  on_build: false            # true: enrich every CLI build (else only with --enrich)
+  max_comparisons: 128       # candidate pages compared for related-page scoring
+  top_n_related: 3           # related pages attached per page
 
 # Paths — resolved relative to this file
 content: ./docs              # source markdown directory

@@ -1,6 +1,6 @@
 /**
  * mdsite CLI — entry point for the Docker container.
- * Usage: node scripts/cli.js build --config <path> [--content <path>] [--output <path>] [--enrich]
+ * Usage: node scripts/cli.js build --config <path> [--content <path>] [--output <path>] [--extract]
  */
 const path               = require('path')
 const { spawnSync }      = require('child_process')
@@ -36,14 +36,14 @@ async function cmd_build(flags) {
   if (flags.content) config.content = path.resolve(flags.content)
   if (flags.output)  config.output  = path.resolve(flags.output)
 
-  // Enrichment runs only when requested: --enrich flag or enrich.on_build in the YAML
-  if (flags.enrich && !config.enrich.url) {
-    console.error('Error: --enrich requires enrich.url in the config')
+  // Extraction runs only when requested: --extract flag or extract.on_build in the YAML
+  if (flags.extract && !config.extract.url) {
+    console.error('Error: --extract requires extract.url in the config')
     process.exit(1)
   }
-  if (!flags.enrich && !config.enrich.on_build) {
-    if (config.enrich.url) console.log('Enrichment configured but skipped — pass --enrich or set enrich.on_build')
-    config.enrich = { ...config.enrich, url: '' }
+  if (!flags.extract && !config.extract.on_build) {
+    if (config.extract.url) console.log('Extraction configured but skipped — pass --extract or set extract.on_build')
+    config.extract = { ...config.extract, url: '' }
   }
 
   process.env.MDSITE_OUTPUT = config.output

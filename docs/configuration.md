@@ -33,11 +33,12 @@ consumed by Next.js and Nextra.
 | `theme_toggle` | string | `"navbar"` | Where the light/dark toggle appears: `"navbar"` or `"sidebar"` |
 | `toc` | boolean | `true` | Right sidebar: "On This Page" section navigation |
 | `reading_time` | boolean | `true` | Show estimated reading time in page headers and feeds |
-| `enrich.url` | string | `""` | Base URL of a running [taggly](https://github.com/kotulc/taggly) instance; empty disables enrichment |
-| `enrich.fields` | list | `[description, tags, categories]` | Metadata fields to generate when the source provides none |
-| `enrich.metrics` | list | `[]` | Section scores to compute and aggregate: `polarity`, `spam`, `toxicity` |
-| `enrich.strict` | boolean | `true` | Fail the build when the service is unreachable; `false` warns and skips |
-| `enrich.on_build` | boolean | `false` | Enrich on every CLI build; otherwise only with the `--enrich` flag |
+| `extract.url` | string | `""` | Base URL of a running [taggly](https://github.com/kotulc/taggly) instance; empty disables extraction |
+| `extract.on_build` | boolean | `false` | Extract on every build; otherwise only with the `--extract` flag |
+| `extract.strict` | boolean | `true` | Fail the build when the service is unreachable; `false` warns and skips |
+| `extract.max_comparisons` | integer | `128` | Cap on candidate pages compared when computing related pages |
+| `extract.top_n_related` | integer | `3` | Number of related pages attached to each page node |
+| `extract.taggly` | object | *(defaults)* | Per-command taggly query params — see [Extraction](#extraction) |
 | `theme.color` | string | `"default"` | Named accent palette — see [Theme](#theme) below |
 | `theme.typeset` | string | `"sans"` | Named body font stack — see [Theme](#theme) below |
 | `theme.navbar` | string | `""` | Navbar background: `"primary"` (theme tint) or any CSS color |
@@ -104,40 +105,47 @@ theme:
 
 Leave empty to keep Nextra's default white/dark backgrounds.
 
-## Enrichment
+## Extraction
 
-The `enrich` block connects the build to a local [taggly](https://github.com/kotulc/taggly)
-NLP service so pages need no hand-written frontmatter — missing `description`, `tags`, and
-`categories` are generated from the page content, and optional metrics are scored per
-`##` section then averaged to the document level. All results land in
-`public/page-meta.json` (never in frontmatter); explicit source frontmatter always wins.
+The `extract` block connects the build to a local [taggly](https://github.com/kotulc/taggly)
+NLP service that layers metadata onto the [site graph](/specifications/metadata): every page
+and section gets a `desc`, `concepts`/`topics`/`keywords`, and `polarity`/`spam`/`toxicity`
+scores, computed bottom-up (leaf sections scored directly, parents aggregated). Each page
+also gets a `related` list scored from page descriptions. All output lands in
+`public/site-meta.json` — never in frontmatter.
 
 ```yaml
-enrich:
+extract:
   url: http://127.0.0.1:8000
-  metrics: [polarity, spam, toxicity]   # optional section scores + document mean
-  on_build: false                       # true: enrich every CLI build
+  on_build: false        # true: extract on every build
+  max_comparisons: 128   # cap on candidate pages for the related computation
+  top_n_related: 3       # related pages attached per page
+  taggly:                # per-command params (all sent explicitly)
+    tag:  { concepts: "concepts, entities, topics", max_ngram: 2, top_n: 10, normalize: true }
+    spam: { threshold: 0.5 }
+    tox:  { threshold: 0.5 }
 ```
 
-Enrichment is opt-in per build — pass `--enrich` to the CLI, or set `on_build: true`:
+Extraction is opt-in per build — pass `--extract` to the CLI, or set `on_build: true`:
 
 ```bash
-node scripts/cli.js build --config mdsite.yaml --enrich
+node scripts/cli.js build --config mdsite.yaml --extract
 ```
 
-Without either, the build makes no network calls (page-meta.json is still generated
-from frontmatter and derived fields) and logs that enrichment was skipped.
-`npm run ingest` and the watcher read `mdsite.yaml` when present, so `on_build: true`
-enriches there too; `--enrich` is CLI-only.
+Without either, the build makes no network calls — the structural graph (folders, pages,
+sections, word count, reading time, links, dates) is still written — and logs that
+extraction was skipped. `npm run ingest` and the watcher read `mdsite.yaml` when present,
+so `on_build: true` extracts there too; `--extract` is CLI-only. Extraction issues many
+taggly calls and runs noticeably longer, logging per-page progress.
 See the [Metadata Contract](/specifications/metadata) spec for the full schema.
 
-### Enrichment in CI
+### Extraction in CI
 
-The deploy workflow supports enrichment behind the `ENRICH` repository variable: when
+The deploy workflow supports extraction behind the `ENRICH` repository variable: when
 set to `true`, it installs taggly from source, starts it in the background, waits for
-`/status`, and passes `--enrich` to the CLI build. Model downloads are cached between
+`/status`, and passes `--extract` to the CLI build. Model downloads are cached between
 runs (`~/.cache/huggingface`). External projects using the mdsite Docker image can do
-the same — run taggly next to the build container and point `enrich.url` at it.
+the same — run taggly next to the build container and point `extract.url` at it.
 
 ## Nav ordering
 
@@ -178,7 +186,7 @@ Set them under **Settings → Secrets and variables → Actions → Variables**.
 |----------|---------|-------------|
 | `CONTENT_SOURCE` | `docs` | Path to content directory, relative to repo root |
 | `BASE_PATH` | _(empty)_ | Subpath prefix for project pages repos (e.g. `/mdsite`) |
-| `ENRICH` | _(empty)_ | Set to `true` to run taggly NLP enrichment during deployment |
+| `ENRICH` | _(empty)_ | Set to `true` to run taggly NLP extraction during deployment |
 
 ## CLI overrides
 

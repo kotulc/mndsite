@@ -59,33 +59,36 @@ describe('load_config — theme resolution', () => {
 })
 
 
-describe('load_config — enrich block', () => {
-  test('test_enrich_defaults_applied', () => {
-    /** Config without an enrich block resolves to disabled strict enrichment. */
+describe('load_config — extract block', () => {
+  test('test_extract_defaults_applied', () => {
+    /** Config without an extract block resolves to disabled strict extraction with taggly defaults. */
     const cfg = load_config(write_yaml('title: t'))
-    expect(cfg.enrich).toEqual({
-      url: '', fields: ['description', 'tags', 'categories'], metrics: [], strict: true, on_build: false,
+    expect(cfg.extract).toMatchObject({
+      url: '', on_build: false, strict: true, max_comparisons: 128, top_n_related: 3,
     })
+    expect(cfg.extract.taggly.tag).toMatchObject({ top_n: 10, normalize: true })
+    expect(cfg.extract.taggly.spam).toEqual({ threshold: 0.5 })
   })
 
-  test('test_enrich_partial_block_merges_defaults', () => {
-    /** An enrich block with only url keeps default fields and strict mode. */
-    const cfg = load_config(write_yaml('title: t\nenrich:\n  url: http://127.0.0.1:8000'))
-    expect(cfg.enrich.url).toBe('http://127.0.0.1:8000')
-    expect(cfg.enrich.fields).toEqual(['description', 'tags', 'categories'])
-    expect(cfg.enrich.strict).toBe(true)
+  test('test_extract_partial_block_merges_defaults', () => {
+    /** An extract block with only url keeps default limits and taggly params. */
+    const cfg = load_config(write_yaml('title: t\nextract:\n  url: http://127.0.0.1:8000'))
+    expect(cfg.extract.url).toBe('http://127.0.0.1:8000')
+    expect(cfg.extract.top_n_related).toBe(3)
+    expect(cfg.extract.taggly.tag.top_n).toBe(10)
   })
 
-  test('test_enrich_invalid_field_throws', () => {
-    /** Unknown enrich field fails config loading with the valid names. */
-    const p = write_yaml('title: t\nenrich:\n  fields: [summary]')
-    expect(() => load_config(p)).toThrow(/unknown enrich\.fields 'summary'.*description, tags, categories/)
+  test('test_extract_taggly_params_override', () => {
+    /** A taggly param override deep-merges over the command's defaults. */
+    const cfg = load_config(write_yaml('title: t\nextract:\n  taggly:\n    tag: { top_n: 5 }'))
+    expect(cfg.extract.taggly.tag.top_n).toBe(5)
+    expect(cfg.extract.taggly.tag.normalize).toBe(true)  // untouched default retained
   })
 
-  test('test_enrich_invalid_metric_throws', () => {
-    /** Unknown enrich metric fails config loading with the valid names. */
-    const p = write_yaml('title: t\nenrich:\n  metrics: [sentiment]')
-    expect(() => load_config(p)).toThrow(/unknown enrich\.metrics 'sentiment'.*polarity, spam, toxicity/)
+  test('test_extract_unknown_taggly_command_throws', () => {
+    /** An unknown taggly command name fails config loading with the valid names. */
+    const p = write_yaml('title: t\nextract:\n  taggly:\n    sentiment: {}')
+    expect(() => load_config(p)).toThrow(/unknown extract\.taggly command 'sentiment'.*tag, desc/)
   })
 })
 
@@ -131,6 +134,6 @@ describe('write_site_config — generated keys', () => {
     expect(out).not.toHaveProperty('theme_mood')
     expect(out).not.toHaveProperty('logo_seed')
     expect(out).not.toHaveProperty('meta_sidebar')
-    expect(out).not.toHaveProperty('enrich')
+    expect(out).not.toHaveProperty('extract')
   })
 })
