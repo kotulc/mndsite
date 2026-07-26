@@ -6,13 +6,13 @@ const fs   = require('fs')
 const os   = require('os')
 const path = require('path')
 
-const { parse_fm, sort_entries, extract_content, auto_index, norm_path, slug_to_title } = require('../../scripts/ingest')
+const { parse_fm, sort_entries, extract_content, auto_index, inject_section_markers, rewrite_md_links, norm_path, slug_to_title } = require('../../scripts/ingest')
 
 
 // --- sort_entries ---
 
 function entry(slug, opts = {}) {
-  return { slug, title: slug, date: opts.date || '' }
+  return { slug, title: slug, published: opts.date || '' }
 }
 
 // Rels not present in site.config nav_order — use auto-detection
@@ -201,6 +201,64 @@ describe('extract_content', () => {
 })
 
 
+// --- rewrite_md_links ---
+
+describe('rewrite_md_links', () => {
+  test('test_rewrite_resolves_relative_link_against_containing_folder', () => {
+    /** A relative sibling link resolves against the source file's own directory,
+     *  not the page's own rendered URL (which would nest it one level too deep). */
+    const out = rewrite_md_links('[Content Pipeline](content-pipeline)', '/features/')
+    expect(out).toBe('[Content Pipeline](/features/content-pipeline)')
+  })
+
+  test('test_rewrite_leaves_absolute_links_untouched', () => {
+    /** Links already starting with /, a scheme, or # pass through unchanged. */
+    const mdx = '[a](/x) [b](https://x.com) [c](mailto:x@x.com) [d](#frag)'
+    expect(rewrite_md_links(mdx, '/features/')).toBe(mdx)
+  })
+
+  test('test_rewrite_skips_image_links', () => {
+    /** Image markdown (![...]) is never rewritten as a page link. */
+    const mdx = '![alt](diagram.png)'
+    expect(rewrite_md_links(mdx, '/features/')).toBe(mdx)
+  })
+
+  test('test_rewrite_preserves_fragment_and_trailing_text', () => {
+    /** A relative link with a #fragment and trailing title keeps both after rewriting. */
+    const out = rewrite_md_links('[Fields](configuration#fields "see fields")', '/features/')
+    expect(out).toBe('[Fields](/features/configuration#fields "see fields")')
+  })
+})
+
+
+// --- inject_section_markers ---
+
+describe('inject_section_markers', () => {
+  test('test_inject_marks_h2_and_h3_in_document_order', () => {
+    /** Each ##/### heading gets a <SectionMarker i={N}/>, N counting from 0. */
+    const mdx = '# Title\n\n## Fields\n\nBody.\n\n### Sub\n\nMore.\n\n## Extraction\n\nEnd.\n'
+    const out = inject_section_markers(mdx)
+    expect(out).toContain('## Fields\n\n<SectionMarker i={0} />')
+    expect(out).toContain('### Sub\n\n<SectionMarker i={1} />')
+    expect(out).toContain('## Extraction\n\n<SectionMarker i={2} />')
+  })
+
+  test('test_inject_skips_h1_and_h4', () => {
+    /** The page title (h1) and headings deeper than ### are not marked. */
+    const mdx = '# Title\n\n#### Deep\n\nBody.\n'
+    const out = inject_section_markers(mdx)
+    expect(out).not.toContain('SectionMarker')
+  })
+
+  test('test_inject_skips_headings_inside_code_fences', () => {
+    /** A ## inside a code fence is not treated as a heading. */
+    const mdx = '# Title\n\n```md\n## Not a heading\n```\n'
+    const out = inject_section_markers(mdx)
+    expect(out).not.toContain('SectionMarker')
+  })
+})
+
+
 // --- pages output (integration) ---
 
 const PAGES = path.join(__dirname, '../../pages')
@@ -282,8 +340,8 @@ describe('site graph output', () => {
     /** Page nodes carry structural fields and a nested section tree (no taggly needed). */
     const page = flatten_pages(graph()).find(p => p.url === '/configuration')
     expect(page).toMatchObject({ type: 'page', slug: 'configuration' })
-    expect(page.word_count).toBeGreaterThan(0)
-    expect(page.reading_time).toBeGreaterThanOrEqual(1)
+    expect(page.metrics.word_count).toBeGreaterThan(0)
+    expect(page.metrics.reading_time).toBeGreaterThanOrEqual(1)
     expect(page.children.map(s => s.name)).toContain('Fields')
     expect(Array.isArray(page.links)).toBe(true)
     expect(typeof page.hash).toBe('string')

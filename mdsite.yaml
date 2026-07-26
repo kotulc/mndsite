@@ -13,9 +13,6 @@ theme:
 extract:
   url: http://127.0.0.1:8000
   on_build: true
-  max_comparisons: 128
-  top_n_related: 3
-  extract_descriptions: true
 
 content: ./docs
 output: ./dist

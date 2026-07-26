@@ -4,16 +4,22 @@
  * layers NLP metadata onto every page and section node:
  *   - tags:    concept groups (via /ext), entities (via /ent), keywords (via /key),
  *              each capped to its configured size via taggly's own top_n (or a plain
- *              slice for /ext, which has no top_n of its own)
- *   - metrics: polarity, spam, toxicity (via /polar, /spam, /tox)
+ *              slice for /ext, which has no top_n of its own) — re-capped after
+ *              aggregation too, since a union of children can exceed the limit again
+ *   - metrics: polarity, spam, toxicity (via /polar, /spam, /tox), merged into the
+ *              same metrics object that already carries structural word_count/
+ *              reading_time (scripts/graph.js) rather than replacing it
  * Leaf content is scored directly; parent nodes aggregate their children (tag groups
- * union+dedupe, metrics average). Page descriptions (via /desc) are optional and
+ * union+dedupe+re-cap, metrics average). Page descriptions (via /desc) are optional and
  * computed once per page directly from its full text — not aggregated from sections.
  * Related pages are scored per page via /score, comparing descriptions when available
  * (extract_descriptions) and falling back to each page's combined tag terms otherwise.
+ * Each page also gets page_tags: its page_tags-count (default 5) most relevant non-
+ * keyword tags overall, selected via /rank against the page's own text — the page
+ * title itself is excluded from candidates before ranking.
  * Pages whose content hash matches the previous build are skipped and carry their
- * previous tags/metrics/desc forward unchanged; changing the extract config invalidates
- * this cache for every page. All output lands in the graph.
+ * previous tags/metrics/desc/page_tags forward unchanged; changing the extract config
+ * invalidates this cache for every page. All output lands in the graph.
  * Enabled by extract.url in mdsite.yaml; runs only via --extract or extract.on_build.
  */
 const crypto = require('crypto')
@@ -23,12 +29,12 @@ const { flatten_pages, plain_text } = require('./graph')
 // Input length caps: taggly's extraction/classifier models silently degrade (empty
 // results, no error) or reject requests above roughly 512 tokens of input.
 const TEXT_MAX = 1500   // /ext, /ent, /key, /polar, /spam, /tox
-const DESC_MAX  = 8000  // /desc, /score (generative/embedding, tolerate far more input)
+const DESC_MAX  = 8000  // /desc, /score, /rank (generative/embedding, tolerate far more input)
 
 // extract config fields that change what taggly computes — hashed to invalidate the
 // per-page content-hash cache when the user edits extraction settings
 const CONFIG_FIELDS = [
-  'extract_concepts', 'max_concepts', 'max_keywords', 'max_entities',
+  'extract_concepts', 'max_concepts', 'max_keywords', 'max_entities', 'page_tags',
   'score_polarity', 'score_toxicity', 'score_spam', 'extract_descriptions',
 ]
 
@@ -127,10 +133,21 @@ function mean_scores(values) {
 }
 
 
-function aggregate_tags(metas) {
-  /** Union each tag group across children (deduped, first-seen order). */
+function group_cap(cfg, group) {
+  /** The configured max size for a tag group by name (entities/keywords have their
+   *  own limits; every /ext concept group shares max_concepts). */
+  if (group === 'entities') return cfg.max_entities
+  if (group === 'keywords') return cfg.max_keywords
+  return cfg.max_concepts
+}
+
+
+function aggregate_tags(metas, cfg) {
+  /** Union each tag group across children (deduped, first-seen order), then re-cap to
+   *  the configured size — a union of already-capped children can still exceed it. */
   const groups = new Set(metas.flatMap(m => Object.keys(m.tags || {})))
-  return Object.fromEntries([...groups].map(g => [g, union(metas.map(m => (m.tags || {})[g] || []))]))
+  return Object.fromEntries([...groups].map(g =>
+    [g, union(metas.map(m => (m.tags || {})[g] || [])).slice(0, group_cap(cfg, g))]))
 }
 
 
@@ -143,7 +160,9 @@ function aggregate_metrics(metas) {
 
 async function extract_node(node, call, cfg) {
   /** Bottom-up: enrich all child sections, then set this node's tags/metrics from its
-   *  own content plus its children's (single-source nodes pass through unchanged). */
+   *  own content plus its children's (single-source nodes pass through unchanged).
+   *  metrics is merged, not replaced — pages already carry structural word_count/
+   *  reading_time there (scripts/graph.js) before extraction adds polarity/spam/toxicity. */
   for (const child of node.children || []) await extract_node(child, call, cfg)
 
   const metas = []
@@ -157,10 +176,10 @@ async function extract_node(node, call, cfg) {
 
   if (metas.length === 1) {
     if (metas[0].tags)    node.tags    = metas[0].tags
-    if (metas[0].metrics) node.metrics = metas[0].metrics
+    if (metas[0].metrics) node.metrics = { ...node.metrics, ...metas[0].metrics }
   } else if (metas.length > 1) {
-    node.tags    = aggregate_tags(metas)
-    node.metrics = aggregate_metrics(metas)
+    node.tags    = aggregate_tags(metas, cfg)
+    node.metrics = { ...node.metrics, ...aggregate_metrics(metas) }
   }
 }
 
@@ -175,6 +194,47 @@ async function page_desc(call, page) {
   /** Generate a page's description directly from its full text (not from tags/sections). */
   const prose = plain_text(page_text(page)).slice(0, DESC_MAX)
   page.desc = prose ? (await call('desc', { content: prose })).description : ''
+}
+
+
+function tag_candidates(tags, title) {
+  /** Flat { term, group } list from every non-keyword group on a page's full (aggregated)
+   *  tags, deduped by term and excluding any term matching the page title (case-insensitive) —
+   *  a concept/topic that just restates the title isn't worth surfacing as a page tag. */
+  const title_lc = (title || '').trim().toLowerCase()
+  const seen = new Set()
+  const out = []
+  for (const [group, terms] of Object.entries(tags || {})) {
+    if (group === 'keywords') continue
+    for (const term of terms) {
+      const term_lc = term.toLowerCase()
+      if (term_lc === title_lc || seen.has(term_lc)) continue
+      seen.add(term_lc)
+      out.push({ term, group })
+    }
+  }
+  return out
+}
+
+
+async function select_page_tags(call, cfg, page) {
+  /** A page's page_tags-count most relevant non-keyword tags overall, selected via
+   *  /rank against the page's own text, regrouped for TagList's per-group coloring. */
+  const candidates = tag_candidates(page.tags, page.name)
+  if (!candidates.length || cfg.page_tags <= 0) return {}
+
+  const query = plain_text(page_text(page)).slice(0, DESC_MAX)
+  const { ranked } = await call('rank', { query, candidates: candidates.map(c => c.term) }, { top_n: cfg.page_tags })
+
+  const group_of = new Map(candidates.map(c => [c.term, c.group]))
+  const tags = {}
+  for (const term of ranked) {
+    const group = group_of.get(term)
+    if (!group) continue
+    if (!tags[group]) tags[group] = []
+    tags[group].push(term)
+  }
+  return tags
 }
 
 
@@ -209,11 +269,14 @@ async function compute_related(pages, call, cfg) {
 
 
 function copy_forward(prior, node) {
-  /** Copy a matched previous page's tags/metrics/desc/updated onto its rebuilt node,
-   *  recursing into children (safe: identical content hash implies identical structure). */
+  /** Copy a matched previous page's tags/metrics/desc/page_tags/updated onto its rebuilt
+   *  node, recursing into children (safe: identical content hash implies identical
+   *  structure). metrics is merged so the freshly-built structural word_count/
+   *  reading_time survive. */
   if (prior.tags)    node.tags    = prior.tags
-  if (prior.metrics) node.metrics = prior.metrics
+  if (prior.metrics) node.metrics = { ...node.metrics, ...prior.metrics }
   if (prior.desc !== undefined) node.desc = prior.desc
+  if (prior.page_tags) node.page_tags = prior.page_tags
   node.updated = prior.updated
   const prior_children = prior.children || []
   ;(node.children || []).forEach((child, i) => { if (prior_children[i]) copy_forward(prior_children[i], child) })
@@ -246,6 +309,7 @@ async function extract_graph(root, cfg, log = () => {}, previous = {}, previous_
     log(`page ${i + 1}/${pages.length}: ${page.url}`)
     await extract_node(page, call, cfg)
     if (cfg.extract_descriptions) await page_desc(call, page)
+    page.page_tags = await select_page_tags(call, cfg, page)
     page.updated = new Date().toISOString()
   }
 
@@ -258,6 +322,6 @@ async function extract_graph(root, cfg, log = () => {}, previous = {}, previous_
 
 module.exports = {
   check_service, extract_graph, extract_node, node_tags, node_metrics, page_desc,
-  aggregate_tags, aggregate_metrics, compute_related, mean_scores, union,
-  tags_string, compare_text, config_hash, query_string,
+  tag_candidates, select_page_tags, aggregate_tags, aggregate_metrics, compute_related,
+  mean_scores, union, tags_string, compare_text, config_hash, query_string,
 }

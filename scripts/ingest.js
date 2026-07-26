@@ -84,6 +84,21 @@ function rewrite_md_links(content, url_base) {
 }
 
 
+function inject_section_markers(content) {
+  /** Insert a <SectionMarker i={N}/> after each ##/### heading (fence-aware), N counting
+   *  document order — matches that section's index in the site graph, so the invisible
+   *  scroll marker can report position without needing an id/slug at ingest time.
+   *  extract_content() already strips bare self-closing JSX tags, so feed cards stay clean. */
+  let n = 0
+  let in_fence = false
+  return content.replace(/\r\n?/g, '\n').split('\n').flatMap(line => {
+    if (/^```/.test(line)) { in_fence = !in_fence; return [line] }
+    if (!in_fence && /^#{2,3}\s/.test(line)) return [line, '', `<SectionMarker i={${n++}} />`, '']
+    return [line]
+  }).join('\n')
+}
+
+
 function ensure_h1(mdx_path, title) {
   /** Prepend # title heading if the file's body has no h1 outside code fences.
    *  Handles files with or without a frontmatter block. */
@@ -127,13 +142,13 @@ function norm_path(p) {
 // --- Sorting and navigation ---
 
 function auto_sort(nodes) {
-  /** Sort nodes: newest-first by date when any has a date, else alphabetical by slug.
-   *  Undated nodes always sort alphabetically after dated ones. */
-  const dated   = nodes.filter(n => n.date)
-  const undated = nodes.filter(n => !n.date)
+  /** Sort nodes: newest-first by published date when any has one, else alphabetical
+   *  by slug. Undated nodes always sort alphabetically after dated ones. */
+  const dated   = nodes.filter(n => n.published)
+  const undated = nodes.filter(n => !n.published)
   if (!dated.length) return [...nodes].sort((a, b) => a.slug.localeCompare(b.slug))
   return [
-    ...dated.sort((a, b)   => b.date.localeCompare(a.date) || a.slug.localeCompare(b.slug)),
+    ...dated.sort((a, b)   => b.published.localeCompare(a.published) || a.slug.localeCompare(b.slug)),
     ...undated.sort((a, b) => a.slug.localeCompare(b.slug)),
   ]
 }
@@ -222,9 +237,12 @@ function ingest_page(src_entry, dest_dir, rel, slug, base, img_url) {
   /** Transform one source file into a frontmatter-free .mdx and return its page node. */
   const raw = fs.readFileSync(src_entry, 'utf8').replace(/\r\n?/g, '\n')
   const fm  = parse_fm(raw)
-  const url_base = slug === 'index'
-    ? (rel ? `/${rel}/` : '/')
-    : (rel ? `/${rel}/${slug}/` : `/${slug}/`)
+  // Relative links resolve against the source file's own directory (where the author
+  // wrote them relative to), not the page's rendered pretty-URL — those only coincide
+  // for index pages. Using the page's own slug as a path segment here would nest a
+  // sibling page's link one level too deep (e.g. features/overview.md linking to
+  // "content-pipeline" would wrongly resolve under /features/overview/ instead of /features/).
+  const url_base = rel ? `/${rel}/` : '/'
 
   const dest = path.join(dest_dir, `${slug}.mdx`)
   fs.writeFileSync(dest, rewrite_md_links(rewrite_img_refs(strip_fm(raw), img_url), url_base))
@@ -232,15 +250,21 @@ function ingest_page(src_entry, dest_dir, rel, slug, base, img_url) {
   const title = fm.title || first_h1(fs.readFileSync(dest, 'utf8')) || slug_to_title(base)
   if (slug !== 'index') ensure_h1(dest, title)
 
+  const content = fs.readFileSync(dest, 'utf8')
   const parts = [...(rel ? rel.split('/') : []), ...(slug === 'index' ? [] : [slug])]
-  return graph.build_page({
+  const page = graph.build_page({
     slug,
     title,
-    url:     '/' + parts.join('/') || '/',
-    content: fs.readFileSync(dest, 'utf8'),
-    date:    fm.date ? String(fm.date).slice(0, 10) : '',
-    created: fs.statSync(src_entry).mtime.toISOString().slice(0, 10),
+    url:       '/' + parts.join('/') || '/',
+    content,
+    published: fm.date ? String(fm.date).slice(0, 10) : '',
+    created:   fs.statSync(src_entry).mtime.toISOString().slice(0, 10),
   })
+
+  // Written after the graph is built from the clean content — markers never leak
+  // into hashing, extraction input, or the graph's own `content` field.
+  fs.writeFileSync(dest, inject_section_markers(content))
+  return page
 }
 
 
@@ -301,9 +325,9 @@ function emit_feed(dest_dir, sorted, rel, dir_title) {
   const feed_entries = sorted
     .filter(n => n.slug !== 'index' && fs.existsSync(path.join(dest_dir, `${n.slug}.mdx`)))
     .map(n => ({
-      url: n.url, title: n.name, date: n.date,
+      url: n.url, title: n.name, date: n.published,
       categories: (n.tags && n.tags.categories) || [], tags: (n.tags && n.tags.keywords) || [],
-      reading_time: n.reading_time,
+      reading_time: n.metrics && n.metrics.reading_time,
       content: extract_content(fs.readFileSync(path.join(dest_dir, `${n.slug}.mdx`), 'utf8')),
     }))
   const name = rel.replace(/\//g, '-') || 'root'
@@ -438,7 +462,8 @@ async function run(config) {
 
 module.exports = {
   parse_fm, strip_fm, first_h1, sort_entries, extract_content, auto_index,
-  ensure_h1, norm_path, slug_to_title, sync_assets, sync_components, run,
+  ensure_h1, inject_section_markers, rewrite_md_links, norm_path, slug_to_title,
+  sync_assets, sync_components, run,
 }
 
 

@@ -6,6 +6,7 @@
  */
 const {
   extract_graph, extract_node, node_tags, node_metrics, page_desc,
+  tag_candidates, select_page_tags,
   aggregate_tags, aggregate_metrics, compute_related, compare_text,
   mean_scores, union, tags_string, config_hash, query_string,
 } = require('../../scripts/extract')
@@ -15,7 +16,7 @@ const CFG = {
   url: 'http://test', max_comparisons: 128, top_n_related: 3,
   extract_descriptions: true,
   extract_concepts: ['categories', 'topics', 'concepts'],
-  max_concepts: 8, max_keywords: 32, max_entities: 8,
+  max_concepts: 8, max_keywords: 32, max_entities: 8, page_tags: 5,
   score_polarity: true, score_toxicity: true, score_spam: true,
 }
 
@@ -29,6 +30,7 @@ const RESPONSES = {
   spam:  { score: 0.04 },
   tox:   { score: 0.002 },
   score: { scores: [0.9, 0.1] },
+  rank:  { ranked: ['c1', 't1', 'x1', 'e1'] },
 }
 
 function make_call(overrides = {}) {
@@ -108,7 +110,17 @@ describe('aggregate_tags / aggregate_metrics', () => {
       { tags: { topics: ['a', 'b'], keywords: ['k'] } },
       { tags: { topics: ['b', 'c'], entities: ['e'] } },
     ]
-    expect(aggregate_tags(metas)).toEqual({ topics: ['a', 'b', 'c'], keywords: ['k'], entities: ['e'] })
+    expect(aggregate_tags(metas, CFG)).toEqual({ topics: ['a', 'b', 'c'], keywords: ['k'], entities: ['e'] })
+  })
+
+  test('test_aggregate_tags_recaps_group_after_union', () => {
+    /** A union of already-capped children can still exceed the limit — re-cap it. */
+    const metas = [
+      { tags: { keywords: ['a', 'b', 'c'] } },
+      { tags: { keywords: ['d', 'e', 'f'] } },
+    ]
+    const capped = aggregate_tags(metas, { ...CFG, max_keywords: 4 })
+    expect(capped.keywords).toEqual(['a', 'b', 'c', 'd'])
   })
 
   test('test_aggregate_metrics_means_each_key', () => {
@@ -143,6 +155,17 @@ describe('extract_node — bottom-up', () => {
     expect(node.tags.topics).toEqual(['t1'])   // unioned from both children (deduped)
     expect(node.metrics.spam).toBe(0.04)       // mean of equal children values
   })
+
+  test('test_extract_node_merges_metrics_onto_structural_fields', async () => {
+    /** Pre-existing structural metrics (word_count/reading_time from graph.js) survive
+     *  alongside the NLP metrics extraction adds — metrics is merged, not replaced. */
+    const node = { name: 'P', type: 'page', content: 'text', metrics: { word_count: 42, reading_time: 1 }, children: [] }
+    await extract_node(node, make_call(), CFG)
+    expect(node.metrics).toEqual({
+      word_count: 42, reading_time: 1,
+      polarity: RESPONSES.polar.scores, spam: RESPONSES.spam.score, toxicity: RESPONSES.tox.score,
+    })
+  })
 })
 
 
@@ -166,6 +189,67 @@ describe('page_desc', () => {
     const page = { content: '', children: [] }
     await page_desc(call, page)
     expect(page.desc).toBe('')
+    expect(call).not.toHaveBeenCalled()
+  })
+})
+
+
+describe('tag_candidates', () => {
+  test('test_tag_candidates_excludes_keywords_and_title', () => {
+    /** keywords never become candidates; a term matching the title (any case) is dropped. */
+    const tags = { categories: ['Configuration', 'reference'], keywords: ['config', 'yaml'] }
+    expect(tag_candidates(tags, 'configuration')).toEqual([{ term: 'reference', group: 'categories' }])
+  })
+
+  test('test_tag_candidates_dedupes_across_groups', () => {
+    /** The same term appearing in two groups is only kept once, from the first group seen. */
+    const tags = { categories: ['setup'], topics: ['setup', 'install'] }
+    expect(tag_candidates(tags, '')).toEqual([
+      { term: 'setup', group: 'categories' }, { term: 'install', group: 'topics' },
+    ])
+  })
+
+  test('test_tag_candidates_empty_for_no_tags', () => {
+    expect(tag_candidates(undefined, 'x')).toEqual([])
+    expect(tag_candidates({}, 'x')).toEqual([])
+  })
+})
+
+
+describe('select_page_tags', () => {
+  test('test_select_page_tags_ranks_with_page_text_as_query', async () => {
+    /** /rank is called with the page's own text and every non-keyword, non-title term. */
+    const page = { name: 'P', content: 'intro', children: [], tags: { categories: ['c1'], keywords: ['k1'] } }
+    const call = jest.fn((cmd, body, params) => {
+      expect(cmd).toBe('rank')
+      expect(body).toEqual({ query: 'intro', candidates: ['c1'] })
+      expect(params).toEqual({ top_n: CFG.page_tags })
+      return Promise.resolve({ ranked: ['c1'] })
+    })
+    await select_page_tags(call, CFG, page)
+    expect(call).toHaveBeenCalled()
+  })
+
+  test('test_select_page_tags_regroups_ranked_terms_by_original_group', async () => {
+    /** The flat /rank result is rebuilt into a {group: [terms]} shape for TagList. */
+    const page = { name: 'P', content: 'x', children: [], tags: { categories: ['c1'], topics: ['t1', 't2'] } }
+    const call = () => Promise.resolve({ ranked: ['t2', 'c1'] })
+    expect(await select_page_tags(call, CFG, page)).toEqual({ topics: ['t2'], categories: ['c1'] })
+  })
+
+  test('test_select_page_tags_empty_without_candidates', async () => {
+    /** No taggly call when there's nothing to rank (e.g. only keywords, or no tags at all). */
+    const call = jest.fn()
+    const page = { name: 'P', content: '', children: [], tags: { keywords: ['k1'] } }
+    expect(await select_page_tags(call, CFG, page)).toEqual({})
+    expect(call).not.toHaveBeenCalled()
+  })
+
+  test('test_select_page_tags_empty_when_disabled', async () => {
+    /** page_tags <= 0 disables the feature entirely, even with candidates available. */
+    const call = jest.fn()
+    const page = { name: 'P', content: 'x', children: [], tags: { categories: ['c1'] } }
+    expect(await select_page_tags(call, { ...CFG, page_tags: 0 }, page)).toEqual({})
     expect(call).not.toHaveBeenCalled()
   })
 })
@@ -270,6 +354,7 @@ describe('extract_graph', () => {
     expect(graph.children[0].tags.keywords).toEqual(['k1', 'k2'])
     expect(graph.children[0].desc).toBe('A summary.')
     expect(graph.children[0].related[0]).toMatchObject({ url: '/b', score: 0.9 })
+    expect(graph.children[0].page_tags).toEqual({ categories: ['c1'], topics: ['t1'], concepts: ['x1'], entities: ['e1'] })
     expect(graph.children[0].updated).toEqual(expect.any(String))
     expect(graph.extract_config).toBe(config_hash(CFG))
   })
@@ -280,11 +365,15 @@ describe('extract_graph', () => {
     const page = build_page({ slug: 'a', title: 'a', url: '/a', content: '# a\n\nintro\n' })
     const graph = root_node({ name: 'Site', children: [page] })
     const previous = {
-      '/a': { ...page, tags: { keywords: ['cached'] }, metrics: { spam: 0.5 }, desc: 'cached desc', updated: '2020-01-01T00:00:00.000Z' },
+      '/a': {
+        ...page, tags: { keywords: ['cached'] }, metrics: { spam: 0.5 }, desc: 'cached desc',
+        page_tags: { categories: ['cached-tag'] }, updated: '2020-01-01T00:00:00.000Z',
+      },
     }
     await extract_graph(graph, CFG, () => {}, previous, config_hash(CFG))
     expect(graph.children[0].tags).toEqual({ keywords: ['cached'] })
     expect(graph.children[0].desc).toBe('cached desc')
+    expect(graph.children[0].page_tags).toEqual({ categories: ['cached-tag'] })
     expect(graph.children[0].updated).toBe('2020-01-01T00:00:00.000Z')
     expect(fetch).not.toHaveBeenCalled()   // single page, no peers to compare for related
   })

@@ -21,9 +21,9 @@ const DEFAULTS = {
   extract:        {
     url: '', on_build: false, strict: true,
     max_comparisons: 128, top_n_related: 3,
-    extract_descriptions: false,
+    extract_descriptions: true,
     extract_concepts: ['categories', 'topics', 'concepts'],
-    max_concepts: 8, max_keywords: 32, max_entities: 8,
+    max_concepts: 4, max_keywords: 32, max_entities: 4, page_tags: 5,
     score_polarity: true, score_toxicity: true, score_spam: true,
   },
   flatten:        [],
@@ -64,6 +64,7 @@ function resolve_extract(raw) {
   cfg.max_concepts    = parseInt(cfg.max_concepts, 10)
   cfg.max_keywords    = parseInt(cfg.max_keywords, 10)
   cfg.max_entities    = parseInt(cfg.max_entities, 10)
+  cfg.page_tags       = parseInt(cfg.page_tags, 10)
   cfg.extract_descriptions = !!cfg.extract_descriptions
   cfg.score_polarity  = cfg.score_polarity !== false
   cfg.score_toxicity  = cfg.score_toxicity !== false
@@ -84,8 +85,14 @@ function write_site_config(config, dest_dir) {
     'theme_toggle', 'toc', 'reading_time',
     'theme', 'flatten', 'nav_order',
   ]
-  const body = keys
-    .map(k => `  ${k}: ${JSON.stringify(config[k])}`)
+  // page_tags is extract-only at load time, but the UI needs the limit (PageInfo
+  // caps per-section chips to the same count used for page-level chips).
+  const values = {
+    ...Object.fromEntries(keys.map(k => [k, config[k]])),
+    page_tags: config.extract.page_tags,
+  }
+  const body = Object.entries(values)
+    .map(([k, v]) => `  ${k}: ${JSON.stringify(v)}`)
     .join(',\n')
 
   fs.writeFileSync(

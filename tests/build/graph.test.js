@@ -50,11 +50,11 @@ describe('build_page', () => {
                   '## Section One\n\nSome words in the first section.\n'
 
   test('test_build_page_structural_fields', () => {
-    /** A page node carries name, url, slug, dates, counts, links, intro, sections. */
-    const node = build_page({ slug: 'my-page', title: 'My Page', url: '/my-page', content, date: '2026-01-15', created: '2026-07-20' })
-    expect(node).toMatchObject({ name: 'My Page', type: 'page', url: '/my-page', slug: 'my-page', date: '2026-01-15', created: '2026-07-20' })
-    expect(node.word_count).toBeGreaterThan(0)
-    expect(node.reading_time).toBeGreaterThanOrEqual(1)
+    /** A page node carries name, url, slug, dates, metrics, links, intro, sections. */
+    const node = build_page({ slug: 'my-page', title: 'My Page', url: '/my-page', content, published: '2026-01-15', created: '2026-07-20' })
+    expect(node).toMatchObject({ name: 'My Page', type: 'page', url: '/my-page', slug: 'my-page', published: '2026-01-15', created: '2026-07-20' })
+    expect(node.metrics.word_count).toBeGreaterThan(0)
+    expect(node.metrics.reading_time).toBeGreaterThanOrEqual(1)
     expect(node.children.map(s => s.name)).toEqual(['Section One'])
     expect(node.content).toContain('Intro line')  // intro is text before first ##
   })

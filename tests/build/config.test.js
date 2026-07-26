@@ -65,9 +65,9 @@ describe('load_config — extract block', () => {
     const cfg = load_config(write_yaml('title: t'))
     expect(cfg.extract).toEqual({
       url: '', on_build: false, strict: true, max_comparisons: 128, top_n_related: 3,
-      extract_descriptions: false,
+      extract_descriptions: true,
       extract_concepts: ['categories', 'topics', 'concepts'],
-      max_concepts: 8, max_keywords: 32, max_entities: 8,
+      max_concepts: 4, max_keywords: 32, max_entities: 4, page_tags: 5,
       score_polarity: true, score_toxicity: true, score_spam: true,
     })
   })
@@ -84,9 +84,11 @@ describe('load_config — extract block', () => {
   test('test_extract_numeric_and_bool_fields_override', () => {
     /** Numeric limits, the description toggle, and score toggles all override cleanly. */
     const cfg = load_config(write_yaml([
-      'title: t', 'extract:', '  max_concepts: 4', '  extract_descriptions: true', '  score_spam: false',
+      'title: t', 'extract:', '  max_concepts: 6', '  page_tags: 8',
+      '  extract_descriptions: true', '  score_spam: false',
     ].join('\n')))
-    expect(cfg.extract.max_concepts).toBe(4)
+    expect(cfg.extract.max_concepts).toBe(6)
+    expect(cfg.extract.page_tags).toBe(8)
     expect(cfg.extract.extract_descriptions).toBe(true)
     expect(cfg.extract.score_spam).toBe(false)
     expect(cfg.extract.score_polarity).toBe(true)   // untouched default retained
@@ -127,12 +129,13 @@ describe('resolve_theme — preset tables', () => {
 
 describe('write_site_config — generated keys', () => {
   test('test_write_site_config_includes_new_keys', () => {
-    /** Generated site.config.js carries resolved theme, footer, and description. */
-    const cfg = load_config(write_yaml('title: t\ndescription: d\nfooter: f\ntheme:\n  color: emerald'))
+    /** Generated site.config.js carries resolved theme, footer, description, and page_tags. */
+    const cfg = load_config(write_yaml('title: t\ndescription: d\nfooter: f\ntheme:\n  color: emerald\nextract:\n  page_tags: 8'))
     write_site_config(cfg, tmp)
     const out = require(path.join(tmp, 'site.config.js'))
     expect(out.description).toBe('d')
     expect(out.footer).toBe('f')
+    expect(out.page_tags).toBe(8)
     expect(out.theme).toEqual({
       color: 'emerald', typeset: 'sans', navbar: '', footer: '',
       hue: 161, saturation: 94, font_stack: '',
@@ -148,5 +151,6 @@ describe('write_site_config — generated keys', () => {
     expect(out).not.toHaveProperty('logo_seed')
     expect(out).not.toHaveProperty('meta_sidebar')
     expect(out).not.toHaveProperty('extract')
+    expect(out.page_tags).toBe(5)
   })
 })

@@ -38,11 +38,12 @@ consumed by Next.js and Nextra.
 | `extract.strict` | boolean | `true` | Fail the build when the service is unreachable; `false` warns and skips |
 | `extract.max_comparisons` | integer | `128` | Cap on candidate pages compared per `/score` related-page call |
 | `extract.top_n_related` | integer | `3` | Number of related pages attached to each page node |
-| `extract.extract_descriptions` | boolean | `false` | Generate a page-level SEO `desc` via `/desc` (sections never get one) |
+| `extract.extract_descriptions` | boolean | `true` | Generate a page-level SEO `desc` via `/desc` (sections never get one) |
 | `extract.extract_concepts` | list | `[categories, topics, concepts]` | `/ext` concept groups to request; `[]` disables `/ext` entirely |
-| `extract.max_concepts` | integer | `8` | Max terms kept per `/ext` concept group (via `/rank`) |
-| `extract.max_keywords` | integer | `32` | Max `/key` keywords kept (via `/rank`) |
-| `extract.max_entities` | integer | `8` | Max `/ent` entities kept (via `/rank`) |
+| `extract.max_concepts` | integer | `4` | Max terms kept per `/ext` concept group (plain-sliced) |
+| `extract.max_keywords` | integer | `32` | Max `/key` keywords kept (taggly's native `top_n`) |
+| `extract.max_entities` | integer | `4` | Max `/ent` entities kept (taggly's native `top_n`) |
+| `extract.page_tags` | integer | `5` | Max chips shown for a page (below its title, and in the ToC sidebar) — the most relevant terms overall via `/rank`, page title excluded |
 | `extract.score_polarity` | boolean | `true` | Score `metrics.polarity` via `/polar` |
 | `extract.score_toxicity` | boolean | `true` | Score `metrics.toxicity` via `/tox` |
 | `extract.score_spam` | boolean | `true` | Score `metrics.spam` via `/spam` |
@@ -119,7 +120,12 @@ NLP service that layers metadata onto the [site graph](/specifications/metadata)
 and section gets `tags` (concept groups via `/ext`, entities via `/ent`, keywords via `/key`,
 each capped by `max_concepts`/`max_entities`/`max_keywords`) and `metrics`
 (`polarity`/`spam`/`toxicity`), computed bottom-up (leaf sections scored directly, parents
-aggregated). Pages optionally get a `desc`, and every page always gets a `related` list —
+aggregated). Each page also gets `page_tags` — its `page_tags`-count (default 5) most
+relevant non-keyword tags overall, selected via `/rank` against the page's own text (the
+page title itself is excluded from candidates first, so a tag that just restates the title
+never crowds out something more useful). This is what renders as chips below the title and
+in the ToC sidebar; the full aggregated `tags` still drives the sidebar's per-section
+display. Pages optionally get a `desc`, and every page always gets a `related` list —
 scored via `/score` against other pages' descriptions when available, or their tag terms
 otherwise. All output lands in `public/site-meta.json` — never in frontmatter.
 
@@ -129,11 +135,12 @@ extract:
   on_build: false        # true: extract on every build
   max_comparisons: 128   # cap on candidate pages compared per /score related-page call
   top_n_related: 3       # related pages attached per page
-  extract_descriptions: false        # true: generate a page-level SEO desc via /desc
+  extract_descriptions: true         # false: skip the page-level SEO desc via /desc
   extract_concepts: [categories, topics, concepts]   # /ext groups; [] disables /ext
-  max_concepts: 8        # max terms kept per /ext group (plain-sliced — /ext has no top_n)
+  max_concepts: 4        # max terms kept per /ext group (plain-sliced — /ext has no top_n)
   max_keywords: 32       # max /key keywords kept (taggly's native top_n)
-  max_entities: 8        # max /ent entities kept (taggly's native top_n)
+  max_entities: 4        # max /ent entities kept (taggly's native top_n)
+  page_tags: 5            # max page-level tag chips shown, selected via /rank
   score_polarity: true
   score_toxicity: true
   score_spam: true
@@ -151,12 +158,13 @@ that extraction was skipped. `npm run ingest` and the watcher read `mdsite.yaml`
 present, so `on_build: true` extracts there too; `--extract` is CLI-only.
 
 Pages are only re-extracted when their content hash changes since the previous build —
-unchanged pages copy their prior `tags`/`metrics`/`desc` forward with no taggly calls, so
-incremental builds stay fast. Changing any of `extract_concepts`, `max_concepts`,
-`max_keywords`, `max_entities`, `score_polarity`, `score_toxicity`, `score_spam`, or
-`extract_descriptions` invalidates that cache for every page automatically (the config
-itself is hashed and stored in the graph); `url`/`on_build`/`strict`/`max_comparisons`/
-`top_n_related` don't affect computed output, so changing only those keeps the cache.
+unchanged pages copy their prior `tags`/`metrics`/`desc`/`page_tags` forward with no taggly
+calls, so incremental builds stay fast. Changing any of `extract_concepts`, `max_concepts`,
+`max_keywords`, `max_entities`, `page_tags`, `score_polarity`, `score_toxicity`,
+`score_spam`, or `extract_descriptions` invalidates that cache for every page automatically
+(the config itself is hashed and stored in the graph); `url`/`on_build`/`strict`/
+`max_comparisons`/`top_n_related` don't affect computed output, so changing only those keeps
+the cache.
 Extraction logs per-page progress as it runs.
 See the [Metadata Contract](/specifications/metadata) spec for the full schema.
 

@@ -1,14 +1,15 @@
 /**
  * Structural site-graph construction.
  * Builds the folder / page / section node tree that mirrors the content directory,
- * with structural metadata (word count, reading time, links, dates). NLP metadata is
- * layered on afterward by scripts/extract.js. This module is pure and taggly-free.
+ * with structural metadata (word count, reading time, links, dates) under `metrics`.
+ * NLP metadata is layered on afterward by scripts/extract.js, into the same `metrics`
+ * object. This module is pure and taggly-free.
  *
  * Node shapes (see docs/specifications/metadata.md for the full contract):
  *   root    { name, type:'root',    url:'/', children }
  *   folder  { name, type:'folder',  url, slug, children }
- *   page    { name, type:'page',    url, slug, date, created, hash, word_count,
- *             reading_time, links, content, children:[section] }
+ *   page    { name, type:'page',    url, slug, published, created, hash,
+ *             metrics:{word_count,reading_time}, links, content, children:[section] }
  *   section { name, type:'section', level, content, children:[section] }
  */
 const crypto = require('crypto')
@@ -86,9 +87,10 @@ function section_tree(body) {
 }
 
 
-function build_page({ slug, title, url, content, date, created }) {
+function build_page({ slug, title, url, content, published, created }) {
   /** Build a structural page node from transformed page content (frontmatter stripped,
-   *  title h1 present). NLP fields are added later by scripts/extract.js. */
+   *  title h1 present). NLP fields are added later by scripts/extract.js, merged into
+   *  the same `metrics` object as word_count/reading_time. */
   const body = content.replace(/\r\n?/g, '\n').replace(/^\s*#\s+.+\n?/, '')
   const { intro, sections } = section_tree(body)
   return {
@@ -96,14 +98,13 @@ function build_page({ slug, title, url, content, date, created }) {
     type: 'page',
     url,
     slug,
-    date:         date || '',
-    created:      created || '',
-    hash:         content_hash(content),
-    word_count:   word_count(body),
-    reading_time: reading_time(body),
-    links:        extract_links(content),
-    content:      intro,
-    children:     sections,
+    published: published || '',
+    created:   created || '',
+    hash:      content_hash(content),
+    metrics:   { word_count: word_count(body), reading_time: reading_time(body) },
+    links:     extract_links(content),
+    content:   intro,
+    children:  sections,
   }
 }
 

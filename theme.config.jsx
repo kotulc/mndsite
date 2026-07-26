@@ -1,6 +1,10 @@
+import { useState } from 'react'
 import { useRouter } from 'next/router'
 import PageHeader from './components/PageHeader'
 import TagList from './components/TagList'
+import SectionMarker from './components/SectionMarker'
+import MetaSidebar from './components/MetaSidebar'
+import { PageInfoToggle, PageInfoPanel } from './components/PageInfo'
 import SiteFooter from './components/SiteFooter'
 import GitHubLink from './components/GitHubLink'
 import FeedLink from './components/FeedLink'
@@ -26,26 +30,16 @@ function use_page_meta() {
 
 
 function PageMeta() {
-  /** Renders date, reading time (unless disabled), and category/keyword chips. */
+  /** Renders published date, reading time (unless disabled), and the page's curated
+   *  top page_tags chips (meta.page_tags — ranked, title excluded, see extract.js). */
   const meta = use_page_meta()
-  const mins = siteConfig.reading_time === false ? null : meta.reading_time
-  const tags = meta.tags || {}
+  const metrics = meta.metrics || {}
+  const mins = siteConfig.reading_time === false ? null : metrics.reading_time
   return (
     <>
-      <PageHeader date={meta.date} reading_time={mins} />
-      <TagList categories={tags.categories} tags={tags.keywords} />
+      <PageHeader date={meta.published} reading_time={mins} />
+      <TagList tags={meta.page_tags} />
     </>
-  )
-}
-
-
-function EditLink({ className }) {
-  /** "Edit this page" TOC link to the configured repo; hidden when repo_url is unset. */
-  if (!siteConfig.repo_url) return null
-  return (
-    <a href={siteConfig.repo_url} target="_blank" rel="noopener noreferrer" className={className}>
-      Edit this page
-    </a>
   )
 }
 
@@ -69,11 +63,17 @@ const THEME_CSS = [
 
 
 function PageTitle({ children }) {
-  /** Custom h1 override: renders the heading then immediately injects page metadata. */
+  /** Custom h1 override: renders the heading with an "Info" toggle beside it, the page
+   *  metadata (date/reading time/tags), then the expandable PageInfo panel when open. */
+  const [info_open, set_info_open] = useState(false)
   return (
     <>
-      <h1 className="nx-mt-2 nx-text-4xl nx-font-bold nx-tracking-tight nx-text-slate-900 dark:nx-text-slate-100">{children}</h1>
+      <div className="page-title-row">
+        <h1 className="nx-mt-2 nx-text-4xl nx-font-bold nx-tracking-tight nx-text-slate-900 dark:nx-text-slate-100">{children}</h1>
+        <PageInfoToggle open={info_open} on_toggle={() => set_info_open(v => !v)} />
+      </div>
       <PageMeta />
+      {info_open && <PageInfoPanel />}
     </>
   )
 }
@@ -109,8 +109,10 @@ export default {
     </>
   ),
   feedback: { content: null },
-  editLink: { component: EditLink },
-  toc: siteConfig.toc === false ? { component: () => null } : {},
-  components: { h1: PageTitle },
+  // Nextra renders editLink before toc.extraContent, so its own copy is disabled here —
+  // MetaSidebar renders "Edit this page" itself, last, after description/keywords/links/related.
+  editLink: { component: () => null },
+  toc: siteConfig.toc === false ? { component: () => null } : { extraContent: <MetaSidebar /> },
+  components: { h1: PageTitle, SectionMarker },
   main: ({ children }) => <>{children}</>,
 }

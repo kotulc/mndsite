@@ -1,16 +1,24 @@
 /**
- * Renders page categories and tags as pill chips.
- * Categories use a distinct style from tags.
+ * Renders a node's tag groups (all except keywords) as chips. Each of the standard
+ * groups (categories/topics/concepts/entities) gets its own named chip style; any
+ * other configured extract_concepts group falls back to chip-custom.
  */
 import Chip from './Chip'
 
+const KNOWN_GROUPS = ['categories', 'topics', 'concepts', 'entities']
 
-export default function TagList({ categories = [], tags = [] }) {
-  if (!categories.length && !tags.length) return null
+function group_variant(group) {
+  return KNOWN_GROUPS.includes(group) ? group : 'custom'
+}
+
+export default function TagList({ tags = {} }) {
+  const groups = Object.entries(tags).filter(([group, terms]) => group !== 'keywords' && terms && terms.length)
+  if (!groups.length) return null
   return (
     <div className="tag-list">
-      {categories.map(c => <Chip key={c} label={c} variant="category" />)}
-      {tags.map(t => <Chip key={t} label={t} variant="tag" />)}
+      {groups.map(([group, terms]) =>
+        terms.map(term => <Chip key={`${group}-${term}`} label={term} variant={group_variant(group)} />)
+      )}
     </div>
   )
 }

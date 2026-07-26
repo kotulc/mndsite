@@ -122,11 +122,12 @@ extract:
   strict: true               # fail the build if the service is unreachable
   max_comparisons: 128       # candidate terms/pages compared per /rank call
   top_n_related: 3           # related pages attached per page
-  extract_descriptions: false        # generate a page-level SEO desc via /desc
+  extract_descriptions: true        # generate a page-level SEO desc via /desc
   extract_concepts: [categories, topics, concepts]   # /ext groups; [] disables /ext
-  max_concepts: 8            # max terms kept per /ext group
-  max_keywords: 32           # max /key keywords kept
-  max_entities: 8            # max /ent entities kept
+  max_concepts: 4            # max terms kept per /ext group
+  max_keywords: 16           # max /key keywords kept
+  max_entities: 4            # max /ent entities kept
+  page_tags: 5               # max page-level tag chips shown, selected via /rank
   score_polarity: true
   score_toxicity: true
   score_spam: true
