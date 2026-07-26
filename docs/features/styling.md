@@ -108,17 +108,17 @@ in `theme.config.jsx` — mdsite uses this slot for `MetaSidebar` (see
 ```
 Nextra layout
 ├── Left nav (Nextra)
-├── main  →  page title + PageMeta (below it) + page content + invisible SectionMarker anchors
-└── Right TOC column (Nextra)
+├── main  →  page title + Info/Contents actions + PageMeta + optional PageInfo/TocMenu panels + page content
+└── Right TOC column (Nextra, ≥ xl)
     ├── "On This Page" heading list
-    └── toc.extraContent  →  MetaSidebar (desc, tags, keywords/metrics, related, edit link)
+    └── toc.extraContent  →  MetaSidebar (Related, Edit this page)
 ```
 
-The `.meta-sidebar-*` and `.filter-panel` classes in `global.css` style components
-placed in this column. Nextra pins this whole column sticky near the top of the
-viewport by default, with its own capped-height scrollbar independent of the page's own
-scroll — that default is left in place so the "On This Page" heading list and Related
-links stay fixed while the body scrolls.
+The `.meta-sidebar-*` and `.panel-label` classes in `global.css` style components
+placed in this column and in the inline Info/Contents panels. Nextra pins this whole
+column sticky near the top of the viewport by default, with its own capped-height
+scrollbar independent of the page's own scroll — that default is left in place so the
+"On This Page" heading list and Related links stay fixed while the body scrolls.
 
 ## Chips
 
@@ -129,7 +129,7 @@ chips via the shared `Chip` component. Variants:
 |-------|-------|---------|
 | `.chip.chip-categories` / `.chip-topics` / `.chip-concepts` / `.chip-entities` | One fixed color per standard group | `TagList` chips (every group except `keywords`) |
 | `.chip.chip-custom` | Fixed fallback color | Any `extract_concepts` group outside the standard four |
-| `.chip.chip-tag` | Gray | Keyword chips in `MetaSidebar` |
+| `.chip.chip-tag` | Gray | Default Chip variant / keyword-style chips |
 | `.chip.chip-danger` | Red | Destructive-action chips (filters, per-entry actions) |
 
 `TagList` maps each tag group name straight to its chip variant (`categories` →

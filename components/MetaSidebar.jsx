@@ -12,7 +12,7 @@ import { useSection, find_page } from './SectionContext'
 import siteConfig from '../site.config'
 
 function Label({ children }) {
-  return <p className="meta-sidebar-label">{children}</p>
+  return <p className="panel-label">{children}</p>
 }
 
 function RelatedLink({ href, name }) {
@@ -34,10 +34,13 @@ export default function MetaSidebar() {
 
   const links   = page.links || []
   const related = page.related || []
+  const has_related = !!(links.length || related.length)
+  const has_edit = !!siteConfig.repo_url
+  if (!has_related && !has_edit) return null
 
   return (
     <div className="meta-sidebar-content">
-      {(!!links.length || !!related.length) && (
+      {has_related && (
         <div className="meta-sidebar-section">
           <Label>Related</Label>
           {links.map(l => {

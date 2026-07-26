@@ -31,8 +31,8 @@ or browse the [Features](/features) section for the full capability overview.
 - **Markdown → MDX** — automatic conversion, any folder structure
 - **Images** — copied and path-rewritten automatically; corrupt EXIF data stripped
 - **Reading time** — estimated and injected into every page's frontmatter
-- **Tags and categories** — rendered as pill chips below each title and in the sidebar
-- **Sidebar metrics** — any numeric frontmatter field surfaces as a labeled score
+- **Tags and categories** — rendered as pill chips below each title and in the PageInfo panel
+- **Related links** — outbound + related pages in the ToC sidebar (and mobile Contents panel)
 - **Nav ordering** — configure page and folder order via `nav_order` in YAML or `order:` in frontmatter
 - **Per-page feed** — scroll to the bottom of any page to load the next one inline
 - **Theme toggle** — light / dark / system toggle in the navbar

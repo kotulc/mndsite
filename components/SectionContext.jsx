@@ -1,10 +1,10 @@
 /**
- * Shares the current page's node and scroll-active section index between the invisible
- * SectionMarker markers (injected by ingest.js after each heading) and the MetaSidebar
- * ToC panel. Provided once in _app.jsx so it spans Nextra's separate content and
- * TOC-column subtrees.
+ * Shares the current page's node and its flattened section list with PageInfo,
+ * MetaSidebar, and TocMenu. Provided once in _app.jsx so it spans Nextra's separate
+ * content and TOC-column subtrees. Section data comes from the site graph
+ * (public/site-meta.json), not from in-page markers.
  */
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import siteMeta from '../public/site-meta.json'
 
@@ -31,8 +31,7 @@ export function find_page(url) {
 
 
 export function flatten_sections(page) {
-  /** Depth-first list of a page's sections in document order — matches the `i` index
-   *  ingest.js bakes into each <SectionMarker i={N}/>. */
+  /** Depth-first list of a page's sections in document order (from the site graph). */
   const out = []
   for (const child of (page && page.children) || []) {
     out.push(child)
@@ -45,42 +44,15 @@ export function flatten_sections(page) {
 const SectionContext = createContext(null)
 
 
-function at_page_bottom() {
-  return window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2
-}
-
 export function SectionProvider({ children }) {
   const { route } = useRouter()
   const page = PAGE_INDEX[route] || null
   const sections = useMemo(() => flatten_sections(page), [page])
-  const [active, set_active] = useState(-1)
-
-  // Reset synchronously (not via effect) so a render never pairs a stale `active` index
-  // from the previous page with the new page's (possibly shorter) `sections` array.
-  const [tracked_page, set_tracked_page] = useState(page)
-  if (page !== tracked_page) {
-    set_tracked_page(page)
-    set_active(-1)
-  }
-
-  useEffect(() => {
-    // The last section's own marker often can't cross the near-top trigger band used
-    // for scrollspy — there may not be enough trailing content to scroll it that far.
-    // Force it active once the user has scrolled as far as the page allows.
-    if (!sections.length) return
-    function on_scroll() {
-      if (at_page_bottom()) set_active(sections.length - 1)
-    }
-    window.addEventListener('scroll', on_scroll, { passive: true })
-    on_scroll()
-    return () => window.removeEventListener('scroll', on_scroll)
-  }, [sections])
-
-  const value = useMemo(() => ({ page, sections, active, set_active }), [page, sections, active])
+  const value = useMemo(() => ({ page, sections }), [page, sections])
   return <SectionContext.Provider value={value}>{children}</SectionContext.Provider>
 }
 
 
 export function useSection() {
-  return useContext(SectionContext) || { page: null, sections: [], active: -1, set_active: () => {} }
+  return useContext(SectionContext) || { page: null, sections: [] }
 }

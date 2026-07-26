@@ -133,7 +133,7 @@ dropped first — a concept that just restates the title isn't a useful tag), th
 relevance to the page's own full text via `/rank` and cut to the top `page_tags` (default 5).
 The result keeps each surviving term's original group, so it renders with the same
 per-group chip coloring as `tags`. This curated set — not the full `tags` — is what renders
-below the page title and, when no section is in view, in the ToC sidebar's "Tags" block.
+below the page title; the same limit caps each section's chips in the PageInfo panel.
 
 ## Related pages
 
@@ -169,10 +169,8 @@ them alone doesn't force re-extraction.
 
 `site-meta.json` is the graph (source of truth). The theme derives a flat `url → page`
 index from it at load to render `PageHeader` (`published` date, `metrics.reading_time`),
-`TagList` (`page_tags`, as page-level chips below the title), `SectionMarker` (an
-invisible per-section scroll anchor injected after each heading — sections render no tags
-of their own inline), and `MetaSidebar` (`desc`, tags — the active section's full `tags`,
-or the page's own `page_tags` — plus `keywords` + `metrics`, `links`, `related`) — see
+`TagList` (`page_tags`, as page-level chips below the title), `PageInfo` (page `desc` +
+per-section tags), and `MetaSidebar` (Related + Edit) — see
 [Page Metadata](/specifications/page-metadata) for the full component contract. Any
 component can fetch the graph at `${basePath}/site-meta.json` and walk or index it.
 

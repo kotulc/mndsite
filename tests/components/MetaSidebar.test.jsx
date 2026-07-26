@@ -72,17 +72,17 @@ test('test_meta_sidebar_links_and_related_share_one_section', () => {
     },
   })
   const { container } = render(<MetaSidebar />)
-  const labels = [...container.querySelectorAll('.meta-sidebar-label')].map(l => l.textContent)
+  const labels = [...container.querySelectorAll('.panel-label')].map(l => l.textContent)
   expect(labels.filter(l => l === 'Related')).toHaveLength(1)
   expect(container.querySelectorAll('.related-link')).toHaveLength(2)
 })
 
 test('test_meta_sidebar_hides_edit_link_without_repo_url', () => {
-  /** Edit link is omitted when repo_url is unset. */
+  /** Edit link is omitted when repo_url is unset; empty sidebar returns null. */
   const original = site_config.repo_url
   site_config.repo_url = ''
   useSection.mockReturnValue({ page: { links: [], related: [] } })
-  render(<MetaSidebar />)
-  expect(screen.queryByText('Edit this page')).not.toBeInTheDocument()
+  const { container } = render(<MetaSidebar />)
+  expect(container).toBeEmptyDOMElement()
   site_config.repo_url = original
 })

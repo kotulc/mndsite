@@ -6,7 +6,7 @@ const fs   = require('fs')
 const os   = require('os')
 const path = require('path')
 
-const { parse_fm, sort_entries, extract_content, auto_index, inject_section_markers, rewrite_md_links, norm_path, slug_to_title } = require('../../scripts/ingest')
+const { parse_fm, sort_entries, extract_content, auto_index, rewrite_md_links, norm_path, slug_to_title } = require('../../scripts/ingest')
 
 
 // --- sort_entries ---
@@ -227,34 +227,6 @@ describe('rewrite_md_links', () => {
     /** A relative link with a #fragment and trailing title keeps both after rewriting. */
     const out = rewrite_md_links('[Fields](configuration#fields "see fields")', '/features/')
     expect(out).toBe('[Fields](/features/configuration#fields "see fields")')
-  })
-})
-
-
-// --- inject_section_markers ---
-
-describe('inject_section_markers', () => {
-  test('test_inject_marks_h2_and_h3_in_document_order', () => {
-    /** Each ##/### heading gets a <SectionMarker i={N}/>, N counting from 0. */
-    const mdx = '# Title\n\n## Fields\n\nBody.\n\n### Sub\n\nMore.\n\n## Extraction\n\nEnd.\n'
-    const out = inject_section_markers(mdx)
-    expect(out).toContain('## Fields\n\n<SectionMarker i={0} />')
-    expect(out).toContain('### Sub\n\n<SectionMarker i={1} />')
-    expect(out).toContain('## Extraction\n\n<SectionMarker i={2} />')
-  })
-
-  test('test_inject_skips_h1_and_h4', () => {
-    /** The page title (h1) and headings deeper than ### are not marked. */
-    const mdx = '# Title\n\n#### Deep\n\nBody.\n'
-    const out = inject_section_markers(mdx)
-    expect(out).not.toContain('SectionMarker')
-  })
-
-  test('test_inject_skips_headings_inside_code_fences', () => {
-    /** A ## inside a code fence is not treated as a heading. */
-    const mdx = '# Title\n\n```md\n## Not a heading\n```\n'
-    const out = inject_section_markers(mdx)
-    expect(out).not.toContain('SectionMarker')
   })
 })
 

@@ -1,9 +1,12 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { PageInfoToggle, PageInfoPanel, limit_tags, layout_section_rows, section_anchor } from '../../components/PageInfo'
 import { useSection } from '../../components/SectionContext'
 
 jest.mock('../../components/SectionContext', () => ({ useSection: jest.fn() }))
 jest.mock('../../site.config', () => ({ page_tags: 5 }))
+jest.mock('next/router', () => ({
+  useRouter: () => ({ events: { on: jest.fn(), off: jest.fn() } }),
+}))
 
 
 test('test_page_info_toggle_hidden_without_description_or_tagged_sections', () => {
@@ -21,15 +24,16 @@ test('test_page_info_toggle_shows_with_description_only', () => {
 })
 
 test('test_page_info_toggle_reflects_open_state_in_aria', () => {
-  /** aria-expanded / label track the open flag for accessibility. */
+  /** aria-expanded / controls / label track the open flag for accessibility. */
   useSection.mockReturnValue({ page: { desc: 'x' }, sections: [] })
   render(<PageInfoToggle open={true} on_toggle={() => {}} />)
   const btn = screen.getByRole('button', { name: 'Hide page info' })
   expect(btn).toHaveAttribute('aria-expanded', 'true')
+  expect(btn).toHaveAttribute('aria-controls', 'page-info-panel')
 })
 
 test('test_page_info_panel_renders_title_summary_and_section_tag_map', () => {
-  /** Card labels its summary inline and packs sections into a content-sized mosaic. */
+  /** Panel labels its summary and packs sections into a content-sized mosaic. */
   useSection.mockReturnValue({
     page: { desc: 'A page about things.' },
     sections: [
@@ -37,10 +41,9 @@ test('test_page_info_panel_renders_title_summary_and_section_tag_map', () => {
       { name: 'Usage', tags: { topics: ['cli'] } },
     ],
   })
-  const { container } = render(<PageInfoPanel />)
+  const { container } = render(<PageInfoPanel open={true} on_close={() => {}} />)
   expect(screen.getByRole('heading', { name: 'Page intelligence' })).toBeInTheDocument()
-  expect(screen.getByText('Summary')).toBeInTheDocument()
-  expect(screen.queryByRole('heading', { name: 'Summary' })).not.toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Summary' })).toBeInTheDocument()
   expect(screen.getByText('A page about things.')).toBeInTheDocument()
   expect(screen.getByRole('heading', { name: 'Sections' })).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Setup' })).toHaveAttribute('href', '#setup')
@@ -49,6 +52,22 @@ test('test_page_info_panel_renders_title_summary_and_section_tag_map', () => {
   expect(screen.getByText('cli')).toBeInTheDocument()
   expect(container.querySelectorAll('.page-info-section')).toHaveLength(2)
   expect(container.querySelectorAll('.page-info-row')).toHaveLength(1)
+})
+
+test('test_page_info_panel_returns_null_when_closed', () => {
+  /** Nothing mounts while the panel is closed. */
+  useSection.mockReturnValue({ page: { desc: 'x' }, sections: [] })
+  const { container } = render(<PageInfoPanel open={false} on_close={() => {}} />)
+  expect(container).toBeEmptyDOMElement()
+})
+
+test('test_page_info_panel_closes_on_escape', () => {
+  /** Escape dismisses the panel, matching TocMenu behavior. */
+  useSection.mockReturnValue({ page: { desc: 'x' }, sections: [] })
+  const on_close = jest.fn()
+  render(<PageInfoPanel open={true} on_close={on_close} />)
+  fireEvent.keyDown(document, { key: 'Escape' })
+  expect(on_close).toHaveBeenCalled()
 })
 
 test('test_page_info_panel_omits_sections_with_no_tags_and_hides_keywords', () => {
@@ -61,7 +80,7 @@ test('test_page_info_panel_omits_sections_with_no_tags_and_hides_keywords', () =
       { name: 'Tagged', tags: { concepts: ['shown'], keywords: ['hidden'] } },
     ],
   })
-  render(<PageInfoPanel />)
+  render(<PageInfoPanel open={true} on_close={() => {}} />)
   expect(screen.queryByText('Empty')).not.toBeInTheDocument()
   expect(screen.queryByText('ignored')).not.toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Tagged' })).toBeInTheDocument()
@@ -72,7 +91,7 @@ test('test_page_info_panel_omits_sections_with_no_tags_and_hides_keywords', () =
 test('test_page_info_panel_returns_null_when_no_info', () => {
   /** Nothing renders when there's neither a description nor tagged sections. */
   useSection.mockReturnValue({ page: { desc: '' }, sections: [{ name: 'x', tags: {} }] })
-  const { container } = render(<PageInfoPanel />)
+  const { container } = render(<PageInfoPanel open={true} on_close={() => {}} />)
   expect(container).toBeEmptyDOMElement()
 })
 
@@ -91,7 +110,7 @@ test('test_page_info_panel_limits_section_tags_to_page_tags', () => {
       },
     }],
   })
-  render(<PageInfoPanel />)
+  render(<PageInfoPanel open={true} on_close={() => {}} />)
   expect(screen.getByText('c1')).toBeInTheDocument()
   expect(screen.getByText('c2')).toBeInTheDocument()
   expect(screen.getByText('t1')).toBeInTheDocument()

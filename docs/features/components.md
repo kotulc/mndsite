@@ -28,7 +28,11 @@ appear on every page are registered globally in `theme.config.jsx`.
 | Component | File | Where rendered |
 |-----------|------|----------------|
 | `PageHeader` | `PageHeader.jsx` | Below page title — date and reading time |
-| `TagList` | `TagList.jsx` | Below `PageHeader` — category and tag chips |
+| `TagList` | `TagList.jsx` | Below `PageHeader` — curated `page_tags` chips; also inside PageInfo |
+| `PageInfo` | `PageInfo.jsx` | Info toggle + expandable Summary / Sections panel |
+| `TocMenu` | `TocMenu.jsx` | Contents toggle + inline Sections + MetaSidebar (below `xl`) |
+| `MetaSidebar` | `MetaSidebar.jsx` | Right ToC (and TocMenu) — Related + Edit |
+| `Chip` | `Chip.jsx` | Used by TagList |
 | `SiteFooter` | `SiteFooter.jsx` | Site-wide footer |
 | `GitHubLink` | `GitHubLink.jsx` | Navbar — circular GitHub icon |
 | `ThemeToggle` | `ThemeToggle.jsx` | Navbar — light/dark/system toggle |

@@ -43,7 +43,7 @@ consumed by Next.js and Nextra.
 | `extract.max_concepts` | integer | `4` | Max terms kept per `/ext` concept group (plain-sliced) |
 | `extract.max_keywords` | integer | `32` | Max `/key` keywords kept (taggly's native `top_n`) |
 | `extract.max_entities` | integer | `4` | Max `/ent` entities kept (taggly's native `top_n`) |
-| `extract.page_tags` | integer | `5` | Max chips shown for a page (below its title, and in the ToC sidebar) — the most relevant terms overall via `/rank`, page title excluded |
+| `extract.page_tags` | integer | `5` | Max chips shown for a page (below its title, and per section in the PageInfo panel) — the most relevant terms overall via `/rank`, page title excluded |
 | `extract.score_polarity` | boolean | `true` | Score `metrics.polarity` via `/polar` |
 | `extract.score_toxicity` | boolean | `true` | Score `metrics.toxicity` via `/tox` |
 | `extract.score_spam` | boolean | `true` | Score `metrics.spam` via `/spam` |
@@ -123,9 +123,9 @@ each capped by `max_concepts`/`max_entities`/`max_keywords`) and `metrics`
 aggregated). Each page also gets `page_tags` — its `page_tags`-count (default 5) most
 relevant non-keyword tags overall, selected via `/rank` against the page's own text (the
 page title itself is excluded from candidates first, so a tag that just restates the title
-never crowds out something more useful). This is what renders as chips below the title and
-in the ToC sidebar; the full aggregated `tags` still drives the sidebar's per-section
-display. Pages optionally get a `desc`, and every page always gets a `related` list —
+never crowds out something more useful). This is what renders as chips below the title;
+the same `page_tags` limit also caps each section's chips in the PageInfo panel. Pages
+optionally get a `desc`, and every page always gets a `related` list —
 scored via `/score` against other pages' descriptions when available, or their tag terms
 otherwise. All output lands in `public/site-meta.json` — never in frontmatter.
 

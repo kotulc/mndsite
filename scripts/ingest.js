@@ -84,21 +84,6 @@ function rewrite_md_links(content, url_base) {
 }
 
 
-function inject_section_markers(content) {
-  /** Insert a <SectionMarker i={N}/> after each ##/### heading (fence-aware), N counting
-   *  document order — matches that section's index in the site graph, so the invisible
-   *  scroll marker can report position without needing an id/slug at ingest time.
-   *  extract_content() already strips bare self-closing JSX tags, so feed cards stay clean. */
-  let n = 0
-  let in_fence = false
-  return content.replace(/\r\n?/g, '\n').split('\n').flatMap(line => {
-    if (/^```/.test(line)) { in_fence = !in_fence; return [line] }
-    if (!in_fence && /^#{2,3}\s/.test(line)) return [line, '', `<SectionMarker i={${n++}} />`, '']
-    return [line]
-  }).join('\n')
-}
-
-
 function ensure_h1(mdx_path, title) {
   /** Prepend # title heading if the file's body has no h1 outside code fences.
    *  Handles files with or without a frontmatter block. */
@@ -261,9 +246,6 @@ function ingest_page(src_entry, dest_dir, rel, slug, base, img_url) {
     created:   fs.statSync(src_entry).mtime.toISOString().slice(0, 10),
   })
 
-  // Written after the graph is built from the clean content — markers never leak
-  // into hashing, extraction input, or the graph's own `content` field.
-  fs.writeFileSync(dest, inject_section_markers(content))
   return page
 }
 
@@ -462,7 +444,7 @@ async function run(config) {
 
 module.exports = {
   parse_fm, strip_fm, first_h1, sort_entries, extract_content, auto_index,
-  ensure_h1, inject_section_markers, rewrite_md_links, norm_path, slug_to_title,
+  ensure_h1, rewrite_md_links, norm_path, slug_to_title,
   sync_assets, sync_components, run,
 }
 

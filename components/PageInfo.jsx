@@ -8,6 +8,8 @@
  * absolute treemap did. Data comes from SectionContext. Both pieces share open state
  * owned by the caller (theme.config.jsx's PageTitle).
  */
+import { useEffect } from 'react'
+import { useRouter } from 'next/router'
 import { useSection } from './SectionContext'
 import TagList from './TagList'
 import siteConfig from '../site.config'
@@ -80,12 +82,12 @@ function use_page_info() {
   return { desc, tagged_sections, has_info: !!(desc || tagged_sections.length) }
 }
 
-function IntelligenceIcon() {
+function IntelligenceIcon({ size = 14 }) {
   // Sparkle glyph — reads as "AI/intelligence" rather than a plain info "i"
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M12 2l1.9 5.1L19 9l-5.1 1.9L12 16l-1.9-5.1L5 9l5.1-1.9L12 2z" />
-      <path d="M18.5 14l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4z" opacity="0.7" />
+      <path d="M18.5 14l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4z" />
     </svg>
   )
 }
@@ -98,6 +100,7 @@ export function PageInfoToggle({ open, on_toggle }) {
       type="button"
       className="page-info-toggle"
       aria-expanded={open}
+      aria-controls="page-info-panel"
       aria-label={open ? 'Hide page info' : 'Show page info'}
       onClick={on_toggle}
     >
@@ -107,25 +110,39 @@ export function PageInfoToggle({ open, on_toggle }) {
   )
 }
 
-export function PageInfoPanel() {
+export function PageInfoPanel({ open, on_close }) {
   const { desc, tagged_sections, has_info } = use_page_info()
-  if (!has_info) return null
+  const { events } = useRouter()
+
+  useEffect(() => {
+    if (!open) return
+    function on_key(e) { if (e.key === 'Escape') on_close() }
+    document.addEventListener('keydown', on_key)
+    return () => document.removeEventListener('keydown', on_key)
+  }, [open, on_close])
+
+  useEffect(() => {
+    if (!open) return
+    function close() { on_close() }
+    events.on('routeChangeStart', close)
+    return () => events.off('routeChangeStart', close)
+  }, [open, on_close, events])
+
+  if (!open || !has_info) return null
+
   const rows = layout_section_rows(tagged_sections)
   return (
-    <section className="page-info-panel" aria-labelledby="page-info-title">
-      <h2 id="page-info-title" className="page-info-title">
-        <IntelligenceIcon />
-        Page intelligence
-      </h2>
+    <section id="page-info-panel" className="page-info-panel" aria-labelledby="page-info-title">
+      <h2 id="page-info-title" className="page-info-title">Page intelligence</h2>
       {desc && (
-        <p className="page-info-summary">
-          <span className="page-info-label">Summary</span>
-          <span className="page-info-desc">{desc}</span>
-        </p>
+        <div className="page-info-summary">
+          <h3 className="panel-label">Summary</h3>
+          <p className="page-info-desc">{desc}</p>
+        </div>
       )}
       {!!rows.length && (
         <div className="page-info-section-map">
-          <h3 className="page-info-label">Sections</h3>
+          <h3 className="panel-label">Sections</h3>
           <div className="page-info-sections">
             {rows.map((row, ri) => (
               <div key={ri} className="page-info-row">

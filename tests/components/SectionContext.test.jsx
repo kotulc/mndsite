@@ -1,7 +1,6 @@
-import { useEffect } from 'react'
-import { render, act } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import { useRouter } from 'next/router'
-import { SectionProvider, useSection, find_page } from '../../components/SectionContext'
+import { SectionProvider, useSection, find_page, flatten_sections } from '../../components/SectionContext'
 
 jest.mock('next/router', () => ({ useRouter: jest.fn() }))
 jest.mock('../../public/site-meta.json', () => ({
@@ -10,7 +9,9 @@ jest.mock('../../public/site-meta.json', () => ({
       type: 'folder', url: '/features', name: 'Features', children: [
         {
           type: 'page', url: '/features/overview', name: 'Overview', children: [
-            { type: 'section', name: 'Intro', level: 2, children: [] },
+            { type: 'section', name: 'Intro', level: 2, children: [
+              { type: 'section', name: 'Nested', level: 3, children: [] },
+            ] },
             { type: 'section', name: 'Details', level: 2, children: [] },
           ],
         },
@@ -45,46 +46,32 @@ describe('find_page', () => {
 })
 
 
-function Probe({ testid = 'probe' }) {
-  const { page, active } = useSection()
-  return <div data-testid={testid}>{page ? page.name : 'none'}:{active}</div>
-}
-
-function Setter({ to }) {
-  const { set_active } = useSection()
-  useEffect(() => { set_active(to) }, []) // eslint-disable-line react-hooks/exhaustive-deps
-  return null
-}
-
-
-test('test_section_provider_resets_active_synchronously_on_page_change', () => {
-  /** A stale active index from the previous page never pairs with the new page's
-   *  sections — regression test for the "current is undefined" crash. */
-  useRouter.mockReturnValue({ route: '/features/overview' })
-  const { rerender, getByTestId } = render(
-    <SectionProvider><Setter to={1} /><Probe /></SectionProvider>
-  )
-  expect(getByTestId('probe').textContent).toBe('Overview:1')
-
-  useRouter.mockReturnValue({ route: '/about' })
-  rerender(<SectionProvider><Setter to={1} /><Probe /></SectionProvider>)
-  expect(getByTestId('probe').textContent).toBe('About:-1')
+describe('flatten_sections', () => {
+  test('test_flatten_sections_depth_first_document_order', () => {
+    /** Nested sections appear in document order under their parent. */
+    const page = find_page('/features/overview')
+    expect(flatten_sections(page).map(s => s.name)).toEqual(['Intro', 'Nested', 'Details'])
+  })
 })
 
-test('test_section_provider_activates_last_section_at_page_bottom', () => {
-  /** The last section's own marker often can't cross the near-top scrollspy band —
-   *  reaching the bottom of the page forces it active directly. */
+
+function Probe() {
+  const { page, sections } = useSection()
+  return (
+    <div data-testid="probe">
+      {page ? page.name : 'none'}:{sections.map(s => s.name).join(',')}
+    </div>
+  )
+}
+
+
+test('test_section_provider_exposes_page_and_sections_for_route', () => {
+  /** Provider resolves the current route's page node and flattened section list. */
   useRouter.mockReturnValue({ route: '/features/overview' })
-  Object.defineProperty(window, 'innerHeight', { value: 800, configurable: true })
-  Object.defineProperty(document.documentElement, 'scrollHeight', { value: 2000, configurable: true })
-  Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true })
+  const { getByTestId, rerender } = render(<SectionProvider><Probe /></SectionProvider>)
+  expect(getByTestId('probe').textContent).toBe('Overview:Intro,Nested,Details')
 
-  const { getByTestId } = render(<SectionProvider><Probe /></SectionProvider>)
-  expect(getByTestId('probe').textContent).toBe('Overview:-1')
-
-  act(() => {
-    window.scrollY = 1200
-    window.dispatchEvent(new Event('scroll'))
-  })
-  expect(getByTestId('probe').textContent).toBe('Overview:1')
+  useRouter.mockReturnValue({ route: '/about' })
+  rerender(<SectionProvider><Probe /></SectionProvider>)
+  expect(getByTestId('probe').textContent).toBe('About:')
 })

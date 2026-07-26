@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import PageHeader from './components/PageHeader'
 import TagList from './components/TagList'
-import SectionMarker from './components/SectionMarker'
 import MetaSidebar from './components/MetaSidebar'
 import { PageInfoToggle, PageInfoPanel } from './components/PageInfo'
+import { TocMenuToggle, TocMenuPanel } from './components/TocMenu'
 import SiteFooter from './components/SiteFooter'
 import GitHubLink from './components/GitHubLink'
 import FeedLink from './components/FeedLink'
@@ -63,17 +63,32 @@ const THEME_CSS = [
 
 
 function PageTitle({ children }) {
-  /** Custom h1 override: renders the heading with an "Info" toggle beside it, the page
-   *  metadata (date/reading time/tags), then the expandable PageInfo panel when open. */
+  /** Custom h1 override: heading + Info/Contents actions, page metadata, optional panels.
+   *  Info and Contents are mutually exclusive — opening one closes the other. */
   const [info_open, set_info_open] = useState(false)
+  const [toc_open, set_toc_open] = useState(false)
+
+  function toggle_info() {
+    set_info_open(v => !v)
+    set_toc_open(false)
+  }
+  function toggle_toc() {
+    set_toc_open(v => !v)
+    set_info_open(false)
+  }
+
   return (
     <>
       <div className="page-title-row">
         <h1 className="nx-mt-2 nx-text-4xl nx-font-bold nx-tracking-tight nx-text-slate-900 dark:nx-text-slate-100">{children}</h1>
-        <PageInfoToggle open={info_open} on_toggle={() => set_info_open(v => !v)} />
+        <div className="page-title-actions">
+          <PageInfoToggle open={info_open} on_toggle={toggle_info} />
+          <TocMenuToggle open={toc_open} on_toggle={toggle_toc} />
+        </div>
       </div>
       <PageMeta />
-      {info_open && <PageInfoPanel />}
+      <PageInfoPanel open={info_open} on_close={() => set_info_open(false)} />
+      <TocMenuPanel open={toc_open} on_close={() => set_toc_open(false)} />
     </>
   )
 }
@@ -110,9 +125,9 @@ export default {
   ),
   feedback: { content: null },
   // Nextra renders editLink before toc.extraContent, so its own copy is disabled here —
-  // MetaSidebar renders "Edit this page" itself, last, after description/keywords/links/related.
+  // MetaSidebar renders "Edit this page" itself, last, after Related.
   editLink: { component: () => null },
   toc: siteConfig.toc === false ? { component: () => null } : { extraContent: <MetaSidebar /> },
-  components: { h1: PageTitle, SectionMarker },
+  components: { h1: PageTitle },
   main: ({ children }) => <>{children}</>,
 }
