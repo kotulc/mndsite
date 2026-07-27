@@ -33,20 +33,9 @@ consumed by Next.js and Nextra.
 | `theme_toggle` | string | `"navbar"` | Where the light/dark toggle appears: `"navbar"` or `"sidebar"` |
 | `toc` | boolean | `true` | Right sidebar: "On This Page" section navigation |
 | `reading_time` | boolean | `true` | Show estimated reading time in page headers and feeds |
-| `extract.url` | string | `""` | Base URL of a running [taggly](https://github.com/kotulc/taggly) instance; empty disables extraction |
-| `extract.on_build` | boolean | `false` | Extract on every build; otherwise only with the `--extract` flag |
-| `extract.strict` | boolean | `true` | Fail the build when the service is unreachable; `false` warns and skips |
-| `extract.max_comparisons` | integer | `128` | Cap on candidate pages compared per `/score` related-page call |
-| `extract.top_n_related` | integer | `3` | Number of related pages attached to each page node |
-| `extract.extract_descriptions` | boolean | `true` | Generate a page-level SEO `desc` via `/desc` (sections never get one) |
-| `extract.extract_concepts` | list | `[categories, topics, concepts]` | `/ext` concept groups to request; `[]` disables `/ext` entirely |
-| `extract.max_concepts` | integer | `4` | Max terms kept per `/ext` concept group (plain-sliced) |
-| `extract.max_keywords` | integer | `32` | Max `/key` keywords kept (taggly's native `top_n`) |
-| `extract.max_entities` | integer | `4` | Max `/ent` entities kept (taggly's native `top_n`) |
-| `extract.page_tags` | integer | `5` | Max chips shown for a page (below its title, and per section in the PageInfo panel) — the most relevant terms overall via `/rank`, page title excluded |
-| `extract.score_polarity` | boolean | `true` | Score `metrics.polarity` via `/polar` |
-| `extract.score_toxicity` | boolean | `true` | Score `metrics.toxicity` via `/tox` |
-| `extract.score_spam` | boolean | `true` | Score `metrics.spam` via `/spam` |
+| `tags.max_keywords` | integer | `32` | Max tag terms stored per page/section after ingest |
+| `tags.page_tags` | integer | `5` | Max chips shown below the title and per section in PageInfo |
+| `tags.top_n_related` | integer | `3` | Related pages attached per page via embedding similarity |
 | `theme.color` | string | `"default"` | Named accent palette — see [Theme](#theme) below |
 | `theme.typeset` | string | `"sans"` | Named body font stack — see [Theme](#theme) below |
 | `theme.navbar` | string | `""` | Navbar background: `"primary"` (theme tint) or any CSS color |
@@ -113,68 +102,29 @@ theme:
 
 Leave empty to keep Nextra's default white/dark backgrounds.
 
-## Extraction
+## Tagging
 
-The `extract` block connects the build to a local [taggly](https://github.com/kotulc/taggly)
-NLP service that layers metadata onto the [site graph](/specifications/metadata): every page
-and section gets `tags` (concept groups via `/ext`, entities via `/ent`, keywords via `/key`,
-each capped by `max_concepts`/`max_entities`/`max_keywords`) and `metrics`
-(`polarity`/`spam`/`toxicity`), computed bottom-up (leaf sections scored directly, parents
-aggregated). Each page also gets `page_tags` — its `page_tags`-count (default 5) most
-relevant non-keyword tags overall, selected via `/rank` against the page's own text (the
-page title itself is excluded from candidates first, so a tag that just restates the title
-never crowds out something more useful). This is what renders as chips below the title;
-the same `page_tags` limit also caps each section's chips in the PageInfo panel. Pages
-optionally get a `desc`, and every page always gets a `related` list —
-scored via `/score` against other pages' descriptions when available, or their tag terms
-otherwise. All output lands in `public/site-meta.json` — never in frontmatter.
+During ingest, mdsite always runs local keyword extraction and embedding-based tagging.
+Output lands in `public/site-meta.json` — a flat list of pages, not frontmatter. Tags use
+fixed groups (`category`, `topic`, `concept`, `entity`, `user`); frontmatter `tags` and
+`categories` merge into `user` (still scored). The UI shows the first `page_tags` chips
+from each unit's merged tag list.
+
+Embeddings use **Xenova/all-MiniLM-L6-v2** vendored at `models/Xenova/all-MiniLM-L6-v2/`.
+Ingest loads from disk only — no Hugging Face download. After all pages are tagged,
+`fill_related` scores pairwise page similarity and writes `related` (`{ name, url, score }`).
+
+Optional page summary: set `desc` or `description` in frontmatter — PageInfo shows it when present.
 
 ```yaml
-extract:
-  url: http://127.0.0.1:8000
-  on_build: false        # true: extract on every build
-  max_comparisons: 128   # cap on candidate pages compared per /score related-page call
-  top_n_related: 3       # related pages attached per page
-  extract_descriptions: true         # false: skip the page-level SEO desc via /desc
-  extract_concepts: [categories, topics, concepts]   # /ext groups; [] disables /ext
-  max_concepts: 4        # max terms kept per /ext group (plain-sliced — /ext has no top_n)
-  max_keywords: 32       # max /key keywords kept (taggly's native top_n)
-  max_entities: 4        # max /ent entities kept (taggly's native top_n)
-  page_tags: 5            # max page-level tag chips shown, selected via /rank
-  score_polarity: true
-  score_toxicity: true
-  score_spam: true
+tags:
+  max_keywords: 32       # tag pool stored per page/section
+  page_tags: 5           # chips below title and per section in PageInfo
+  top_n_related: 3       # related pages per page (skips urls already in links)
 ```
 
-Extraction is opt-in per build — pass `--extract` to the CLI, or set `on_build: true`:
-
-```bash
-node scripts/cli.js build --config mdsite.yaml --extract
-```
-
-Without either, the build makes no network calls — the structural graph (folders, pages,
-sections, word count, reading time, links, dates, content hash) is still written — and logs
-that extraction was skipped. `npm run ingest` and the watcher read `mdsite.yaml` when
-present, so `on_build: true` extracts there too; `--extract` is CLI-only.
-
-Pages are only re-extracted when their content hash changes since the previous build —
-unchanged pages copy their prior `tags`/`metrics`/`desc`/`page_tags` forward with no taggly
-calls, so incremental builds stay fast. Changing any of `extract_concepts`, `max_concepts`,
-`max_keywords`, `max_entities`, `page_tags`, `score_polarity`, `score_toxicity`,
-`score_spam`, or `extract_descriptions` invalidates that cache for every page automatically
-(the config itself is hashed and stored in the graph); `url`/`on_build`/`strict`/
-`max_comparisons`/`top_n_related` don't affect computed output, so changing only those keeps
-the cache.
-Extraction logs per-page progress as it runs.
-See the [Metadata Contract](/specifications/metadata) spec for the full schema.
-
-### Extraction in CI
-
-The deploy workflow supports extraction behind the `ENRICH` repository variable: when
-set to `true`, it installs taggly from source, starts it in the background, waits for
-`/status`, and passes `--extract` to the CLI build. Model downloads are cached between
-runs (`~/.cache/huggingface`). External projects using the mdsite Docker image can do
-the same — run taggly next to the build container and point `extract.url` at it.
+See the [Metadata Contract](/specifications/metadata) spec for the full schema. Hashing,
+incremental graph enrichment, and external NLP live in the sibling **mndmeta** project.
 
 ## Nav ordering
 
@@ -215,7 +165,6 @@ Set them under **Settings → Secrets and variables → Actions → Variables**.
 |----------|---------|-------------|
 | `CONTENT_SOURCE` | `docs` | Path to content directory, relative to repo root |
 | `BASE_PATH` | _(empty)_ | Subpath prefix for project pages repos (e.g. `/mdsite`) |
-| `ENRICH` | _(empty)_ | Set to `true` to run taggly NLP extraction during deployment |
 
 ## CLI overrides
 

@@ -1,8 +1,8 @@
 /**
  * Right ToC sidebar panel, rendered via theme.config.jsx's toc.extraContent, below
  * Nextra's own "On This Page" heading list: a combined "Related" list (the page's own
- * outbound links, resolved to the linked page's name where possible, plus taggly's
- * related pages), then the edit-this-page link — always last, since Nextra renders
+ * outbound links, resolved to the linked page's name where possible, plus ingest
+ * `related` pages), then the edit-this-page link — always last, since Nextra renders
  * editLink before extraContent (theme.config.jsx disables Nextra's own copy to make
  * this so). Description and section tags now live in the PageInfo panel below the page
  * header instead (see components/PageInfo.jsx); keywords/metrics are not shown for now.

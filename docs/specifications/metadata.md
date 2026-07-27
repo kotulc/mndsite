@@ -22,7 +22,9 @@ tools) lives in the sibling **mndmeta** project.
       "desc": null,
       "metrics": { "word_count": 1200, "reading_time": 6 },
       "links": ["/features/metadata"],
-      "related": [],
+      "related": [
+        { "name": "Site Configuration", "url": "/specifications/site-configuration", "score": 0.63 }
+      ],
       "tags": [
         { "term": "yaml", "score": 0.91, "group": "user" },
         { "term": "extract", "score": 0.74, "group": "concept" }

@@ -114,23 +114,11 @@ theme:
 flatten: []                  # list of section slugs to flatten (no subfolder in nav)
 nav_order: {}                # map of section slug → ordered list of page slugs
 
-# Optional — NLP extraction via a local taggly instance (github.com/kotulc/taggly)
-# Builds the site graph in public/site-meta.json; runs only with --extract or on_build: true
-extract:
-  url: ""                    # e.g. http://127.0.0.1:8000; empty disables extraction
-  on_build: false            # true: extract on every build (else only with --extract)
-  strict: true               # fail the build if the service is unreachable
-  max_comparisons: 128       # candidate terms/pages compared per /rank call
-  top_n_related: 3           # related pages attached per page
-  extract_descriptions: true        # generate a page-level SEO desc via /desc
-  extract_concepts: [categories, topics, concepts]   # /ext groups; [] disables /ext
-  max_concepts: 4            # max terms kept per /ext group
-  max_keywords: 16           # max /key keywords kept
-  max_entities: 4            # max /ent entities kept
-  page_tags: 5               # max page-level tag chips shown, selected via /rank
-  score_polarity: true
-  score_toxicity: true
-  score_spam: true
+# Optional — local tagging (always on during ingest)
+tags:
+  max_keywords: 32           # tag pool stored per page/section
+  page_tags: 5               # chips below title and per section in PageInfo
+  top_n_related: 3           # related pages per page (embedding similarity)
 
 # Paths — resolved relative to this file
 content: ./docs              # source markdown directory
