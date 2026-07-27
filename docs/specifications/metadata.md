@@ -50,6 +50,9 @@ Fixed group vocabulary: **`category`**, **`topic`**, **`concept`**, **`entity`**
 | `score` | Similarity of the term to the page/section **title** (0–1), via local embeddings |
 | `group` | One of the fixed groups. Frontmatter tags always use `user` (still scored). Auto tags are assigned by embedding similarity to group-label prompts |
 
+Embeddings use **Xenova/all-MiniLM-L6-v2** vendored at `models/Xenova/all-MiniLM-L6-v2/` (quantized ONNX +
+tokenizer files). Ingest loads from disk only — no Hugging Face download.
+
 Pipeline (always on during ingest):
 
 1. Extract up to `tags.max_keywords` candidates from the unit text

@@ -9,9 +9,14 @@
  *   5. Merge user-first, then auto by score; keep up to max_keywords in metadata
  *      (UI displays the first page_tags of that list)
  *
- * Embeddings: @xenova/transformers (all-MiniLM-L6-v2). Inject `embedder` in tests.
+ * Embeddings: @xenova/transformers (all-MiniLM-L6-v2), vendored under models/.
+ * Inject `embedder` in tests.
  */
+const path = require('path')
 const { plain_text } = require('./text')
+
+const EMBED_MODEL = 'Xenova/all-MiniLM-L6-v2'
+const LOCAL_MODELS = path.join(__dirname, '../models')
 
 const USER_GROUP = 'user'
 const AUTO_GROUPS = ['category', 'topic', 'concept', 'entity']
@@ -76,49 +81,23 @@ function cosine(a, b) {
 
 
 let _pipeline = null
-let _embed_mode = null // 'mini' | 'offline'
-
-/** Deterministic local embedder for offline/CI when HuggingFace is unreachable.
- *  Enable with MDSITE_OFFLINE_EMBED=1 (or when the real model fails to load). */
-async function offline_embedder(texts) {
-  return texts.map(t => {
-    const v = new Array(32).fill(0)
-    const s = String(t || '')
-    for (let i = 0; i < s.length; i++) v[i % 32] += (s.charCodeAt(i) % 97) / 97
-    // light bigram signal so similar phrases score closer
-    for (let i = 0; i + 1 < s.length; i++) v[(s.charCodeAt(i) + s.charCodeAt(i + 1)) % 32] += 0.15
-    const n = Math.sqrt(v.reduce((a, b) => a + b * b, 0)) || 1
-    return v.map(x => x / n)
-  })
-}
 
 
 async function ensure_pipeline() {
-  /** Resolve MiniLM once; on failure lock into offline mode for the rest of the process. */
-  if (_embed_mode === 'offline' || process.env.MDSITE_OFFLINE_EMBED === '1') {
-    _embed_mode = 'offline'
-    return null
-  }
+  /** Resolve vendored MiniLM once per process. */
   if (_pipeline) return _pipeline
-  try {
-    const { pipeline } = await import('@xenova/transformers')
-    _pipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2')
-    _embed_mode = 'mini'
-    return _pipeline
-  } catch (err) {
-    console.warn(`  Warning: embedding model unavailable (${err.cause?.code || err.message}) — using offline embedder`)
-    console.warn('  Tip: set MDSITE_OFFLINE_EMBED=1 to skip the download, or cache Xenova/all-MiniLM-L6-v2 once HuggingFace is reachable')
-    _embed_mode = 'offline'
-    _pipeline = null
-    return null
-  }
+  const { pipeline, env } = await import('@xenova/transformers')
+  env.localModelPath = LOCAL_MODELS
+  env.allowRemoteModels = false
+  env.allowLocalModels = true
+  _pipeline = await pipeline('feature-extraction', EMBED_MODEL)
+  return _pipeline
 }
 
 
 async function default_embedder(texts) {
-  /** Lazy-load MiniLM; fall back to offline_embedder if remote weights are unavailable. */
+  /** Embed via vendored MiniLM. */
   const pipe = await ensure_pipeline()
-  if (!pipe) return offline_embedder(texts)
   const out = []
   for (const t of texts) {
     const tensor = await pipe(t, { pooling: 'mean', normalize: true })
@@ -230,6 +209,6 @@ async function fill_related(pages, { top_n_related = 3, embedder } = {}) {
 
 module.exports = {
   USER_GROUP, AUTO_GROUPS, GROUP_PROMPTS, STOPWORDS,
-  tokenize, extract_keywords, cosine, tag_unit, default_embedder, offline_embedder,
+  tokenize, extract_keywords, cosine, tag_unit, default_embedder,
   page_fingerprint, fill_related,
 }
