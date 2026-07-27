@@ -59,51 +59,24 @@ describe('load_config — theme resolution', () => {
 })
 
 
-describe('load_config — extract block', () => {
-  test('test_extract_defaults_applied', () => {
-    /** Config without an extract block resolves to disabled strict extraction with defaults. */
+describe('load_config — tags block', () => {
+  test('test_tags_defaults_applied', () => {
+    /** Config without a tags block resolves to default keyword/page_tags limits. */
     const cfg = load_config(write_yaml('title: t'))
-    expect(cfg.extract).toEqual({
-      url: '', on_build: false, strict: true, max_comparisons: 128, top_n_related: 3,
-      extract_descriptions: true,
-      extract_concepts: ['categories', 'topics', 'concepts'],
-      max_concepts: 4, max_keywords: 32, max_entities: 4, page_tags: 5,
-      score_polarity: true, score_toxicity: true, score_spam: true,
-    })
+    expect(cfg.tags).toEqual({ max_keywords: 32, page_tags: 5, top_n_related: 3 })
   })
 
-  test('test_extract_partial_block_merges_defaults', () => {
-    /** An extract block with only url keeps every other default. */
-    const cfg = load_config(write_yaml('title: t\nextract:\n  url: http://127.0.0.1:8000'))
-    expect(cfg.extract.url).toBe('http://127.0.0.1:8000')
-    expect(cfg.extract.top_n_related).toBe(3)
-    expect(cfg.extract.max_keywords).toBe(32)
-    expect(cfg.extract.extract_concepts).toEqual(['categories', 'topics', 'concepts'])
+  test('test_tags_partial_block_merges_defaults', () => {
+    /** A tags block with only page_tags keeps max_keywords default. */
+    const cfg = load_config(write_yaml('title: t\ntags:\n  page_tags: 8'))
+    expect(cfg.tags.page_tags).toBe(8)
+    expect(cfg.tags.max_keywords).toBe(32)
+    expect(cfg.tags.top_n_related).toBe(3)
   })
 
-  test('test_extract_numeric_and_bool_fields_override', () => {
-    /** Numeric limits, the description toggle, and score toggles all override cleanly. */
-    const cfg = load_config(write_yaml([
-      'title: t', 'extract:', '  max_concepts: 6', '  page_tags: 8',
-      '  extract_descriptions: true', '  score_spam: false',
-    ].join('\n')))
-    expect(cfg.extract.max_concepts).toBe(6)
-    expect(cfg.extract.page_tags).toBe(8)
-    expect(cfg.extract.extract_descriptions).toBe(true)
-    expect(cfg.extract.score_spam).toBe(false)
-    expect(cfg.extract.score_polarity).toBe(true)   // untouched default retained
-  })
-
-  test('test_extract_empty_concepts_list_allowed', () => {
-    /** An empty extract_concepts list is valid — it disables /ext, not an error. */
-    const cfg = load_config(write_yaml('title: t\nextract:\n  extract_concepts: []'))
-    expect(cfg.extract.extract_concepts).toEqual([])
-  })
-
-  test('test_extract_concepts_non_array_throws', () => {
-    /** extract_concepts must be a list; a scalar value fails config loading. */
-    const p = write_yaml('title: t\nextract:\n  extract_concepts: concepts')
-    expect(() => load_config(p)).toThrow(/extract_concepts must be a list/)
+  test('test_tags_invalid_page_tags_throws', () => {
+    const p = write_yaml('title: t\ntags:\n  page_tags: 0')
+    expect(() => load_config(p)).toThrow(/page_tags must be a positive integer/)
   })
 })
 
@@ -130,7 +103,7 @@ describe('resolve_theme — preset tables', () => {
 describe('write_site_config — generated keys', () => {
   test('test_write_site_config_includes_new_keys', () => {
     /** Generated site.config.js carries resolved theme, footer, description, and page_tags. */
-    const cfg = load_config(write_yaml('title: t\ndescription: d\nfooter: f\ntheme:\n  color: emerald\nextract:\n  page_tags: 8'))
+    const cfg = load_config(write_yaml('title: t\ndescription: d\nfooter: f\ntheme:\n  color: emerald\ntags:\n  page_tags: 8'))
     write_site_config(cfg, tmp)
     const out = require(path.join(tmp, 'site.config.js'))
     expect(out.description).toBe('d')

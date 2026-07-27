@@ -1,12 +1,9 @@
 /**
  * "Info" affordance for the page header. PageInfoToggle renders a small intelligence
  * icon beside the page title; clicking it expands PageInfoPanel below the header, which
- * shows the page description and a per-section tag breakdown. Keywords and metrics are
- * intentionally omitted for now. Each section shows at most `page_tags` chips (same
- * limit as the curated chips below the title). Sections pack into a content-sized mosaic
- * (rows of weight-flexed tiles) so busy pages never clip chips the way a fixed-height
- * absolute treemap did. Data comes from SectionContext. Both pieces share open state
- * owned by the caller (theme.config.jsx's PageTitle).
+ * shows an optional page description (frontmatter desc) and a per-section tag breakdown.
+ * Each section shows at most `page_tags` chips. Sections pack into a content-sized mosaic.
+ * Data comes from SectionContext. Open state is owned by theme.config.jsx's PageTitle.
  */
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
@@ -14,38 +11,18 @@ import { useSection } from './SectionContext'
 import TagList from './TagList'
 import siteConfig from '../site.config'
 
-const GROUP_ORDER = ['categories', 'topics', 'concepts', 'entities']
-
 function section_has_tags(node) {
-  return !!node.tags && Object.entries(node.tags).some(([group, terms]) => group !== 'keywords' && terms && terms.length)
+  return Array.isArray(node.tags) && node.tags.length > 0
 }
 
 export function limit_tags(tags, n) {
-  /** Keep the first n non-keyword terms across groups (standard groups first, then any
-   *  custom extract_concepts groups), preserving each term's original group for chip
-   *  coloring. Used to mirror extract.page_tags for section chips in PageInfo. */
-  if (!tags || n <= 0) return {}
-  const groups = [
-    ...GROUP_ORDER.filter(g => tags[g] && tags[g].length),
-    ...Object.keys(tags).filter(g => g !== 'keywords' && !GROUP_ORDER.includes(g) && tags[g] && tags[g].length),
-  ]
-  const out = {}
-  let left = n
-  for (const group of groups) {
-    if (left <= 0) break
-    const take = tags[group].slice(0, left)
-    if (!take.length) continue
-    out[group] = take
-    left -= take.length
-  }
-  return out
+  /** Keep the first n tags (already user-first, then by score). */
+  if (!Array.isArray(tags) || n <= 0) return []
+  return tags.slice(0, n)
 }
 
 function tag_count(tags) {
-  return Object.entries(tags || {}).reduce(
-    (n, [group, terms]) => group === 'keywords' ? n : n + ((terms && terms.length) || 0),
-    0,
-  )
+  return Array.isArray(tags) ? tags.length : 0
 }
 
 export function layout_section_rows(sections) {

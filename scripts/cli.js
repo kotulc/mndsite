@@ -1,6 +1,6 @@
 /**
  * mdsite CLI — entry point for the Docker container.
- * Usage: node scripts/cli.js build --config <path> [--content <path>] [--output <path>] [--extract]
+ * Usage: node scripts/cli.js build --config <path> [--content <path>] [--output <path>]
  */
 const path               = require('path')
 const { spawnSync }      = require('child_process')
@@ -35,16 +35,6 @@ async function cmd_build(flags) {
   const config = load_config(flags.config)
   if (flags.content) config.content = path.resolve(flags.content)
   if (flags.output)  config.output  = path.resolve(flags.output)
-
-  // Extraction runs only when requested: --extract flag or extract.on_build in the YAML
-  if (flags.extract && !config.extract.url) {
-    console.error('Error: --extract requires extract.url in the config')
-    process.exit(1)
-  }
-  if (!flags.extract && !config.extract.on_build) {
-    if (config.extract.url) console.log('Extraction configured but skipped — pass --extract or set extract.on_build')
-    config.extract = { ...config.extract, url: '' }
-  }
 
   process.env.MDSITE_OUTPUT = config.output
   write_site_config(config)

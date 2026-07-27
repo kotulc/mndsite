@@ -611,18 +611,19 @@ a.page-info-section-name:hover {
   color: var(--site-gray-600);
 }
 
-/* Extracted tag-group chips — each of the standard groups gets a named, fixed color;
-   any other configured extract_concepts group falls back to chip-custom */
-.chip-categories { background: hsl(210 70% 92%); color: hsl(210 55% 32%); }
-.chip-topics     { background: hsl(265 70% 94%); color: hsl(265 45% 40%); }
-.chip-concepts   { background: hsl(35 80% 88%);  color: hsl(35 65% 28%); }
-.chip-entities   { background: hsl(340 75% 94%); color: hsl(340 55% 40%); }
+/* Fixed tag-group chips (singular groups + legacy plural aliases) */
+.chip-category, .chip-categories { background: hsl(210 70% 92%); color: hsl(210 55% 32%); }
+.chip-topic,     .chip-topics     { background: hsl(265 70% 94%); color: hsl(265 45% 40%); }
+.chip-concept,   .chip-concepts   { background: hsl(35 80% 88%);  color: hsl(35 65% 28%); }
+.chip-entity,    .chip-entities   { background: hsl(340 75% 94%); color: hsl(340 55% 40%); }
+.chip-user       { background: hsl(160 45% 90%); color: hsl(160 40% 28%); }
 .chip-custom     { background: hsl(150 55% 88%); color: hsl(150 50% 24%); }
 
-:is(html[class~="dark"]) .chip-categories { background: hsl(210 35% 22%); color: hsl(210 70% 75%); }
-:is(html[class~="dark"]) .chip-topics     { background: hsl(265 35% 24%); color: hsl(265 70% 80%); }
-:is(html[class~="dark"]) .chip-concepts   { background: hsl(35 35% 20%);  color: hsl(35 70% 72%); }
-:is(html[class~="dark"]) .chip-entities   { background: hsl(340 35% 22%); color: hsl(340 70% 80%); }
+:is(html[class~="dark"]) .chip-category, :is(html[class~="dark"]) .chip-categories { background: hsl(210 35% 22%); color: hsl(210 70% 75%); }
+:is(html[class~="dark"]) .chip-topic,     :is(html[class~="dark"]) .chip-topics     { background: hsl(265 35% 24%); color: hsl(265 70% 80%); }
+:is(html[class~="dark"]) .chip-concept,   :is(html[class~="dark"]) .chip-concepts   { background: hsl(35 35% 20%);  color: hsl(35 70% 72%); }
+:is(html[class~="dark"]) .chip-entity,    :is(html[class~="dark"]) .chip-entities   { background: hsl(340 35% 22%); color: hsl(340 70% 80%); }
+:is(html[class~="dark"]) .chip-user       { background: hsl(160 25% 18%); color: hsl(160 50% 70%); }
 :is(html[class~="dark"]) .chip-custom     { background: hsl(150 30% 18%); color: hsl(150 55% 70%); }
 
 /* Post index listing */

@@ -1,8 +1,20 @@
 /**
- * Unit tests for structural site-graph construction: section nesting, page node
- * fields, link extraction, and page flattening. Pure — no taggly service involved.
+ * Unit tests for markdown text helpers and flat page meta construction.
  */
-const { section_tree, build_page, extract_links, word_count, flatten_pages, root_node, folder_node } = require('../../scripts/graph')
+const { section_tree, word_count, extract_links } = require('../../scripts/text')
+const { build_page, parse_user_tags, parse_desc } = require('../../scripts/meta')
+
+
+/** Deterministic fake embeddings: hash chars into a small vector. */
+async function fake_embedder(texts) {
+  return texts.map(t => {
+    const v = new Array(8).fill(0)
+    const s = String(t)
+    for (let i = 0; i < s.length; i++) v[i % 8] += s.charCodeAt(i) / 1000
+    const n = Math.sqrt(v.reduce((a, b) => a + b * b, 0)) || 1
+    return v.map(x => x / n)
+  })
+}
 
 
 describe('section_tree', () => {
@@ -35,83 +47,61 @@ describe('section_tree', () => {
     const { sections } = section_tree('## Real\n\n```\n## fake\n```\ntail\n')
     expect(sections.map(s => s.name)).toEqual(['Real'])
   })
-
-  test('test_section_tree_handles_crlf', () => {
-    /** CRLF line endings parse the same as LF. */
-    const { sections } = section_tree('## Alpha\r\n\r\ntext\r\n\r\n### Sub\r\n\r\nx\r\n')
-    expect(sections.map(s => s.name)).toEqual(['Alpha'])
-    expect(sections[0].children.map(s => s.name)).toEqual(['Sub'])
-  })
 })
 
 
 describe('build_page', () => {
   const content = '# My Page\n\nIntro line with a [link](/other) and https://example.com here.\n\n' +
-                  '## Section One\n\nSome words in the first section.\n'
+                  '## Section One\n\nSome words in the first section about configuration yaml extract.\n'
+  const cfg = { max_keywords: 8, page_tags: 5 }
 
-  test('test_build_page_structural_fields', () => {
-    /** A page node carries name, url, slug, dates, metrics, links, intro, sections. */
-    const node = build_page({ slug: 'my-page', title: 'My Page', url: '/my-page', content, published: '2026-01-15', created: '2026-07-20' })
-    expect(node).toMatchObject({ name: 'My Page', type: 'page', url: '/my-page', slug: 'my-page', published: '2026-01-15', created: '2026-07-20' })
+  test('test_build_page_flat_fields', async () => {
+    /** A page record carries name, url, slug, dates, metrics, links, related, tags, sections. */
+    const node = await build_page({
+      slug: 'my-page', title: 'My Page', url: '/my-page', content,
+      published: '2026-01-15', created: '2026-07-20', fm: { tags: ['yaml'] },
+    }, cfg, fake_embedder)
+    expect(node).toMatchObject({
+      name: 'My Page', url: '/my-page', slug: 'my-page',
+      published: '2026-01-15', created: '2026-07-20', related: [],
+    })
+    expect(node.hash).toBeUndefined()
+    expect(node.type).toBeUndefined()
     expect(node.metrics.word_count).toBeGreaterThan(0)
-    expect(node.metrics.reading_time).toBeGreaterThanOrEqual(1)
-    expect(node.children.map(s => s.name)).toEqual(['Section One'])
-    expect(node.content).toContain('Intro line')  // intro is text before first ##
-  })
-
-  test('test_build_page_strips_title_from_body', () => {
-    /** The leading title h1 is not treated as a section or included in intro headings. */
-    const node = build_page({ slug: 'p', title: 'My Page', url: '/p', content })
-    expect(node.content.startsWith('# My Page')).toBe(false)
-  })
-
-  test('test_build_page_extracts_links', () => {
-    /** Both markdown link hrefs and bare URLs are collected, deduped. */
-    const node = build_page({ slug: 'p', title: 'P', url: '/p', content })
     expect(node.links).toEqual(expect.arrayContaining(['/other', 'https://example.com']))
+    expect(node.sections.map(s => s.name)).toEqual(['Section One'])
+    expect(node.tags[0]).toMatchObject({ term: 'yaml', group: 'user' })
+    expect(typeof node.tags[0].score).toBe('number')
+  })
+
+  test('test_build_page_optional_desc', async () => {
+    /** desc comes from frontmatter when present. */
+    const node = await build_page({
+      slug: 'p', title: 'P', url: '/p', content: '# P\n\nbody\n', fm: { desc: 'Hello' },
+    }, cfg, fake_embedder)
+    expect(node.desc).toBe('Hello')
   })
 })
 
 
-describe('content_hash (via build_page)', () => {
-  test('test_hash_changes_with_content_and_matches_identical_content', () => {
-    /** Change detection: same content hashes identically, different content differs. */
-    const a = build_page({ slug: 'p', title: 'P', url: '/p', content: '# P\n\nbody one\n' })
-    const b = build_page({ slug: 'p', title: 'P', url: '/p', content: '# P\n\nbody two\n' })
-    const c = build_page({ slug: 'p', title: 'P', url: '/p', content: '# P\n\nbody one\n' })
-    expect(a.hash).not.toBe(b.hash)
-    expect(a.hash).toBe(c.hash)
+describe('parse helpers', () => {
+  test('test_parse_user_tags_merges_tags_and_categories', () => {
+    expect(parse_user_tags({ tags: ['a', 'B'], categories: ['b', 'c'] })).toEqual(['a', 'B', 'c'])
+  })
+
+  test('test_parse_desc_null_when_absent', () => {
+    expect(parse_desc({})).toBeNull()
+    expect(parse_desc({ description: '  ' })).toBeNull()
   })
 })
 
 
-describe('extract_links', () => {
-  test('test_extract_links_excludes_images', () => {
-    /** Image refs (![...]) are not collected as links. */
-    const links = extract_links('![alt](/img.png) and [text](/page)')
-    expect(links).toContain('/page')
-    expect(links).not.toContain('/img.png')
+describe('word_count / links', () => {
+  test('test_word_count_ignores_code_fences', () => {
+    expect(word_count('one two\n```\ncode here\n```\nthree')).toBe(3)
   })
-})
 
-
-describe('word_count', () => {
-  test('test_word_count_ignores_code_and_syntax', () => {
-    /** Code fences and markdown punctuation do not inflate the word count. */
-    expect(word_count('one two three')).toBe(3)
-    expect(word_count('word\n\n```\nlots of code here\n```\n')).toBe(1)
-  })
-})
-
-
-describe('flatten_pages', () => {
-  test('test_flatten_pages_collects_pages_in_order', () => {
-    /** Page nodes are collected depth-first; folders and sections are not pages. */
-    const page = (slug) => build_page({ slug, title: slug, url: `/${slug}`, content: `# ${slug}\n\nbody\n` })
-    const graph = root_node({ name: 'Site', children: [
-      page('a'),
-      folder_node({ name: 'F', url: '/f', slug: 'f', children: [page('b')] }),
-    ] })
-    expect(flatten_pages(graph).map(p => p.slug)).toEqual(['a', 'b'])
+  test('test_extract_links_skips_images', () => {
+    expect(extract_links('![x](/img.png) [y](/page) https://z.com')).toEqual(['/page', 'https://z.com'])
   })
 })

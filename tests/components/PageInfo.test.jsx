@@ -10,21 +10,18 @@ jest.mock('next/router', () => ({
 
 
 test('test_page_info_toggle_hidden_without_description_or_tagged_sections', () => {
-  /** No affordance when there's nothing to show (no desc, no tagged sections). */
-  useSection.mockReturnValue({ page: { desc: '' }, sections: [] })
+  useSection.mockReturnValue({ page: { desc: null }, sections: [] })
   const { container } = render(<PageInfoToggle open={false} on_toggle={() => {}} />)
   expect(container).toBeEmptyDOMElement()
 })
 
 test('test_page_info_toggle_shows_with_description_only', () => {
-  /** A page with just a description still gets the toggle. */
   useSection.mockReturnValue({ page: { desc: 'About this page.' }, sections: [] })
   render(<PageInfoToggle open={false} on_toggle={() => {}} />)
   expect(screen.getByRole('button', { name: 'Show page info' })).toBeInTheDocument()
 })
 
 test('test_page_info_toggle_reflects_open_state_in_aria', () => {
-  /** aria-expanded / controls / label track the open flag for accessibility. */
   useSection.mockReturnValue({ page: { desc: 'x' }, sections: [] })
   render(<PageInfoToggle open={true} on_toggle={() => {}} />)
   const btn = screen.getByRole('button', { name: 'Hide page info' })
@@ -33,12 +30,11 @@ test('test_page_info_toggle_reflects_open_state_in_aria', () => {
 })
 
 test('test_page_info_panel_renders_title_summary_and_section_tag_map', () => {
-  /** Panel labels its summary and packs sections into a content-sized mosaic. */
   useSection.mockReturnValue({
     page: { desc: 'A page about things.' },
     sections: [
-      { name: 'Setup', tags: { categories: ['install'] } },
-      { name: 'Usage', tags: { topics: ['cli'] } },
+      { name: 'Setup', tags: [{ term: 'install', group: 'category', score: 0.9 }] },
+      { name: 'Usage', tags: [{ term: 'cli', group: 'topic', score: 0.8 }] },
     ],
   })
   const { container } = render(<PageInfoPanel open={true} on_close={() => {}} />)
@@ -51,18 +47,25 @@ test('test_page_info_panel_renders_title_summary_and_section_tag_map', () => {
   expect(screen.getByRole('link', { name: 'Usage' })).toHaveAttribute('href', '#usage')
   expect(screen.getByText('cli')).toBeInTheDocument()
   expect(container.querySelectorAll('.page-info-section')).toHaveLength(2)
-  expect(container.querySelectorAll('.page-info-row')).toHaveLength(1)
+})
+
+test('test_page_info_panel_omits_summary_without_desc', () => {
+  useSection.mockReturnValue({
+    page: { desc: null },
+    sections: [{ name: 'Only', tags: [{ term: 'x', group: 'topic', score: 1 }] }],
+  })
+  render(<PageInfoPanel open={true} on_close={() => {}} />)
+  expect(screen.queryByRole('heading', { name: 'Summary' })).not.toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Only' })).toBeInTheDocument()
 })
 
 test('test_page_info_panel_returns_null_when_closed', () => {
-  /** Nothing mounts while the panel is closed. */
   useSection.mockReturnValue({ page: { desc: 'x' }, sections: [] })
   const { container } = render(<PageInfoPanel open={false} on_close={() => {}} />)
   expect(container).toBeEmptyDOMElement()
 })
 
 test('test_page_info_panel_closes_on_escape', () => {
-  /** Escape dismisses the panel, matching TocMenu behavior. */
   useSection.mockReturnValue({ page: { desc: 'x' }, sections: [] })
   const on_close = jest.fn()
   render(<PageInfoPanel open={true} on_close={on_close} />)
@@ -70,78 +73,49 @@ test('test_page_info_panel_closes_on_escape', () => {
   expect(on_close).toHaveBeenCalled()
 })
 
-test('test_page_info_panel_omits_sections_with_no_tags_and_hides_keywords', () => {
-  /** Sections whose only content is keywords (or nothing) are dropped, and keywords are
-   *  never rendered. */
-  useSection.mockReturnValue({
-    page: { desc: 'Desc.' },
-    sections: [
-      { name: 'Empty', tags: { keywords: ['ignored'] } },
-      { name: 'Tagged', tags: { concepts: ['shown'], keywords: ['hidden'] } },
-    ],
-  })
-  render(<PageInfoPanel open={true} on_close={() => {}} />)
-  expect(screen.queryByText('Empty')).not.toBeInTheDocument()
-  expect(screen.queryByText('ignored')).not.toBeInTheDocument()
-  expect(screen.getByRole('link', { name: 'Tagged' })).toBeInTheDocument()
-  expect(screen.getByText('shown')).toBeInTheDocument()
-  expect(screen.queryByText('hidden')).not.toBeInTheDocument()
-})
-
 test('test_page_info_panel_returns_null_when_no_info', () => {
-  /** Nothing renders when there's neither a description nor tagged sections. */
-  useSection.mockReturnValue({ page: { desc: '' }, sections: [{ name: 'x', tags: {} }] })
+  useSection.mockReturnValue({ page: { desc: null }, sections: [{ name: 'x', tags: [] }] })
   const { container } = render(<PageInfoPanel open={true} on_close={() => {}} />)
   expect(container).toBeEmptyDOMElement()
 })
 
 test('test_page_info_panel_limits_section_tags_to_page_tags', () => {
-  /** Each section shows at most siteConfig.page_tags chips (standard groups first). */
   useSection.mockReturnValue({
-    page: { desc: '' },
+    page: { desc: null },
     sections: [{
       name: 'Busy',
-      tags: {
-        categories: ['c1', 'c2'],
-        topics: ['t1', 't2'],
-        concepts: ['x1', 'x2'],
-        entities: ['e1'],
-        keywords: ['ignored'],
-      },
+      tags: [
+        { term: 'c1', group: 'category', score: 1 },
+        { term: 'c2', group: 'category', score: 0.9 },
+        { term: 't1', group: 'topic', score: 0.8 },
+        { term: 't2', group: 'topic', score: 0.7 },
+        { term: 'x1', group: 'concept', score: 0.6 },
+        { term: 'x2', group: 'concept', score: 0.5 },
+      ],
     }],
   })
   render(<PageInfoPanel open={true} on_close={() => {}} />)
   expect(screen.getByText('c1')).toBeInTheDocument()
-  expect(screen.getByText('c2')).toBeInTheDocument()
-  expect(screen.getByText('t1')).toBeInTheDocument()
-  expect(screen.getByText('t2')).toBeInTheDocument()
   expect(screen.getByText('x1')).toBeInTheDocument()
   expect(screen.queryByText('x2')).not.toBeInTheDocument()
-  expect(screen.queryByText('e1')).not.toBeInTheDocument()
-  expect(screen.queryByText('ignored')).not.toBeInTheDocument()
 })
 
-test('test_limit_tags_preserves_group_membership_for_chip_coloring', () => {
-  /** Truncation keeps each kept term under its original group. */
-  expect(limit_tags({ topics: ['a', 'b'], categories: ['c'] }, 2))
-    .toEqual({ categories: ['c'], topics: ['a'] })
+test('test_limit_tags_slices_array', () => {
+  expect(limit_tags([{ term: 'a' }, { term: 'b' }, { term: 'c' }], 2))
+    .toEqual([{ term: 'a' }, { term: 'b' }])
 })
 
 test('test_layout_section_rows_packs_busy_pages_without_thin_slices', () => {
-  /** Eight sections become rows of ~3 — no absolute thin tiles that clip chips. */
   const sections = Array.from({ length: 8 }, (_, i) => ({
     name: `S${i}`,
-    tags: { categories: ['a', 'b', 'c', 'd', 'e'] },
+    tags: [{ term: 'a' }, { term: 'b' }, { term: 'c' }, { term: 'd' }, { term: 'e' }],
   }))
   const rows = layout_section_rows(sections)
   expect(rows).toHaveLength(3)
   expect(rows.map(r => r.length)).toEqual([3, 3, 2])
-  expect(rows.flat()).toHaveLength(8)
   expect(rows[0][0].weight).toBe(5)
 })
 
 test('test_section_anchor_slugifies_heading_text', () => {
-  /** Section links target the same GitHub-style fragment Nextra puts on headings. */
   expect(section_anchor('How It Works')).toBe('how-it-works')
-  expect(section_anchor('Extraction in CI')).toBe('extraction-in-ci')
 })

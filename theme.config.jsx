@@ -13,32 +13,33 @@ import siteConfig from './site.config'
 import siteMeta from './public/site-meta.json'
 
 
-// Flatten the site graph into a url → page-node index once at module load
-function index_pages(node, acc = {}) {
-  if (node.type === 'page') acc[node.url] = node
-  for (const child of node.children || []) index_pages(child, acc)
-  return acc
+function strip_trailing_slash(path) {
+  return path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path
 }
-const PAGE_INDEX = index_pages(siteMeta)
+
+// Flat site-meta.json → url → page index
+const PAGE_INDEX = Object.fromEntries(
+  (siteMeta.pages || []).map(p => [strip_trailing_slash(p.url), p])
+)
 
 
 function use_page_meta() {
-  /** Page node for the current route from the generated site graph. */
+  /** Page record for the current route from public/site-meta.json. */
   const { route } = useRouter()
-  return PAGE_INDEX[route] || {}
+  return PAGE_INDEX[strip_trailing_slash(route)] || PAGE_INDEX[route] || {}
 }
 
 
 function PageMeta() {
-  /** Renders published date, reading time (unless disabled), and the page's curated
-   *  top page_tags chips (meta.page_tags — ranked, title excluded, see extract.js). */
+  /** Renders published date, reading time (unless disabled), and top page_tags chips. */
   const meta = use_page_meta()
   const metrics = meta.metrics || {}
   const mins = siteConfig.reading_time === false ? null : metrics.reading_time
+  const chips = Array.isArray(meta.tags) ? meta.tags.slice(0, siteConfig.page_tags ?? 5) : []
   return (
     <>
       <PageHeader date={meta.published} reading_time={mins} />
-      <TagList tags={meta.page_tags} />
+      <TagList tags={chips} />
     </>
   )
 }

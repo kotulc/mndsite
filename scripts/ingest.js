@@ -1,18 +1,18 @@
 /**
  * Content ingestion pipeline.
- * Recursively mirrors any markdown source tree into the Next.js site content directory (pages/)
- * and builds the structural site graph (public/site-meta.json):
+ * Recursively mirrors any markdown source tree into the Next.js pages/ directory and
+ * writes flat page metadata to public/site-meta.json:
  *   - Renames .md → .mdx (home.md or index.md at any level → index.mdx)
- *   - Strips frontmatter from output pages — metadata lives in the site graph, not frontmatter
+ *   - Strips frontmatter from output pages — metadata lives in site-meta.json
  *   - Ensures each page has an h1 (title from frontmatter, first heading, or slug)
- *   - Builds a folder/page/section node graph mirroring the content tree (scripts/graph.js)
- *   - Optionally layers NLP metadata onto the graph via taggly (scripts/extract.js),
- *     skipping pages whose content hash matches the previous build's site-meta.json
+ *   - Builds flat page/section records with local keyword + embedding tags (scripts/meta.js)
  *   - Auto-generates index.mdx (redirect to first sorted page) when none exists
  *   - Copies images/ subdirectories to public/images/<rel-path>/ and rewrites refs
  *   - Strips corrupt EXIF segments from copied JPEGs
  *   - Auto-generates _meta.json at each level; sort order: nav_order > date > alpha
  *   - For flatten[] directories: writes public/dir-feeds/<name>.json and a DirFeed page
+ *
+ * Content hashing / taggly graph enrichment live in the sibling mndmeta project.
  *
  * Usage: node scripts/ingest.js [source-dir]   (default: docs/)
  */
@@ -20,8 +20,8 @@ const fs = require('fs')
 const path = require('path')
 const yaml = require('js-yaml')
 const { strip_dir } = require('./fix-exif')
-const graph = require('./graph')
-const extract = require('./extract')
+const meta = require('./meta')
+const tags = require('./tags')
 
 
 const ROOT      = path.join(__dirname, '..')
@@ -218,8 +218,8 @@ function copy_images(src_dir, rel) {
 }
 
 
-function ingest_page(src_entry, dest_dir, rel, slug, base, img_url) {
-  /** Transform one source file into a frontmatter-free .mdx and return its page node. */
+async function ingest_page(src_entry, dest_dir, rel, slug, base, img_url, tag_cfg, embedder) {
+  /** Transform one source file into a frontmatter-free .mdx and return its flat page record. */
   const raw = fs.readFileSync(src_entry, 'utf8').replace(/\r\n?/g, '\n')
   const fm  = parse_fm(raw)
   // Relative links resolve against the source file's own directory (where the author
@@ -237,24 +237,24 @@ function ingest_page(src_entry, dest_dir, rel, slug, base, img_url) {
 
   const content = fs.readFileSync(dest, 'utf8')
   const parts = [...(rel ? rel.split('/') : []), ...(slug === 'index' ? [] : [slug])]
-  const page = graph.build_page({
+  return meta.build_page({
     slug,
     title,
     url:       '/' + parts.join('/') || '/',
     content,
     published: fm.date ? String(fm.date).slice(0, 10) : '',
     created:   fs.statSync(src_entry).mtime.toISOString().slice(0, 10),
-  })
-
-  return page
+    fm,
+  }, tag_cfg, embedder)
 }
 
 
-function ingest_dir(src_dir, dest_dir, rel) {
-  /** Recursively mirror src_dir → dest_dir and return its folder (or root) graph node. */
+async function ingest_dir(src_dir, dest_dir, rel, tag_cfg, embedder) {
+  /** Recursively mirror src_dir → dest_dir; return { pages, title } for flat meta + nav. */
   fs.mkdirSync(dest_dir, { recursive: true })
   const img_url = copy_images(src_dir, rel)
-  const nodes = []
+  const nav_nodes = []
+  const pages = []
 
   for (const entry of fs.readdirSync(src_dir).sort()) {
     const src_entry = path.join(src_dir, entry)
@@ -263,7 +263,9 @@ function ingest_dir(src_dir, dest_dir, rel) {
 
     if (stat.isDirectory()) {
       const sub_rel = rel ? `${rel}/${entry}` : entry
-      nodes.push(ingest_dir(src_entry, path.join(dest_dir, entry), sub_rel))
+      const sub = await ingest_dir(src_entry, path.join(dest_dir, entry), sub_rel, tag_cfg, embedder)
+      pages.push(...sub.pages)
+      nav_nodes.push({ slug: entry, name: sub.title, type: 'folder' })
       continue
     }
 
@@ -273,18 +275,22 @@ function ingest_dir(src_dir, dest_dir, rel) {
 
     const base = path.basename(entry, is_mdx ? '.mdx' : '.md')
     const slug = (base === 'home' || base === 'index') ? 'index' : base
-    nodes.push(ingest_page(src_entry, dest_dir, rel, slug, base, img_url))
+    const page = await ingest_page(src_entry, dest_dir, rel, slug, base, img_url, tag_cfg, embedder)
+    pages.push(page)
+    nav_nodes.push({
+      slug, name: page.name, type: 'page', url: page.url,
+      published: page.published, metrics: page.metrics, tags: page.tags,
+    })
   }
 
-  const sorted = sort_entries(nodes, rel)
+  const sorted = sort_entries(nav_nodes, rel)
   const index  = sorted.find(n => n.slug === 'index')
   const title  = index ? index.name : slug_to_title(path.basename(src_dir))
 
   if (is_flatten(rel)) emit_feed(dest_dir, sorted, rel, title)
   else emit_nav(dest_dir, sorted, rel)
 
-  if (!rel) return graph.root_node({ name: get_config().title, children: sorted })
-  return graph.folder_node({ name: title, url: `/${rel}`, slug: path.basename(src_dir), children: sorted })
+  return { pages, title }
 }
 
 
@@ -305,10 +311,11 @@ function emit_nav(dest_dir, sorted, rel) {
 function emit_feed(dest_dir, sorted, rel, dir_title) {
   /** Emit feed output for a flattened directory: dir-feed JSON, DirFeed page, hidden meta. */
   const feed_entries = sorted
-    .filter(n => n.slug !== 'index' && fs.existsSync(path.join(dest_dir, `${n.slug}.mdx`)))
+    .filter(n => n.type === 'page' && n.slug !== 'index' && fs.existsSync(path.join(dest_dir, `${n.slug}.mdx`)))
     .map(n => ({
       url: n.url, title: n.name, date: n.published,
-      categories: (n.tags && n.tags.categories) || [], tags: (n.tags && n.tags.keywords) || [],
+      categories: (n.tags || []).filter(t => t.group === 'user' || t.group === 'category').map(t => t.term),
+      tags: (n.tags || []).map(t => t.term),
       reading_time: n.metrics && n.metrics.reading_time,
       content: extract_content(fs.readFileSync(path.join(dest_dir, `${n.slug}.mdx`), 'utf8')),
     }))
@@ -371,58 +378,29 @@ function sync_assets(assets_dir) {
 
 // --- Pipeline entry ---
 
-function load_previous(extract_on) {
-  /** Read the previous build's site graph (if any) into a url -> page node map plus its
-   *  extract config hash, so extraction can skip pages whose content hash hasn't
-   *  changed. Ignores a missing or corrupt previous graph — every page is treated
-   *  as changed. */
-  if (!extract_on || !fs.existsSync(SITE_META)) return { pages: {}, config_hash: '' }
-  try {
-    const prev = JSON.parse(fs.readFileSync(SITE_META, 'utf8'))
-    return {
-      pages: Object.fromEntries(graph.flatten_pages(prev).map(p => [p.url, p])),
-      config_hash: prev.extract_config || '',
-    }
-  } catch {
-    return { pages: {}, config_hash: '' }
-  }
-}
-
-
 async function run(config) {
-  /** Execute the full ingest pipeline: mirror files, build the site graph, optionally extract. */
+  /** Execute the full ingest pipeline: mirror files, build flat site-meta.json with local tags. */
   _config = config
   const src = config.content
-  const extract_on = !!config.extract?.url
+  const tag_cfg = config.tags || { max_keywords: 32, page_tags: 5 }
 
   console.log(`\nIngesting from: ${src}`)
-
-  if (extract_on) {
-    try {
-      await extract.check_service(config.extract.url)
-    } catch (err) {
-      if (config.extract.strict !== false) throw err
-      console.warn(`  Warning: ${err.message} — skipping extraction`)
-      config.extract = { ...config.extract, url: '' }
-    }
-  }
-
-  const previous = load_previous(extract_on)
+  console.log(`  Tagging pages locally (max_keywords=${tag_cfg.max_keywords}, page_tags=${tag_cfg.page_tags})`)
 
   fs.rmSync(PAGES,   { recursive: true, force: true })
   fs.rmSync(PUB_IMG, { recursive: true, force: true })
   fs.rmSync(SITE_META, { force: true })
 
-  const site_graph = ingest_dir(src, PAGES, '')
-  const pages = graph.flatten_pages(site_graph)
+  const embedder = tags.default_embedder
+  const { pages } = await ingest_dir(src, PAGES, '', tag_cfg, embedder)
 
-  if (config.extract?.url) {
-    console.log(`  Extracting metadata via taggly at ${config.extract.url} (${pages.length} pages)`)
-    await extract.extract_graph(site_graph, config.extract, msg => console.log(`  [extract] ${msg}`), previous.pages, previous.config_hash)
-  }
+  console.log(`  Scoring related pages (top_n_related=${tag_cfg.top_n_related ?? 3})`)
+  await tags.fill_related(pages, { top_n_related: tag_cfg.top_n_related ?? 3, embedder })
 
-  fs.writeFileSync(SITE_META, JSON.stringify(site_graph, null, 2) + '\n')
-  console.log(`  Wrote site graph (${pages.length} pages) to public/site-meta.json`)
+  // Stable order by url for diffs / tooling
+  pages.sort((a, b) => a.url.localeCompare(b.url))
+  fs.writeFileSync(SITE_META, JSON.stringify({ pages }, null, 2) + '\n')
+  console.log(`  Wrote site metadata (${pages.length} pages) to public/site-meta.json`)
 
   const app_src = path.join(ROOT, '_app.jsx')
   if (fs.existsSync(app_src)) fs.copyFileSync(app_src, path.join(PAGES, '_app.jsx'))
@@ -450,19 +428,14 @@ module.exports = {
 
 
 // --- Main (direct invocation: npm run ingest [source-dir]) ---
-// Reads mdsite.yaml when present (site.config.js fallback), so extract.on_build
-// applies here too; one-off extraction runs use the CLI --extract flag instead.
+// Reads mdsite.yaml when present (site.config.js fallback).
 
 if (require.main === module) {
   const yaml_path = path.join(ROOT, 'mdsite.yaml')
   const cfg = fs.existsSync(yaml_path)
     ? require('./config').load_config(yaml_path)
-    : { ...require('../site.config'), content: path.join(ROOT, 'docs') }
+    : { ...require('../site.config'), content: path.join(ROOT, 'docs'), tags: { max_keywords: 32, page_tags: 5 } }
   if (process.argv[2]) cfg.content = path.resolve(process.argv[2])
 
-  if (cfg.extract?.url && !cfg.extract.on_build) {
-    console.log('Extraction configured but skipped — set extract.on_build or build with --extract')
-    cfg.extract = { ...cfg.extract, url: '' }
-  }
   run(cfg).catch(err => { console.error(err.message); process.exit(1) })
 }

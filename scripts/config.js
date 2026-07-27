@@ -18,13 +18,10 @@ const DEFAULTS = {
   toc:            true,
   reading_time:   true,
   theme:          { color: 'default', typeset: 'sans', navbar: '', footer: '' },
-  extract:        {
-    url: '', on_build: false, strict: true,
-    max_comparisons: 128, top_n_related: 3,
-    extract_descriptions: true,
-    extract_concepts: ['categories', 'topics', 'concepts'],
-    max_concepts: 4, max_keywords: 32, max_entities: 4, page_tags: 5,
-    score_polarity: true, score_toxicity: true, score_spam: true,
+  tags:           {
+    max_keywords: 32,
+    page_tags: 5,
+    top_n_related: 3,
   },
   flatten:        [],
   nav_order:      {},
@@ -44,8 +41,8 @@ function load_config(yaml_path) {
 
   if (!cfg.title) throw new Error(`mdsite.yaml: 'title' is required`)
 
-  cfg.theme   = resolve_theme({ ...DEFAULTS.theme, ...(raw.theme || {}) })
-  cfg.extract = resolve_extract(raw.extract)
+  cfg.theme = resolve_theme({ ...DEFAULTS.theme, ...(raw.theme || {}) })
+  cfg.tags  = resolve_tags(raw.tags)
 
   cfg.content = path.resolve(dir, cfg.content)
   cfg.output  = path.resolve(dir, cfg.output)
@@ -56,22 +53,16 @@ function load_config(yaml_path) {
 }
 
 
-function resolve_extract(raw) {
-  /** Merge the extract block over defaults and coerce numeric/boolean/list fields. */
-  const cfg = { ...DEFAULTS.extract, ...(raw || {}) }
-  cfg.max_comparisons = parseInt(cfg.max_comparisons, 10)
-  cfg.top_n_related   = parseInt(cfg.top_n_related, 10)
-  cfg.max_concepts    = parseInt(cfg.max_concepts, 10)
-  cfg.max_keywords    = parseInt(cfg.max_keywords, 10)
-  cfg.max_entities    = parseInt(cfg.max_entities, 10)
-  cfg.page_tags       = parseInt(cfg.page_tags, 10)
-  cfg.extract_descriptions = !!cfg.extract_descriptions
-  cfg.score_polarity  = cfg.score_polarity !== false
-  cfg.score_toxicity  = cfg.score_toxicity !== false
-  cfg.score_spam      = cfg.score_spam !== false
-
-  if (!Array.isArray(cfg.extract_concepts)) {
-    throw new Error(`mdsite.yaml: extract.extract_concepts must be a list of strings`)
+function resolve_tags(raw) {
+  /** Merge the tags block over defaults. Fixed groups live in scripts/meta.js. */
+  const cfg = { ...DEFAULTS.tags, ...(raw || {}) }
+  cfg.max_keywords  = parseInt(cfg.max_keywords, 10)
+  cfg.page_tags     = parseInt(cfg.page_tags, 10)
+  cfg.top_n_related = parseInt(cfg.top_n_related, 10)
+  if (!(cfg.max_keywords > 0)) throw new Error(`mdsite.yaml: tags.max_keywords must be a positive integer`)
+  if (!(cfg.page_tags > 0))    throw new Error(`mdsite.yaml: tags.page_tags must be a positive integer`)
+  if (cfg.top_n_related < 0 || Number.isNaN(cfg.top_n_related)) {
+    throw new Error(`mdsite.yaml: tags.top_n_related must be a non-negative integer`)
   }
   return cfg
 }
@@ -85,11 +76,9 @@ function write_site_config(config, dest_dir) {
     'theme_toggle', 'toc', 'reading_time',
     'theme', 'flatten', 'nav_order',
   ]
-  // page_tags is extract-only at load time, but the UI needs the limit (PageInfo
-  // caps per-section chips to the same count used for page-level chips).
   const values = {
     ...Object.fromEntries(keys.map(k => [k, config[k]])),
-    page_tags: config.extract.page_tags,
+    page_tags: config.tags.page_tags,
   }
   const body = Object.entries(values)
     .map(([k, v]) => `  ${k}: ${JSON.stringify(v)}`)

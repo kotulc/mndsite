@@ -9,10 +9,11 @@ theme:
   color: default
   typeset: sans
 
-# NLP extraction (runs only with --extract or on_build: true; CI gates on the ENRICH var)
-extract:
-  url: http://127.0.0.1:8000
-  on_build: true
+# Local keyword + embedding tags (always on during ingest)
+tags:
+  max_keywords: 32
+  page_tags: 5
+  top_n_related: 3
 
 content: ./docs
 output: ./dist
