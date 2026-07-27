@@ -9,11 +9,11 @@ theme:
   color: default
   typeset: sans
 
-# Local keyword + embedding tags (always on during ingest)
-tags:
+# Local keyword + embedding metadata (always on during ingest)
+meta:
   max_keywords: 32
   page_tags: 5
-  top_n_related: 3
+  related_links: 3
 
 content: ./docs
 output: ./dist

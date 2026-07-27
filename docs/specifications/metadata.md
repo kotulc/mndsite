@@ -57,11 +57,11 @@ tokenizer files). Ingest loads from disk only — no Hugging Face download.
 
 Pipeline (always on during ingest):
 
-1. Extract up to `tags.max_keywords` candidates from the unit text
+1. Extract up to `meta.max_keywords` candidates from the unit text
 2. Score candidates (and frontmatter tags) against the unit title
 3. Group auto candidates; force FM tags to `user`
 4. Merge **user first**, then auto by descending score; store up to `max_keywords`
-5. UI shows the first `tags.page_tags` entries
+5. UI shows the first `meta.page_tags` entries
 
 Frontmatter:
 
@@ -76,13 +76,13 @@ tags: [yaml, extract]
 
 ## Related
 
-After tagging, each page gets up to `tags.top_n_related` related pages via embedding
+After tagging, each page gets up to `meta.related_links` related pages via embedding
 similarity of a short fingerprint (`title` + optional `desc` + top tag terms). Entries
 are `{ name, url, score }`. Pages already listed in `links` are skipped.
 
 ```yaml
-tags:
+meta:
   max_keywords: 32
   page_tags: 5
-  top_n_related: 3
+  related_links: 3
 ```

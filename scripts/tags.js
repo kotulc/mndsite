@@ -173,10 +173,10 @@ function page_fingerprint(page, tag_limit = 8) {
 }
 
 
-async function fill_related(pages, { top_n_related = 3, embedder } = {}) {
+async function fill_related(pages, { related_links = 3, embedder } = {}) {
   /** Pairwise embedding similarity across pages; writes page.related = [{ name, url, score }].
    *  Skips self and urls already present in page.links. Mutates pages in place. */
-  const n = Math.max(0, parseInt(top_n_related, 10) || 0)
+  const n = Math.max(0, parseInt(related_links, 10) || 0)
   if (!pages.length || n === 0) {
     for (const p of pages) p.related = []
     return pages

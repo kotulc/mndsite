@@ -33,9 +33,9 @@ consumed by Next.js and Nextra.
 | `theme_toggle` | string | `"navbar"` | Where the light/dark toggle appears: `"navbar"` or `"sidebar"` |
 | `toc` | boolean | `true` | Right sidebar: "On This Page" section navigation |
 | `reading_time` | boolean | `true` | Show estimated reading time in page headers and feeds |
-| `tags.max_keywords` | integer | `32` | Max tag terms stored per page/section after ingest |
-| `tags.page_tags` | integer | `5` | Max chips shown below the title and per section in PageInfo |
-| `tags.top_n_related` | integer | `3` | Related pages attached per page via embedding similarity |
+| `meta.max_keywords` | integer | `32` | Max tag terms stored per page/section after ingest |
+| `meta.page_tags` | integer | `5` | Max chips shown below the title and per section in PageInfo |
+| `meta.related_links` | integer | `3` | Related pages attached per page via embedding similarity |
 | `theme.color` | string | `"default"` | Named accent palette — see [Theme](#theme) below |
 | `theme.typeset` | string | `"sans"` | Named body font stack — see [Theme](#theme) below |
 | `theme.navbar` | string | `""` | Navbar background: `"primary"` (theme tint) or any CSS color |
@@ -117,10 +117,10 @@ Ingest loads from disk only — no Hugging Face download. After all pages are ta
 Optional page summary: set `desc` or `description` in frontmatter — PageInfo shows it when present.
 
 ```yaml
-tags:
+meta:
   max_keywords: 32       # tag pool stored per page/section
   page_tags: 5           # chips below title and per section in PageInfo
-  top_n_related: 3       # related pages per page (skips urls already in links)
+  related_links: 3       # related pages per page (skips urls already in links)
 ```
 
 See the [Metadata Contract](/specifications/metadata) spec for the full schema. Hashing,

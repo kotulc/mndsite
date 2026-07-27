@@ -3,6 +3,6 @@
  * Used by TagList and consumer components; variant selects the chip-<variant> style in
  * styles/global.css.
  */
-export default function Chip({ label, variant = 'tag' }) {
-  return <span className={`chip chip-${variant}`}>{label}</span>
+export default function Chip({ label, variant = 'tag', title }) {
+  return <span className={`chip chip-${variant}`} title={title}>{label}</span>
 }

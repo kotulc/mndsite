@@ -12,6 +12,16 @@ test('test_tag_list_renders_array_tags', () => {
   expect(screen.getByText('ai')).toBeInTheDocument()
 })
 
+test('test_tag_list_shows_group_and_score_tooltip', () => {
+  render(<TagList tags={[{ term: 'yaml', group: 'user', score: 0.91 }]} />)
+  expect(screen.getByText('yaml')).toHaveAttribute('title', 'User: yaml, score 0.91')
+})
+
+test('test_tag_list_tooltip_without_score_omits_score', () => {
+  render(<TagList tags={[{ term: 'reviews', group: 'category' }]} />)
+  expect(screen.getByText('reviews')).toHaveAttribute('title', 'Category: reviews')
+})
+
 test('test_tag_list_known_groups_get_named_chip_class', () => {
   /** Fixed groups render with their own chip-<group> class. */
   render(<TagList tags={[

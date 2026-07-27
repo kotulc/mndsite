@@ -61,7 +61,7 @@ describe('fill_related', () => {
       { name: 'B', url: '/b', desc: 'shared topic', tags: [{ term: 'alpha' }], links: [] },
       { name: 'C', url: '/c', desc: 'other stuff', tags: [{ term: 'zeta' }], links: [] },
     ]
-    await fill_related(pages, { top_n_related: 1, embedder })
+    await fill_related(pages, { related_links: 1, embedder })
     expect(pages[0].related).toHaveLength(1)
     expect(pages[0].related[0]).toMatchObject({ url: '/b', name: 'B' })
     expect(typeof pages[0].related[0].score).toBe('number')
@@ -74,7 +74,7 @@ describe('fill_related', () => {
       { name: 'B', url: '/b', tags: [{ term: 'x' }], links: [] },
       { name: 'C', url: '/c', tags: [{ term: 'x' }], links: [] },
     ]
-    await fill_related(pages, { top_n_related: 5, embedder })
+    await fill_related(pages, { related_links: 5, embedder })
     expect(pages[0].related.map(r => r.url)).not.toContain('/b')
     expect(pages[0].related.map(r => r.url)).toContain('/c')
   })

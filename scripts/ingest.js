@@ -218,7 +218,7 @@ function copy_images(src_dir, rel) {
 }
 
 
-async function ingest_page(src_entry, dest_dir, rel, slug, base, img_url, tag_cfg, embedder) {
+async function ingest_page(src_entry, dest_dir, rel, slug, base, img_url, meta_cfg, embedder) {
   /** Transform one source file into a frontmatter-free .mdx and return its flat page record. */
   const raw = fs.readFileSync(src_entry, 'utf8').replace(/\r\n?/g, '\n')
   const fm  = parse_fm(raw)
@@ -245,11 +245,11 @@ async function ingest_page(src_entry, dest_dir, rel, slug, base, img_url, tag_cf
     published: fm.date ? String(fm.date).slice(0, 10) : '',
     created:   fs.statSync(src_entry).mtime.toISOString().slice(0, 10),
     fm,
-  }, tag_cfg, embedder)
+  }, meta_cfg, embedder)
 }
 
 
-async function ingest_dir(src_dir, dest_dir, rel, tag_cfg, embedder) {
+async function ingest_dir(src_dir, dest_dir, rel, meta_cfg, embedder) {
   /** Recursively mirror src_dir → dest_dir; return { pages, title } for flat meta + nav. */
   fs.mkdirSync(dest_dir, { recursive: true })
   const img_url = copy_images(src_dir, rel)
@@ -263,7 +263,7 @@ async function ingest_dir(src_dir, dest_dir, rel, tag_cfg, embedder) {
 
     if (stat.isDirectory()) {
       const sub_rel = rel ? `${rel}/${entry}` : entry
-      const sub = await ingest_dir(src_entry, path.join(dest_dir, entry), sub_rel, tag_cfg, embedder)
+      const sub = await ingest_dir(src_entry, path.join(dest_dir, entry), sub_rel, meta_cfg, embedder)
       pages.push(...sub.pages)
       nav_nodes.push({ slug: entry, name: sub.title, type: 'folder' })
       continue
@@ -275,7 +275,7 @@ async function ingest_dir(src_dir, dest_dir, rel, tag_cfg, embedder) {
 
     const base = path.basename(entry, is_mdx ? '.mdx' : '.md')
     const slug = (base === 'home' || base === 'index') ? 'index' : base
-    const page = await ingest_page(src_entry, dest_dir, rel, slug, base, img_url, tag_cfg, embedder)
+    const page = await ingest_page(src_entry, dest_dir, rel, slug, base, img_url, meta_cfg, embedder)
     pages.push(page)
     nav_nodes.push({
       slug, name: page.name, type: 'page', url: page.url,
@@ -382,20 +382,20 @@ async function run(config) {
   /** Execute the full ingest pipeline: mirror files, build flat site-meta.json with local tags. */
   _config = config
   const src = config.content
-  const tag_cfg = config.tags || { max_keywords: 32, page_tags: 5 }
+  const meta_cfg = config.meta || { max_keywords: 32, page_tags: 5, related_links: 3 }
 
   console.log(`\nIngesting from: ${src}`)
-  console.log(`  Tagging pages locally (max_keywords=${tag_cfg.max_keywords}, page_tags=${tag_cfg.page_tags})`)
+  console.log(`  Tagging pages locally (max_keywords=${meta_cfg.max_keywords}, page_tags=${meta_cfg.page_tags})`)
 
   fs.rmSync(PAGES,   { recursive: true, force: true })
   fs.rmSync(PUB_IMG, { recursive: true, force: true })
   fs.rmSync(SITE_META, { force: true })
 
   const embedder = tags.default_embedder
-  const { pages } = await ingest_dir(src, PAGES, '', tag_cfg, embedder)
+  const { pages } = await ingest_dir(src, PAGES, '', meta_cfg, embedder)
 
-  console.log(`  Scoring related pages (top_n_related=${tag_cfg.top_n_related ?? 3})`)
-  await tags.fill_related(pages, { top_n_related: tag_cfg.top_n_related ?? 3, embedder })
+  console.log(`  Scoring related pages (related_links=${meta_cfg.related_links ?? 3})`)
+  await tags.fill_related(pages, { related_links: meta_cfg.related_links ?? 3, embedder })
 
   // Stable order by url for diffs / tooling
   pages.sort((a, b) => a.url.localeCompare(b.url))
@@ -434,7 +434,7 @@ if (require.main === module) {
   const yaml_path = path.join(ROOT, 'mdsite.yaml')
   const cfg = fs.existsSync(yaml_path)
     ? require('./config').load_config(yaml_path)
-    : { ...require('../site.config'), content: path.join(ROOT, 'docs'), tags: { max_keywords: 32, page_tags: 5 } }
+    : { ...require('../site.config'), content: path.join(ROOT, 'docs'), meta: { max_keywords: 32, page_tags: 5, related_links: 3 } }
   if (process.argv[2]) cfg.content = path.resolve(process.argv[2])
 
   run(cfg).catch(err => { console.error(err.message); process.exit(1) })

@@ -114,11 +114,11 @@ theme:
 flatten: []                  # list of section slugs to flatten (no subfolder in nav)
 nav_order: {}                # map of section slug → ordered list of page slugs
 
-# Optional — local tagging (always on during ingest)
-tags:
+# Optional — local metadata tagging (always on during ingest)
+meta:
   max_keywords: 32           # tag pool stored per page/section
   page_tags: 5               # chips below title and per section in PageInfo
-  top_n_related: 3           # related pages per page (embedding similarity)
+  related_links: 3           # related pages per page (embedding similarity)
 
 # Paths — resolved relative to this file
 content: ./docs              # source markdown directory

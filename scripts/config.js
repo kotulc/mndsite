@@ -18,10 +18,10 @@ const DEFAULTS = {
   toc:            true,
   reading_time:   true,
   theme:          { color: 'default', typeset: 'sans', navbar: '', footer: '' },
-  tags:           {
+  meta:           {
     max_keywords: 32,
     page_tags: 5,
-    top_n_related: 3,
+    related_links: 3,
   },
   flatten:        [],
   nav_order:      {},
@@ -42,7 +42,7 @@ function load_config(yaml_path) {
   if (!cfg.title) throw new Error(`mdsite.yaml: 'title' is required`)
 
   cfg.theme = resolve_theme({ ...DEFAULTS.theme, ...(raw.theme || {}) })
-  cfg.tags  = resolve_tags(raw.tags)
+  cfg.meta  = resolve_meta(raw.meta)
 
   cfg.content = path.resolve(dir, cfg.content)
   cfg.output  = path.resolve(dir, cfg.output)
@@ -53,16 +53,16 @@ function load_config(yaml_path) {
 }
 
 
-function resolve_tags(raw) {
-  /** Merge the tags block over defaults. Fixed groups live in scripts/meta.js. */
-  const cfg = { ...DEFAULTS.tags, ...(raw || {}) }
+function resolve_meta(raw) {
+  /** Merge the meta block over defaults. Fixed groups live in scripts/meta.js. */
+  const cfg = { ...DEFAULTS.meta, ...(raw || {}) }
   cfg.max_keywords  = parseInt(cfg.max_keywords, 10)
   cfg.page_tags     = parseInt(cfg.page_tags, 10)
-  cfg.top_n_related = parseInt(cfg.top_n_related, 10)
-  if (!(cfg.max_keywords > 0)) throw new Error(`mdsite.yaml: tags.max_keywords must be a positive integer`)
-  if (!(cfg.page_tags > 0))    throw new Error(`mdsite.yaml: tags.page_tags must be a positive integer`)
-  if (cfg.top_n_related < 0 || Number.isNaN(cfg.top_n_related)) {
-    throw new Error(`mdsite.yaml: tags.top_n_related must be a non-negative integer`)
+  cfg.related_links = parseInt(cfg.related_links, 10)
+  if (!(cfg.max_keywords > 0)) throw new Error(`mdsite.yaml: meta.max_keywords must be a positive integer`)
+  if (!(cfg.page_tags > 0))    throw new Error(`mdsite.yaml: meta.page_tags must be a positive integer`)
+  if (cfg.related_links < 0 || Number.isNaN(cfg.related_links)) {
+    throw new Error(`mdsite.yaml: meta.related_links must be a non-negative integer`)
   }
   return cfg
 }
@@ -78,7 +78,7 @@ function write_site_config(config, dest_dir) {
   ]
   const values = {
     ...Object.fromEntries(keys.map(k => [k, config[k]])),
-    page_tags: config.tags.page_tags,
+    page_tags: config.meta.page_tags,
   }
   const body = Object.entries(values)
     .map(([k, v]) => `  ${k}: ${JSON.stringify(v)}`)

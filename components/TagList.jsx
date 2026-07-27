@@ -6,8 +6,24 @@ import Chip from './Chip'
 
 const KNOWN_GROUPS = ['category', 'topic', 'concept', 'entity', 'user']
 
+const GROUP_LABELS = {
+  category: 'Category',
+  topic:    'Topic',
+  concept:  'Concept',
+  entity:   'Entity',
+  user:     'User',
+}
+
 function group_variant(group) {
   return KNOWN_GROUPS.includes(group) ? group : 'custom'
+}
+
+function tag_tooltip({ term, group, score }) {
+  const label = GROUP_LABELS[group] || (group ? group.charAt(0).toUpperCase() + group.slice(1) : 'Tag')
+  if (typeof score === 'number' && !Number.isNaN(score)) {
+    return `${label}: ${term}, score ${score}`
+  }
+  return `${label}: ${term}`
 }
 
 function normalize_tags(tags) {
@@ -30,7 +46,12 @@ export default function TagList({ tags = [] }) {
   return (
     <div className="tag-list">
       {list.map(t => (
-        <Chip key={`${t.group}-${t.term}`} label={t.term} variant={group_variant(t.group)} />
+        <Chip
+          key={`${t.group}-${t.term}`}
+          label={t.term}
+          variant={group_variant(t.group)}
+          title={tag_tooltip(t)}
+        />
       ))}
     </div>
   )
