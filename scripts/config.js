@@ -16,9 +16,13 @@ const DEFAULTS = {
   footer:         '',
   theme_toggle:   'navbar',
   toc:            true,
-  meta_sidebar:   true,
   reading_time:   true,
   theme:          { color: 'default', typeset: 'sans', navbar: '', footer: '' },
+  meta:           {
+    max_keywords: 32,
+    page_tags: 5,
+    related_links: 3,
+  },
   flatten:        [],
   nav_order:      {},
   content:        './docs',
@@ -38,6 +42,7 @@ function load_config(yaml_path) {
   if (!cfg.title) throw new Error(`mdsite.yaml: 'title' is required`)
 
   cfg.theme = resolve_theme({ ...DEFAULTS.theme, ...(raw.theme || {}) })
+  cfg.meta  = resolve_meta(raw.meta)
 
   cfg.content = path.resolve(dir, cfg.content)
   cfg.output  = path.resolve(dir, cfg.output)
@@ -48,16 +53,35 @@ function load_config(yaml_path) {
 }
 
 
+function resolve_meta(raw) {
+  /** Merge the meta block over defaults. Fixed groups live in scripts/meta.js. */
+  const cfg = { ...DEFAULTS.meta, ...(raw || {}) }
+  cfg.max_keywords  = parseInt(cfg.max_keywords, 10)
+  cfg.page_tags     = parseInt(cfg.page_tags, 10)
+  cfg.related_links = parseInt(cfg.related_links, 10)
+  if (!(cfg.max_keywords > 0)) throw new Error(`mdsite.yaml: meta.max_keywords must be a positive integer`)
+  if (!(cfg.page_tags > 0))    throw new Error(`mdsite.yaml: meta.page_tags must be a positive integer`)
+  if (cfg.related_links < 0 || Number.isNaN(cfg.related_links)) {
+    throw new Error(`mdsite.yaml: meta.related_links must be a non-negative integer`)
+  }
+  return cfg
+}
+
+
 function write_site_config(config, dest_dir) {
   /** Generate site.config.js from a config object for Next.js/Nextra consumption. */
   const dir  = dest_dir || path.join(__dirname, '..')
   const keys = [
     'title', 'repo_url', 'feed_url', 'description', 'footer',
-    'theme_toggle', 'toc', 'meta_sidebar', 'reading_time',
+    'theme_toggle', 'toc', 'reading_time',
     'theme', 'flatten', 'nav_order',
   ]
-  const body = keys
-    .map(k => `  ${k}: ${JSON.stringify(config[k])}`)
+  const values = {
+    ...Object.fromEntries(keys.map(k => [k, config[k]])),
+    page_tags: config.meta.page_tags,
+  }
+  const body = Object.entries(values)
+    .map(([k, v]) => `  ${k}: ${JSON.stringify(v)}`)
     .join(',\n')
 
   fs.writeFileSync(

@@ -6,9 +6,6 @@ tags:
   - frontmatter
   - tags
   - reading-time
-readability: 76
-fields: 5
-components: 5
 related:
   - title: Getting Started
     url: /getting-started
@@ -19,30 +16,35 @@ related:
 # Metadata Display
 
 Metadata is surfaced automatically on every page — no MDX imports required.
-All display is driven by frontmatter fields read by `theme.config.jsx`.
+All metadata lives in the generated [site metadata](/specifications/metadata)
+(`public/site-meta.json`), which `theme.config.jsx` indexes by page url. Source
+frontmatter is optional input: when present it fills node fields and is stripped from the
+output page; pages without it get a generated title. Ingest always runs local keyword +
+embedding tagging to fill `tags`, `related`, and structural fields.
 
-## Frontmatter schema
+## Displayed fields
 
-| Field | Type | Effect |
-|-------|------|--------|
-| `title` | string | Page title shown in heading and nav |
-| `date` | YYYY-MM-DD | Formatted date below title; enables date-based sorting |
-| `order` | integer | Nav position within its directory; lower numbers appear first |
-| `categories` | list | Blue chip pills below the title |
-| `tags` | list | Gray chip pills below the title |
-| `reading_time` | integer | Auto-injected by the pipeline; displays as "N min read" |
+The theme renders these page fields below the title, in the expandable **Page
+intelligence** panel, and in the right-hand ToC (Related / Edit). Sections don't render
+anything inline — tagged sections appear together in the PageInfo mosaic:
 
-Example:
+| Field | Source | Effect |
+|-------|--------|--------|
+| `published` | frontmatter `date` | Formatted date below the title; enables date-based sorting |
+| `metrics.reading_time` | derived | Displays as "N min read" |
+| `tags` (page) | ingest | First `page_tags` chips (default 5) from the merged tag list below the title |
+| `desc` | frontmatter `desc` / `description`, optional | SEO meta description and the Summary block in PageInfo when present |
+| `tags` (per section) | ingest | Section tags in the PageInfo mosaic, capped to `page_tags` chips each |
+| `links`, `related` | derived / ingest | Combined into a single "Related" list in the ToC sidebar (and mobile Contents panel) — internal links show the linked page's name, not its path |
+
+Frontmatter that steers structure and identity:
 
 ```yaml
 ---
-title: My Post
-date: 2026-01-15
-categories:
-  - tutorial
-tags:
-  - markdown
-  - nextjs
+title: My Post      # page name (else the first heading, else the slug)
+date: 2026-01-15    # publish date
+desc: Optional summary for Page intelligence
+tags: [yaml, extract]   # merged into group "user" during ingest
 ---
 ```
 
@@ -51,40 +53,34 @@ tags:
 **`PageHeader`** renders the formatted date and reading time on a single line,
 separated by a center dot. Returns null when neither field is present.
 
-**`TagList`** renders categories (blue) and tags (gray) as pill chips.
-Both arrays are optional; the component returns null when both are empty.
+**`TagList`** renders tags as chips. Each tag is `{ term, group }` with groups
+`category`, `topic`, `concept`, `entity`, or `user`. Returns null when empty. Used below
+the title (first `page_tags` from `page.tags`) and inside `PageInfo` (each section's
+capped tags).
 
-**`PostIndex`** fetches `posts-index.json` at runtime and renders a listing of
-all dated posts with title, date, reading time, and category chips. It is placed
-on the auto-generated `posts/index.mdx` page whenever dated posts are found.
+**`PageInfo`** (`PageInfoToggle` + `PageInfoPanel`) — an Info button beside the page
+title expands an inline panel with the page **Summary** (`desc`) and a **Sections**
+mosaic of tagged headings (each section name links to its in-page anchor). Info and
+Contents are mutually exclusive.
 
-**`MetaSidebar`** renders a sticky right-hand sidebar with categories, tags, and
-any numeric frontmatter fields as labelled metrics. It only appears when there is
-content to show, and is hidden on screens narrower than 1024 px.
+**`TocMenu`** (`TocMenuToggle` + `TocMenuPanel`) — below the `xl` breakpoint Nextra hides
+the right ToC; a Contents button expands an inline **Page Contents** panel with a
+Sections list plus the same `MetaSidebar` (Related / Edit). Disabled when `toc: false`.
+
+**`MetaSidebar`** renders in the right ToC column via `toc.extraContent` (and inside the
+mobile Contents panel): a combined **Related** list (the page's own `links` — resolved
+to the linked page's name via the site metadata index, falling back to the raw href for
+external links — followed by ingest `related` pages), then **Edit this page** — always
+last, since `theme.config.jsx` disables Nextra's built-in edit link. Description and
+section tags live in PageInfo instead. Nextra pins the ToC column sticky near the top of
+the viewport with its own capped-height scrollbar.
 
 **`SiteFooter`** renders the page footer (copyright, build timestamp, credits).
 Edit `components/SiteFooter.jsx` directly to customize the footer across all pages.
 
 ## Metrics
 
-Any numeric frontmatter field not in the reserved set (`title`, `date`, `categories`,
-`tags`, `reading_time`) is displayed in the sidebar as a metric with its score:
-
-```yaml
----
-title: My Analysis
-readability: 72
-sentiment: 0.85
-complexity: 3
----
-```
-
-Field names use underscores which are replaced with spaces in the display
-(e.g. `reading_ease` → "reading ease").
-
-## Post index
-
-Any source file with a `date` field that is not at the source root is included
-in `public/posts-index.json`. The file is sorted newest-first and served as a
-static asset, so the PostIndex component can fetch it client-side without any
-server-side rendering.
+Every page carries a `metrics` object with `word_count` and `reading_time`, always
+present. Ingest also writes `tags` and `related` for every page. Components can fetch
+metadata at `${basePath}/site-meta.json`. See the [Metadata Contract](/specifications/metadata)
+spec for the schema.

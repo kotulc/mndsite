@@ -42,7 +42,7 @@ export default function DirFeed({ dir }) {
           </h2>
           <PageHeader date={e.date}
                       reading_time={siteConfig.reading_time === false ? null : e.reading_time} />
-          <TagList categories={e.categories} tags={e.tags} />
+          <TagList tags={{ categories: e.categories }} />
           <div className="feed-section-content">
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={md_components(basePath)}>{e.content}</ReactMarkdown>
           </div>

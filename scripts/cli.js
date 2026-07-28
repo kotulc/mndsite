@@ -12,20 +12,20 @@ const ROOT = path.join(__dirname, '..')
 
 
 function parse_args(argv) {
-  /** Parse command and named flags from process.argv. */
+  /** Parse command and named flags from process.argv (flags without a value are true). */
   const args    = argv.slice(2)
   const command = args[0]
   const flags   = {}
   for (let i = 1; i < args.length; i++) {
-    if (args[i].startsWith('--') && args[i + 1] && !args[i + 1].startsWith('--')) {
-      flags[args[i].slice(2)] = args[++i]
-    }
+    if (!args[i].startsWith('--')) continue
+    if (args[i + 1] && !args[i + 1].startsWith('--')) flags[args[i].slice(2)] = args[++i]
+    else flags[args[i].slice(2)] = true
   }
   return { command, flags }
 }
 
 
-function cmd_build(flags) {
+async function cmd_build(flags) {
   /** Load config, ingest content, build static site to output path. */
   if (!flags.config) {
     console.error('Error: --config <path> is required')
@@ -44,7 +44,7 @@ function cmd_build(flags) {
   console.log(`  content: ${config.content}`)
   console.log(`  output:  ${config.output}\n`)
 
-  ingest.run(config)
+  await ingest.run(config)
 
   const result = spawnSync('npm', ['run', 'build'], {
     cwd:   ROOT,
@@ -62,7 +62,7 @@ function cmd_build(flags) {
 const { command, flags } = parse_args(process.argv)
 
 if (command === 'build') {
-  cmd_build(flags)
+  cmd_build(flags).catch(err => { console.error(err.message); process.exit(1) })
 } else {
   console.error(`Unknown command: ${command || '(none)'}`)
   console.error('Usage: mdsite build --config <path>')

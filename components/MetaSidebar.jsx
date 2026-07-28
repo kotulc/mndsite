@@ -1,60 +1,57 @@
 /**
- * Right-hand sidebar displaying frontmatter metadata: categories, tags,
- * and any numeric fields as metrics with scores. Add numeric fields to
- * your page's frontmatter (e.g. readability: 72) to surface them here.
+ * Right ToC sidebar panel, rendered via theme.config.jsx's toc.extraContent, below
+ * Nextra's own "On This Page" heading list: a combined "Related" list (the page's own
+ * outbound links, resolved to the linked page's name where possible, plus ingest
+ * `related` pages), then the edit-this-page link — always last, since Nextra renders
+ * editLink before extraContent (theme.config.jsx disables Nextra's own copy to make
+ * this so). Description and section tags now live in the PageInfo panel below the page
+ * header instead (see components/PageInfo.jsx); keywords/metrics are not shown for now.
  */
-import { useConfig } from 'nextra-theme-docs'
 import Link from 'next/link'
-import Chip from './Chip'
+import { useSection, find_page } from './SectionContext'
+import siteConfig from '../site.config'
 
+function Label({ children }) {
+  return <p className="panel-label">{children}</p>
+}
 
-const RESERVED = new Set(['title', 'date', 'categories', 'tags', 'reading_time', 'related'])
+function RelatedLink({ href, name }) {
+  return <div className="related-link"><Link href={href}>{name}</Link></div>
+}
 
+function EditLink() {
+  if (!siteConfig.repo_url) return null
+  return (
+    <a href={siteConfig.repo_url} target="_blank" rel="noopener noreferrer" className="meta-sidebar-edit">
+      Edit this page
+    </a>
+  )
+}
 
 export default function MetaSidebar() {
-  const { frontMatter } = useConfig()
-  const { categories = [], tags = [], related = [] } = frontMatter
+  const { page } = useSection()
+  if (!page) return null
 
-  const metrics = Object.entries(frontMatter).filter(
-    ([key, val]) => !RESERVED.has(key) && typeof val === 'number'
-  )
-
-  if (!categories.length && !tags.length && !metrics.length && !related.length) return null
+  const links   = page.links || []
+  const related = page.related || []
+  const has_related = !!(links.length || related.length)
+  const has_edit = !!siteConfig.repo_url
+  if (!has_related && !has_edit) return null
 
   return (
     <div className="meta-sidebar-content">
-      {(categories.length > 0 || tags.length > 0) && (
+      {has_related && (
         <div className="meta-sidebar-section">
-          <div className="meta-sidebar-label">Tags</div>
-          <div className="meta-sidebar-chips">
-            {categories.map(c => <Chip key={c} label={c} variant="category" />)}
-            {tags.map(t => <Chip key={t} label={t} variant="tag" />)}
-          </div>
+          <Label>Related</Label>
+          {links.map(l => {
+            const linked = find_page(l)
+            return <RelatedLink key={l} href={l} name={linked ? linked.name : l} />
+          })}
+          {related.map(r => <RelatedLink key={r.url} href={r.url} name={r.name} />)}
         </div>
       )}
 
-      {metrics.length > 0 && (
-        <div className="meta-sidebar-section">
-          <div className="meta-sidebar-label">Metrics</div>
-          {metrics.map(([key, val]) => (
-            <div key={key} className="metric-row">
-              <span className="metric-key">{key.replace(/_/g, ' ')}</span>
-              <span className="metric-score">{val}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {related.length > 0 && (
-        <div className="meta-sidebar-section">
-          <div className="meta-sidebar-label">Related</div>
-          {related.map(({ title, url }) => (
-            <div key={url} className="related-link">
-              <Link href={url}>{title}</Link>
-            </div>
-          ))}
-        </div>
-      )}
+      <EditLink />
     </div>
   )
 }

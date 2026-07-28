@@ -7,9 +7,9 @@ module.exports = {
   footer: "",
   theme_toggle: "navbar",
   toc: true,
-  meta_sidebar: true,
   reading_time: true,
   theme: {"color":"default","typeset":"sans","navbar":"","footer":"","hue":{"light":212,"dark":204},"saturation":100,"font_stack":""},
   flatten: ["updates"],
   nav_order: {"":["about","getting-started","configuration"],"features":["overview","components"],"specifications":["format"],"updates":["welcome"]},
+  page_tags: 5,
 }

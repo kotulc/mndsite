@@ -101,29 +101,42 @@ The `main` key in `theme.config.jsx` wraps only the page content area. Nextra
 renders the left nav and right TOC column outside of `main`, so no custom flex
 layout is needed.
 
-`MetaSidebar` is rendered via `toc.extraContent`, which places it below the
-section headings in Nextra's right TOC column:
+Consumer components can render in Nextra's right TOC column via `toc.extraContent`
+in `theme.config.jsx` — mdsite uses this slot for `MetaSidebar` (see
+[Metadata Display](/features/metadata)):
 
 ```
 Nextra layout
 ├── Left nav (Nextra)
-├── main  →  PageMeta + page content + PageContinuation
-└── Right TOC column (Nextra)
+├── main  →  page title + Info/Contents actions + PageMeta + optional PageInfo/TocMenu panels + page content
+└── Right TOC column (Nextra, ≥ xl)
     ├── "On This Page" heading list
-    └── .meta-sidebar-content  (tags, metrics, related)
+    └── toc.extraContent  →  MetaSidebar (Related, Edit this page)
 ```
 
-`MetaSidebar` returns `null` when no frontmatter metadata is present, so the
-divider and sections only appear on pages that have tags, metrics, or related links.
+The `.meta-sidebar-*` and `.panel-label` classes in `global.css` style components
+placed in this column and in the inline Info/Contents panels. Nextra pins this whole
+column sticky near the top of the viewport by default, with its own capped-height
+scrollbar independent of the page's own scroll — that default is left in place so the
+"On This Page" heading list and Related links stay fixed while the body scrolls.
 
 ## Chips
 
-Categories and tags render as rectangular chips. Two style variants are provided:
+Extracted tags, categories, keywords, and filter/action chips render as rectangular
+chips via the shared `Chip` component. Variants:
 
 | Class | Color | Used for |
 |-------|-------|---------|
-| `.chip.chip-category` | Primary (follows `theme.color`) | `categories:` frontmatter list |
-| `.chip.chip-tag` | Gray | `tags:` frontmatter list |
+| `.chip.chip-categories` / `.chip-topics` / `.chip-concepts` / `.chip-entities` | One fixed color per standard group | `TagList` chips (every group except `keywords`) |
+| `.chip.chip-custom` | Fixed fallback color | Any `extract_concepts` group outside the standard four |
+| `.chip.chip-tag` | Gray | Default Chip variant / keyword-style chips |
+| `.chip.chip-danger` | Red | Destructive-action chips (filters, per-entry actions) |
 
-To change chip appearance, edit the `.chip`, `.chip-category`, and `.chip-tag`
-rules in `styles/global.css`.
+`TagList` maps each tag group name straight to its chip variant (`categories` →
+`chip-categories`, etc., `chip-custom` for anything else) — plain class selectors, no
+inline color computation, so the same rule works in both light and dark mode via the
+`:is(html[class~="dark"])` overrides already established for `.chip-tag`/`.chip-danger`.
+
+To change chip appearance, edit the `.chip`, `.chip-categories`/`.chip-topics`/
+`.chip-concepts`/`.chip-entities`/`.chip-custom`, `.chip-tag`, and `.chip-danger` rules
+in `styles/global.css`.

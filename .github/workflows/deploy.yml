@@ -18,13 +18,11 @@ jobs:
 
       - run: npm ci
 
-      - name: Ingest content
-        run: |
-          SRC="${{ vars.CONTENT_SOURCE }}"
-          npm run ingest ${SRC:+-- "$SRC"}
-
       - name: Build
-        run: npm run build
+        run: |
+          FLAGS=""
+          if [ -n "${{ vars.CONTENT_SOURCE }}" ]; then FLAGS="--content ${{ vars.CONTENT_SOURCE }}"; fi
+          node scripts/cli.js build --config mdsite.yaml $FLAGS
         env:
           BASE_PATH: ${{ vars.BASE_PATH }}
 

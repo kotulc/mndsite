@@ -1,34 +1,46 @@
-import { useConfig } from 'nextra-theme-docs'
+import { useState } from 'react'
+import { useRouter } from 'next/router'
 import PageHeader from './components/PageHeader'
 import TagList from './components/TagList'
 import MetaSidebar from './components/MetaSidebar'
+import { PageInfoToggle, PageInfoPanel } from './components/PageInfo'
+import { TocMenuToggle, TocMenuPanel } from './components/TocMenu'
 import SiteFooter from './components/SiteFooter'
 import GitHubLink from './components/GitHubLink'
 import FeedLink from './components/FeedLink'
 import ThemeToggle from './components/ThemeToggle'
 import siteConfig from './site.config'
+import siteMeta from './public/site-meta.json'
 
 
-function PageMeta() {
-  /** Renders date, reading time (unless disabled), and tag chips. */
-  const { frontMatter } = useConfig()
-  const mins = siteConfig.reading_time === false ? null : frontMatter.reading_time
-  return (
-    <>
-      <PageHeader date={frontMatter.date} reading_time={mins} />
-      <TagList categories={frontMatter.categories} tags={frontMatter.tags} />
-    </>
-  )
+function strip_trailing_slash(path) {
+  return path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path
+}
+
+// Flat site-meta.json → url → page index
+const PAGE_INDEX = Object.fromEntries(
+  (siteMeta.pages || []).map(p => [strip_trailing_slash(p.url), p])
+)
+
+
+function use_page_meta() {
+  /** Page record for the current route from public/site-meta.json. */
+  const { route } = useRouter()
+  return PAGE_INDEX[strip_trailing_slash(route)] || PAGE_INDEX[route] || {}
 }
 
 
-function EditLink({ className }) {
-  /** "Edit this page" TOC link to the configured repo; hidden when repo_url is unset. */
-  if (!siteConfig.repo_url) return null
+function PageMeta() {
+  /** Renders published date, reading time (unless disabled), and top page_tags chips. */
+  const meta = use_page_meta()
+  const metrics = meta.metrics || {}
+  const mins = siteConfig.reading_time === false ? null : metrics.reading_time
+  const chips = Array.isArray(meta.tags) ? meta.tags.slice(0, siteConfig.page_tags ?? 5) : []
   return (
-    <a href={siteConfig.repo_url} target="_blank" rel="noopener noreferrer" className={className}>
-      Edit this page
-    </a>
+    <>
+      <PageHeader date={meta.published} reading_time={mins} />
+      <TagList tags={chips} />
+    </>
   )
 }
 
@@ -52,11 +64,32 @@ const THEME_CSS = [
 
 
 function PageTitle({ children }) {
-  /** Custom h1 override: renders the heading then immediately injects page metadata. */
+  /** Custom h1 override: heading + Info/Contents actions, page metadata, optional panels.
+   *  Info and Contents are mutually exclusive — opening one closes the other. */
+  const [info_open, set_info_open] = useState(false)
+  const [toc_open, set_toc_open] = useState(false)
+
+  function toggle_info() {
+    set_info_open(v => !v)
+    set_toc_open(false)
+  }
+  function toggle_toc() {
+    set_toc_open(v => !v)
+    set_info_open(false)
+  }
+
   return (
     <>
-      <h1 className="nx-mt-2 nx-text-4xl nx-font-bold nx-tracking-tight nx-text-slate-900 dark:nx-text-slate-100">{children}</h1>
+      <div className="page-title-row">
+        <h1 className="nx-mt-2 nx-text-4xl nx-font-bold nx-tracking-tight nx-text-slate-900 dark:nx-text-slate-100">{children}</h1>
+        <div className="page-title-actions">
+          <PageInfoToggle open={info_open} on_toggle={toggle_info} />
+          <TocMenuToggle open={toc_open} on_toggle={toggle_toc} />
+        </div>
+      </div>
       <PageMeta />
+      <PageInfoPanel open={info_open} on_close={() => set_info_open(false)} />
+      <TocMenuPanel open={toc_open} on_close={() => set_toc_open(false)} />
     </>
   )
 }
@@ -78,7 +111,11 @@ export default {
   },
   footer: { text: <SiteFooter /> },
   useNextSeoProps() {
-    return { titleTemplate: `%s – ${siteConfig.title}` }
+    const meta = use_page_meta()
+    return {
+      titleTemplate: `%s – ${siteConfig.title}`,
+      description: meta.desc || siteConfig.description || undefined,
+    }
   },
   head: (
     <>
@@ -88,10 +125,10 @@ export default {
     </>
   ),
   feedback: { content: null },
-  editLink: { component: EditLink },
-  toc: siteConfig.toc === false
-    ? { component: () => null }
-    : { extraContent: siteConfig.meta_sidebar !== false ? MetaSidebar : undefined },
+  // Nextra renders editLink before toc.extraContent, so its own copy is disabled here —
+  // MetaSidebar renders "Edit this page" itself, last, after Related.
+  editLink: { component: () => null },
+  toc: siteConfig.toc === false ? { component: () => null } : { extraContent: <MetaSidebar /> },
   components: { h1: PageTitle },
   main: ({ children }) => <>{children}</>,
 }

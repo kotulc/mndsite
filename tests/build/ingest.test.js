@@ -6,13 +6,13 @@ const fs   = require('fs')
 const os   = require('os')
 const path = require('path')
 
-const { parse_fm, sort_entries, extract_content, auto_index, norm_path, slug_to_title } = require('../../scripts/ingest')
+const { parse_fm, sort_entries, extract_content, auto_index, rewrite_md_links, norm_path, slug_to_title } = require('../../scripts/ingest')
 
 
 // --- sort_entries ---
 
 function entry(slug, opts = {}) {
-  return { slug, title: slug, date: opts.date || '' }
+  return { slug, title: slug, published: opts.date || '' }
 }
 
 // Rels not present in site.config nav_order — use auto-detection
@@ -137,7 +137,7 @@ describe('auto_index', () => {
     sorted[0].title = 'Page'
     auto_index(tmp_dir, sorted, '')
     const fm = parse_fm(fs.readFileSync(path.join(tmp_dir, 'index.mdx'), 'utf8'))
-    expect(fm.auto_redirect).toBe('true')
+    expect(fm.auto_redirect).toBe(true)
   })
 
   test('test_auto_index_skips_if_index_exists', () => {
@@ -201,6 +201,36 @@ describe('extract_content', () => {
 })
 
 
+// --- rewrite_md_links ---
+
+describe('rewrite_md_links', () => {
+  test('test_rewrite_resolves_relative_link_against_containing_folder', () => {
+    /** A relative sibling link resolves against the source file's own directory,
+     *  not the page's own rendered URL (which would nest it one level too deep). */
+    const out = rewrite_md_links('[Content Pipeline](content-pipeline)', '/features/')
+    expect(out).toBe('[Content Pipeline](/features/content-pipeline)')
+  })
+
+  test('test_rewrite_leaves_absolute_links_untouched', () => {
+    /** Links already starting with /, a scheme, or # pass through unchanged. */
+    const mdx = '[a](/x) [b](https://x.com) [c](mailto:x@x.com) [d](#frag)'
+    expect(rewrite_md_links(mdx, '/features/')).toBe(mdx)
+  })
+
+  test('test_rewrite_skips_image_links', () => {
+    /** Image markdown (![...]) is never rewritten as a page link. */
+    const mdx = '![alt](diagram.png)'
+    expect(rewrite_md_links(mdx, '/features/')).toBe(mdx)
+  })
+
+  test('test_rewrite_preserves_fragment_and_trailing_text', () => {
+    /** A relative link with a #fragment and trailing title keeps both after rewriting. */
+    const out = rewrite_md_links('[Fields](configuration#fields "see fields")', '/features/')
+    expect(out).toBe('[Fields](/features/configuration#fields "see fields")')
+  })
+})
+
+
 // --- pages output (integration) ---
 
 const PAGES = path.join(__dirname, '../../pages')
@@ -251,6 +281,55 @@ describe('pages output ordering', () => {
     const meta       = JSON.parse(fs.readFileSync(path.join(PAGES, 'features', '_meta.json'), 'utf8'))
     const keys       = Object.keys(meta).filter(k => k !== 'index')
     expect(keys.slice(0, expected.length)).toEqual(expected)
+  })
+})
+
+
+// --- site-meta.json output (integration) ---
+
+describe('site meta output', () => {
+  const meta_path = path.join(__dirname, '../../public/site-meta.json')
+  const load = () => JSON.parse(fs.readFileSync(meta_path, 'utf8'))
+  const has_pages = () => {
+    try { return load().pages.length > 0 } catch { return false }
+  }
+
+  test('test_site_meta_is_flat_pages_list', () => {
+    /** site-meta.json is { pages: [...] } — no root/folder graph. */
+    const m = load()
+    expect(Array.isArray(m.pages)).toBe(true)
+    expect(m.type).toBeUndefined()
+    if (!has_pages()) return
+    expect(m.pages.length).toBeGreaterThan(0)
+  })
+
+  test('test_site_meta_page_fields', () => {
+    /** Page records carry structural fields, tags, related placeholder, nested sections. */
+    if (!has_pages()) return
+    const page = load().pages.find(p => p.url === '/configuration')
+    expect(page).toMatchObject({ slug: 'configuration' })
+    expect(page.metrics.word_count).toBeGreaterThan(0)
+    expect(page.metrics.reading_time).toBeGreaterThanOrEqual(1)
+    expect(page.sections.map(s => s.name)).toContain('Fields')
+    expect(Array.isArray(page.links)).toBe(true)
+    expect(Array.isArray(page.related)).toBe(true)
+    expect(page.hash).toBeUndefined()
+    expect(Array.isArray(page.tags)).toBe(true)
+  })
+
+  test('test_pages_have_no_frontmatter', () => {
+    /** Generated content pages carry no frontmatter block. */
+    for (const f of ['getting-started.mdx', 'configuration.mdx']) {
+      const p = path.join(PAGES, f)
+      if (!fs.existsSync(p)) return
+      const content = fs.readFileSync(p, 'utf8')
+      expect(content.startsWith('---')).toBe(false)
+    }
+  })
+
+  test('test_every_page_has_a_name', () => {
+    if (!has_pages()) return
+    for (const page of load().pages) expect(page.name).toBeTruthy()
   })
 })
 

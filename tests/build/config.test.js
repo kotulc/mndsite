@@ -59,6 +59,28 @@ describe('load_config — theme resolution', () => {
 })
 
 
+describe('load_config — meta block', () => {
+  test('test_meta_defaults_applied', () => {
+    /** Config without a meta block resolves to default keyword/page_tags limits. */
+    const cfg = load_config(write_yaml('title: t'))
+    expect(cfg.meta).toEqual({ max_keywords: 32, page_tags: 5, related_links: 3 })
+  })
+
+  test('test_meta_partial_block_merges_defaults', () => {
+    /** A meta block with only page_tags keeps max_keywords default. */
+    const cfg = load_config(write_yaml('title: t\nmeta:\n  page_tags: 8'))
+    expect(cfg.meta.page_tags).toBe(8)
+    expect(cfg.meta.max_keywords).toBe(32)
+    expect(cfg.meta.related_links).toBe(3)
+  })
+
+  test('test_meta_invalid_page_tags_throws', () => {
+    const p = write_yaml('title: t\nmeta:\n  page_tags: 0')
+    expect(() => load_config(p)).toThrow(/page_tags must be a positive integer/)
+  })
+})
+
+
 describe('resolve_theme — preset tables', () => {
   test.each(Object.entries(COLOR_PRESETS))(
     'test_theme_color_preset_%s', (name, preset) => {
@@ -80,12 +102,13 @@ describe('resolve_theme — preset tables', () => {
 
 describe('write_site_config — generated keys', () => {
   test('test_write_site_config_includes_new_keys', () => {
-    /** Generated site.config.js carries resolved theme, footer, and description. */
-    const cfg = load_config(write_yaml('title: t\ndescription: d\nfooter: f\ntheme:\n  color: emerald'))
+    /** Generated site.config.js carries resolved theme, footer, description, and page_tags. */
+    const cfg = load_config(write_yaml('title: t\ndescription: d\nfooter: f\ntheme:\n  color: emerald\nmeta:\n  page_tags: 8'))
     write_site_config(cfg, tmp)
     const out = require(path.join(tmp, 'site.config.js'))
     expect(out.description).toBe('d')
     expect(out.footer).toBe('f')
+    expect(out.page_tags).toBe(8)
     expect(out.theme).toEqual({
       color: 'emerald', typeset: 'sans', navbar: '', footer: '',
       hue: 161, saturation: 94, font_stack: '',
@@ -93,11 +116,14 @@ describe('write_site_config — generated keys', () => {
   })
 
   test('test_write_site_config_omits_dead_keys', () => {
-    /** Removed keys (content_style, theme_mood, logo_seed) never reach site.config.js. */
+    /** Removed and build-only keys never reach site.config.js. */
     write_site_config(load_config(write_yaml('title: t')), tmp)
     const out = require(path.join(tmp, 'site.config.js'))
     expect(out).not.toHaveProperty('content_style')
     expect(out).not.toHaveProperty('theme_mood')
     expect(out).not.toHaveProperty('logo_seed')
+    expect(out).not.toHaveProperty('meta_sidebar')
+    expect(out).not.toHaveProperty('extract')
+    expect(out.page_tags).toBe(5)
   })
 })

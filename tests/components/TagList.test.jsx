@@ -2,30 +2,55 @@ import { render, screen } from '@testing-library/react'
 import TagList from '../../components/TagList'
 
 
-test('test_tag_list_renders_categories_and_tags', () => {
-  /** Renders all categories and tags as chips. */
-  render(<TagList categories={['reviews', 'events']} tags={['ai', 'wheels']} />)
+test('test_tag_list_renders_array_tags', () => {
+  /** Renders chips from the flat { term, group } list. */
+  render(<TagList tags={[
+    { term: 'reviews', group: 'category' },
+    { term: 'ai', group: 'topic' },
+  ]} />)
   expect(screen.getByText('reviews')).toBeInTheDocument()
-  expect(screen.getByText('events')).toBeInTheDocument()
   expect(screen.getByText('ai')).toBeInTheDocument()
-  expect(screen.getByText('wheels')).toBeInTheDocument()
 })
 
-test('test_tag_list_category_chip_class', () => {
-  /** Category chips have chip-category class, tag chips have chip-tag class. */
-  render(<TagList categories={['opinion']} tags={['gear']} />)
+test('test_tag_list_shows_group_and_score_tooltip', () => {
+  render(<TagList tags={[{ term: 'yaml', group: 'user', score: 0.91 }]} />)
+  expect(screen.getByText('yaml')).toHaveAttribute('title', 'User: yaml, score 0.91')
+})
+
+test('test_tag_list_tooltip_without_score_omits_score', () => {
+  render(<TagList tags={[{ term: 'reviews', group: 'category' }]} />)
+  expect(screen.getByText('reviews')).toHaveAttribute('title', 'Category: reviews')
+})
+
+test('test_tag_list_known_groups_get_named_chip_class', () => {
+  /** Fixed groups render with their own chip-<group> class. */
+  render(<TagList tags={[
+    { term: 'opinion', group: 'category' },
+    { term: 'ai', group: 'topic' },
+    { term: 'x', group: 'concept' },
+    { term: 'acme', group: 'entity' },
+    { term: 'mine', group: 'user' },
+  ]} />)
   expect(screen.getByText('opinion')).toHaveClass('chip-category')
-  expect(screen.getByText('gear')).toHaveClass('chip-tag')
+  expect(screen.getByText('ai')).toHaveClass('chip-topic')
+  expect(screen.getByText('x')).toHaveClass('chip-concept')
+  expect(screen.getByText('acme')).toHaveClass('chip-entity')
+  expect(screen.getByText('mine')).toHaveClass('chip-user')
+})
+
+test('test_tag_list_custom_group_falls_back_to_chip_custom', () => {
+  render(<TagList tags={[{ term: 'cozy', group: 'vibes' }]} />)
+  expect(screen.getByText('cozy')).toHaveClass('chip-custom')
 })
 
 test('test_tag_list_returns_null_when_empty', () => {
-  /** Returns nothing when both arrays are empty. */
-  const { container } = render(<TagList categories={[]} tags={[]} />)
+  const { container } = render(<TagList tags={[]} />)
   expect(container).toBeEmptyDOMElement()
 })
 
-test('test_tag_list_handles_categories_only', () => {
-  /** Renders correctly with categories but no tags. */
-  render(<TagList categories={['long-term']} />)
-  expect(screen.getByText('long-term')).toBeInTheDocument()
+test('test_tag_list_legacy_object_shape_still_works', () => {
+  /** Legacy { group: [terms] } maps still render (plurals → singular classes). */
+  render(<TagList tags={{ categories: ['reviews'], keywords: ['skip'] }} />)
+  expect(screen.getByText('reviews')).toHaveClass('chip-category')
+  expect(screen.queryByText('skip')).not.toBeInTheDocument()
 })

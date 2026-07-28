@@ -32,8 +32,10 @@ consumed by Next.js and Nextra.
 | `footer` | string | `""` | Custom footer credits text; empty keeps "Powered by mdsite and Nextra" |
 | `theme_toggle` | string | `"navbar"` | Where the light/dark toggle appears: `"navbar"` or `"sidebar"` |
 | `toc` | boolean | `true` | Right sidebar: "On This Page" section navigation |
-| `meta_sidebar` | boolean | `true` | Right sidebar: tags, metrics, and related links below the TOC |
 | `reading_time` | boolean | `true` | Show estimated reading time in page headers and feeds |
+| `meta.max_keywords` | integer | `32` | Max tag terms stored per page/section after ingest |
+| `meta.page_tags` | integer | `5` | Max chips shown below the title and per section in PageInfo |
+| `meta.related_links` | integer | `3` | Related pages attached per page via embedding similarity |
 | `theme.color` | string | `"default"` | Named accent palette — see [Theme](#theme) below |
 | `theme.typeset` | string | `"sans"` | Named body font stack — see [Theme](#theme) below |
 | `theme.navbar` | string | `""` | Navbar background: `"primary"` (theme tint) or any CSS color |
@@ -100,6 +102,30 @@ theme:
 
 Leave empty to keep Nextra's default white/dark backgrounds.
 
+## Tagging
+
+During ingest, mdsite always runs local keyword extraction and embedding-based tagging.
+Output lands in `public/site-meta.json` — a flat list of pages, not frontmatter. Tags use
+fixed groups (`category`, `topic`, `concept`, `entity`, `user`); frontmatter `tags` and
+`categories` merge into `user` (still scored). The UI shows the first `page_tags` chips
+from each unit's merged tag list.
+
+Embeddings use **Xenova/all-MiniLM-L6-v2** vendored at `models/Xenova/all-MiniLM-L6-v2/`.
+Ingest loads from disk only — no Hugging Face download. After all pages are tagged,
+`fill_related` scores pairwise page similarity and writes `related` (`{ name, url, score }`).
+
+Optional page summary: set `desc` or `description` in frontmatter — PageInfo shows it when present.
+
+```yaml
+meta:
+  max_keywords: 32       # tag pool stored per page/section
+  page_tags: 5           # chips below title and per section in PageInfo
+  related_links: 3       # related pages per page (skips urls already in links)
+```
+
+See the [Metadata Contract](/specifications/metadata) spec for the full schema. Hashing,
+incremental graph enrichment, and external NLP live in the sibling **mndmeta** project.
+
 ## Nav ordering
 
 By default the pipeline sorts pages newest-first by `date`, or alphabetically.
@@ -113,10 +139,7 @@ nav_order:
 
 The key `""` refers to the source root. Other keys are subdirectory slugs.
 Folders and pages can be mixed. Slugs not listed append alphabetically after
-the explicit entries.
-
-For individual pages without a full directory listing, add `order: N` to the
-page's frontmatter instead — lower numbers appear first.
+the explicit entries; dated pages sort newest-first.
 
 ## BASE_PATH environment variable
 

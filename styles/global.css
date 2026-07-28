@@ -291,6 +291,291 @@ img {
   border-radius: 4px;
 }
 
+/* Page title row: h1 + "Info" intelligence toggle sitting beside it */
+.page-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.page-title-row h1 { flex: 1 1 auto; min-width: 0; }
+
+.page-title-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.page-info-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  margin-top: 0;   /* spacing comes from .page-title-actions */
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--site-gray-200);
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--site-gray-500);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.page-info-toggle:hover {
+  background: var(--site-primary-100);
+  color: var(--site-primary-700);
+  border-color: var(--site-primary-100);
+}
+
+.page-info-toggle[aria-expanded="true"] {
+  background: var(--site-primary-100);
+  color: var(--site-primary-700);
+  border-color: var(--site-primary-100);
+}
+
+.page-info-toggle:focus-visible {
+  outline: 2px solid var(--site-primary-600);
+  outline-offset: 2px;
+}
+
+/* Contents button — same pill as Info, only below xl where Nextra hides .nextra-toc */
+.toc-menu-toggle {
+  display: none;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--site-gray-200);
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--site-gray-500);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+@media (max-width: 1279px) {
+  .toc-menu-toggle { display: inline-flex; }
+}
+
+.toc-menu-toggle:hover,
+.toc-menu-toggle[aria-expanded="true"] {
+  background: var(--site-primary-100);
+  color: var(--site-primary-700);
+  border-color: var(--site-primary-100);
+}
+
+.toc-menu-toggle:focus-visible {
+  outline: 2px solid var(--site-primary-600);
+  outline-offset: 2px;
+}
+
+.toc-menu-count {
+  margin-left: 0.125rem;
+  opacity: 0.65;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Inline expand panels (Info + Contents) — dividers above/below, no card chrome */
+.page-info-panel,
+.toc-menu-panel {
+  margin: 1.25rem 0 1.5rem;
+  padding: 1.25rem 0;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  background: transparent;
+  font-size: 0.875rem;
+}
+
+:is(html[class~="dark"]) .page-info-panel,
+:is(html[class~="dark"]) .toc-menu-panel {
+  border-top-color: #262626;
+  border-bottom-color: #262626;
+}
+
+.page-info-title,
+.toc-menu-title {
+  margin: 0 0 1.25rem;
+  color: var(--site-gray-400);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.toc-menu-block {
+  margin: 0;
+}
+
+.toc-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  column-gap: 1.25rem;
+  row-gap: 0.15rem;
+}
+
+.toc-menu-list li {
+  margin: 0;
+  padding: 0.2rem 0;
+}
+
+.toc-menu-list a {
+  color: var(--site-primary-600);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.toc-menu-list a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.toc-menu-sub {
+  padding-left: 0.85rem;
+}
+
+.toc-menu-sub a {
+  font-weight: 400;
+  color: var(--site-gray-600);
+}
+
+.toc-menu-sub a:hover {
+  color: var(--site-primary-600);
+}
+
+/* Related / Edit inside Contents panel — no divider; Related uses the same horizontal grid as Sections */
+.toc-menu-meta .meta-sidebar-content {
+  font-size: inherit;
+  color: inherit;
+}
+
+.toc-menu-meta .meta-sidebar-section {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  column-gap: 1.25rem;
+  row-gap: 0.15rem;
+}
+
+.toc-menu-block + .toc-menu-meta .meta-sidebar-section {
+  margin-top: 1.25rem;
+}
+
+.toc-menu-meta .meta-sidebar-section .panel-label {
+  grid-column: 1 / -1;
+}
+
+.toc-menu-meta .related-link {
+  margin: 0;
+  padding: 0.2rem 0;
+}
+
+.toc-menu-meta .related-link a {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.toc-menu-meta .meta-sidebar-edit {
+  margin-top: 1rem;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* Shared subsection labels (Summary / Sections / Related) across Info + Contents panels */
+.panel-label {
+  margin: 0 0 0.375rem;
+  color: var(--site-gray-900);
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.page-info-summary {
+  margin: 0;
+}
+
+.page-info-desc {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--site-gray-600);
+}
+
+.page-info-section-map {
+  margin-top: 1rem;
+}
+
+.page-info-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  width: 100%;
+  background: transparent;
+}
+
+.page-info-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+/* Mosaic tiles — transparent so they sit on the page background */
+.page-info-section {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 0.15rem 0.15rem 0.25rem 0;
+  background: transparent;
+}
+
+.page-info-section-name {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.25;
+  color: var(--site-primary-600);
+  text-decoration: none;
+}
+
+a.page-info-section-name:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.page-info-section .tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0;
+}
+
+:is(html[class~="dark"]) .page-info-section {
+  background: transparent;
+}
+
 /* Page header: date + reading time */
 .page-header {
   display: flex;
@@ -321,15 +606,25 @@ img {
   text-transform: lowercase;
 }
 
-.chip-category {
-  background: var(--site-primary-100);
-  color: var(--site-primary-700);
-}
-
 .chip-tag {
   background: var(--site-gray-100);
   color: var(--site-gray-600);
 }
+
+/* Fixed tag-group chips (singular groups + legacy plural aliases) */
+.chip-category, .chip-categories { background: hsl(210 70% 92%); color: hsl(210 55% 32%); }
+.chip-topic,     .chip-topics     { background: hsl(265 70% 94%); color: hsl(265 45% 40%); }
+.chip-concept,   .chip-concepts   { background: hsl(35 80% 88%);  color: hsl(35 65% 28%); }
+.chip-entity,    .chip-entities   { background: hsl(340 75% 94%); color: hsl(340 55% 40%); }
+.chip-user       { background: hsl(160 45% 90%); color: hsl(160 40% 28%); }
+.chip-custom     { background: hsl(150 55% 88%); color: hsl(150 50% 24%); }
+
+:is(html[class~="dark"]) .chip-category, :is(html[class~="dark"]) .chip-categories { background: hsl(210 35% 22%); color: hsl(210 70% 75%); }
+:is(html[class~="dark"]) .chip-topic,     :is(html[class~="dark"]) .chip-topics     { background: hsl(265 35% 24%); color: hsl(265 70% 80%); }
+:is(html[class~="dark"]) .chip-concept,   :is(html[class~="dark"]) .chip-concepts   { background: hsl(35 35% 20%);  color: hsl(35 70% 72%); }
+:is(html[class~="dark"]) .chip-entity,    :is(html[class~="dark"]) .chip-entities   { background: hsl(340 35% 22%); color: hsl(340 70% 80%); }
+:is(html[class~="dark"]) .chip-user       { background: hsl(160 25% 18%); color: hsl(160 50% 70%); }
+:is(html[class~="dark"]) .chip-custom     { background: hsl(150 30% 18%); color: hsl(150 55% 70%); }
 
 /* Post index listing */
 .post-index {
@@ -456,49 +751,38 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
   padding-top: 1rem;
 }
 
-.filter-panel .meta-sidebar-label { margin-bottom: 0.5rem; }
+.filter-panel .panel-label { margin-bottom: 0.5rem; }
 
 /* Hide breadcrumb on root-level pages — no parent path, so no chevron separator svg */
 .nextra-breadcrumb:not(:has(svg)) { display: none; }
 
-/* Metadata sidebar — rendered via toc.extraContent, below the page TOC headings */
+/* Metadata sidebar — rendered via toc.extraContent, below the page TOC headings.
+   Spacing/divider above Related comes from Nextra's sticky extraContent wrapper
+   (nx-mt-8 nx-border-t nx-pt-8), not a custom rule on Related itself. */
 .meta-sidebar-content {
-  border-top: 1px solid var(--site-gray-200);
-  margin-top: 1rem;
-  padding-top: 1rem;
   font-size: 0.8125rem;
   color: var(--site-gray-600);
 }
-
-.meta-sidebar-section { margin-bottom: 1.25rem; }
-
-.meta-sidebar-label {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--site-gray-400);
-  margin-bottom: 0.5rem;
-}
-
-.meta-sidebar-chips { display: flex; flex-wrap: wrap; gap: 0.25rem; }
-
-.metric-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.125rem 0;
-}
-
-.metric-score { font-weight: 600; }
 
 .related-link { padding: 0.125rem 0; }
 
 .related-link a {
   color: var(--site-primary-600);
   text-decoration: none;
+  font-weight: 600;
 }
 
 .related-link a:hover { text-decoration: underline; }
+
+.meta-sidebar-edit {
+  display: block;
+  margin-top: 1.25rem;
+  color: var(--site-primary-600);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.meta-sidebar-edit:hover { text-decoration: underline; }
 
 /* Site footer: copyright · updated timestamp · credits */
 .site-footer {

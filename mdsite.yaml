@@ -4,11 +4,16 @@ repo_url: https://github.com/kotulc/mdsite
 feed_url: updates
 theme_toggle: navbar
 toc: true
-meta_sidebar: true
 
 theme:
   color: default
   typeset: sans
+
+# Local keyword + embedding metadata (always on during ingest)
+meta:
+  max_keywords: 32
+  page_tags: 5
+  related_links: 3
 
 content: ./docs
 output: ./dist
