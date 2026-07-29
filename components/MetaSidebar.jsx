@@ -15,7 +15,14 @@ function Label({ children }) {
   return <p className="panel-label">{children}</p>
 }
 
-function RelatedLink({ href, name }) {
+function RelatedLink({ href, name, external }) {
+  if (external) {
+    return (
+      <div className="related-link">
+        <a href={href} target="_blank" rel="noopener noreferrer">{name}</a>
+      </div>
+    )
+  }
   return <div className="related-link"><Link href={href}>{name}</Link></div>
 }
 
@@ -28,26 +35,57 @@ function EditLink() {
   )
 }
 
+function external_label(href) {
+  try { return new URL(href).hostname.replace(/^www\./, '') }
+  catch { return href }
+}
+
+function related_items(page) {
+  /** Build Related entries: resolved internal links, intentional external links, then related[]. */
+  const items = []
+  const seen = new Set()
+
+  for (const href of page.links || []) {
+    const linked = find_page(href)
+    if (linked) {
+      if (seen.has(linked.url)) continue
+      seen.add(linked.url)
+      items.push({ href: linked.url, name: linked.name, external: false })
+      continue
+    }
+    if (/^https?:\/\//i.test(href)) {
+      if (seen.has(href)) continue
+      seen.add(href)
+      items.push({ href, name: external_label(href), external: true })
+    }
+    // Fragments / unresolved internals are dropped — not useful in Related
+  }
+
+  for (const r of page.related || []) {
+    if (!r?.url || seen.has(r.url)) continue
+    seen.add(r.url)
+    items.push({ href: r.url, name: r.name, external: false })
+  }
+
+  return items
+}
+
 export default function MetaSidebar() {
   const { page } = useSection()
   if (!page) return null
 
-  const links   = page.links || []
-  const related = page.related || []
-  const has_related = !!(links.length || related.length)
+  const items = related_items(page)
   const has_edit = !!siteConfig.repo_url
-  if (!has_related && !has_edit) return null
+  if (!items.length && !has_edit) return null
 
   return (
     <div className="meta-sidebar-content">
-      {has_related && (
+      {!!items.length && (
         <div className="meta-sidebar-section">
           <Label>Related</Label>
-          {links.map(l => {
-            const linked = find_page(l)
-            return <RelatedLink key={l} href={l} name={linked ? linked.name : l} />
-          })}
-          {related.map(r => <RelatedLink key={r.url} href={r.url} name={r.name} />)}
+          {items.map(item => (
+            <RelatedLink key={item.href} href={item.href} name={item.name} external={item.external} />
+          ))}
         </div>
       )}
 

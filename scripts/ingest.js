@@ -382,10 +382,12 @@ async function run(config) {
   /** Execute the full ingest pipeline: mirror files, build flat site-meta.json with local tags. */
   _config = config
   const src = config.content
-  const meta_cfg = config.meta || { max_keywords: 32, page_tags: 5, related_links: 3 }
+  const meta_cfg = config.meta || {
+    max_keywords: 32, page_tags: 5, section_tags: 8, related_links: 3, min_relevance: 0.2,
+  }
 
   console.log(`\nIngesting from: ${src}`)
-  console.log(`  Tagging pages locally (max_keywords=${meta_cfg.max_keywords}, page_tags=${meta_cfg.page_tags})`)
+  console.log(`  Tagging pages locally (max_keywords=${meta_cfg.max_keywords}, page_tags=${meta_cfg.page_tags}, section_tags=${meta_cfg.section_tags}, min_relevance=${meta_cfg.min_relevance ?? 0.2})`)
 
   fs.rmSync(PAGES,   { recursive: true, force: true })
   fs.rmSync(PUB_IMG, { recursive: true, force: true })
@@ -434,7 +436,7 @@ if (require.main === module) {
   const yaml_path = path.join(ROOT, 'mdsite.yaml')
   const cfg = fs.existsSync(yaml_path)
     ? require('./config').load_config(yaml_path)
-    : { ...require('../site.config'), content: path.join(ROOT, 'docs'), meta: { max_keywords: 32, page_tags: 5, related_links: 3 } }
+    : { ...require('../site.config'), content: path.join(ROOT, 'docs'), meta: { max_keywords: 32, page_tags: 5, section_tags: 8, related_links: 3, min_relevance: 0.2 } }
   if (process.argv[2]) cfg.content = path.resolve(process.argv[2])
 
   run(cfg).catch(err => { console.error(err.message); process.exit(1) })

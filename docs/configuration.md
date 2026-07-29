@@ -34,8 +34,10 @@ consumed by Next.js and Nextra.
 | `toc` | boolean | `true` | Right sidebar: "On This Page" section navigation |
 | `reading_time` | boolean | `true` | Show estimated reading time in page headers and feeds |
 | `meta.max_keywords` | integer | `32` | Max tag terms stored per page/section after ingest |
-| `meta.page_tags` | integer | `5` | Max chips shown below the title and per section in PageInfo |
+| `meta.page_tags` | integer | `5` | Max chips shown below the page title |
+| `meta.section_tags` | integer | `8` | Max chips shown per section in the PageInfo mosaic |
 | `meta.related_links` | integer | `3` | Related pages attached per page via embedding similarity |
+| `meta.min_relevance` | number | `0.2` | Drop auto tags whose title-relevance score is below this (0–1); user/FM tags are kept |
 | `theme.color` | string | `"default"` | Named accent palette — see [Theme](#theme) below |
 | `theme.typeset` | string | `"sans"` | Named body font stack — see [Theme](#theme) below |
 | `theme.navbar` | string | `""` | Navbar background: `"primary"` (theme tint) or any CSS color |
@@ -108,7 +110,7 @@ During ingest, mdsite always runs local keyword extraction and embedding-based t
 Output lands in `public/site-meta.json` — a flat list of pages, not frontmatter. Tags use
 fixed groups (`category`, `topic`, `concept`, `entity`, `user`); frontmatter `tags` and
 `categories` merge into `user` (still scored). The UI shows the first `page_tags` chips
-from each unit's merged tag list.
+from each page's merged tag list, and up to `section_tags` chips per section in PageInfo.
 
 Embeddings use **Xenova/all-MiniLM-L6-v2** vendored at `models/Xenova/all-MiniLM-L6-v2/`.
 Ingest loads from disk only — no Hugging Face download. After all pages are tagged,
@@ -119,8 +121,10 @@ Optional page summary: set `desc` or `description` in frontmatter — PageInfo s
 ```yaml
 meta:
   max_keywords: 32       # tag pool stored per page/section
-  page_tags: 5           # chips below title and per section in PageInfo
+  page_tags: 5           # chips below title
+  section_tags: 8        # chips per section in PageInfo
   related_links: 3       # related pages per page (skips urls already in links)
+  min_relevance: 0.2     # drop auto tags below this title-relevance score
 ```
 
 See the [Metadata Contract](/specifications/metadata) spec for the full schema. Hashing,

@@ -33,9 +33,9 @@ MetaSidebar, and TocMenu.
 7. REQ-7: `PageMeta` (date, reading time, the first `page_tags` chips from `page.tags`) renders below the page title, ahead of the rest of the page's content
 8. REQ-8: `MetaSidebar` renders a combined "Related" list then an "Edit this page" link — always last; description and section tags live in `PageInfo` instead
 9. REQ-9: `metrics.word_count` is computed by the ingest pipeline from page content (always present); `metrics.reading_time` is words / 200 rounded, minimum 1 minute
-10. REQ-10: `MetaSidebar`'s combined "Related" list merges the page's own `links` with ingest `related` pages — an internal link is shown as the linked page's name (via `find_page`), not its raw path; an unresolved (e.g. external) link falls back to its raw href
+10. REQ-10: `MetaSidebar`'s combined "Related" list merges resolved internal `links` and intentional external http(s) links with ingest `related` pages — internal links show the page name (via `find_page`); external links show the hostname; fragment-only and unresolved internal paths are omitted
 11. REQ-11: The ToC column (`.nextra-toc`) keeps Nextra's default sticky behavior — pinned near the top of the viewport with its own capped-height scrollbar — so the heading list stays fixed while the body content scrolls
-12. REQ-12: `PageInfo` shows the page `desc` as Summary and a mosaic of tagged sections (each capped to `page_tags` chips); the Info and Contents toggles are mutually exclusive
+12. REQ-12: `PageInfo` shows the page `desc` as Summary and a mosaic of tagged sections (each capped to `section_tags` chips); the Info and Contents toggles are mutually exclusive
 13. REQ-13: Below `xl`, `TocMenu` exposes a Contents panel with a Sections list plus `MetaSidebar`; it is omitted when `toc: false`
 14. REQ-14: `SectionContext` exposes the current page and a depth-first flattened list of its sections from site metadata
 

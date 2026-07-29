@@ -3,7 +3,7 @@ import { PageInfoToggle, PageInfoPanel, limit_tags, layout_section_rows, section
 import { useSection } from '../../components/SectionContext'
 
 jest.mock('../../components/SectionContext', () => ({ useSection: jest.fn() }))
-jest.mock('../../site.config', () => ({ page_tags: 5 }))
+jest.mock('../../site.config', () => ({ section_tags: 5 }))
 jest.mock('next/router', () => ({
   useRouter: () => ({ events: { on: jest.fn(), off: jest.fn() } }),
 }))
@@ -79,7 +79,7 @@ test('test_page_info_panel_returns_null_when_no_info', () => {
   expect(container).toBeEmptyDOMElement()
 })
 
-test('test_page_info_panel_limits_section_tags_to_page_tags', () => {
+test('test_page_info_panel_limits_section_tags_to_section_tags', () => {
   useSection.mockReturnValue({
     page: { desc: null },
     sections: [{

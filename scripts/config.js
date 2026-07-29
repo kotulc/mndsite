@@ -21,7 +21,9 @@ const DEFAULTS = {
   meta:           {
     max_keywords: 32,
     page_tags: 5,
+    section_tags: 8,
     related_links: 3,
+    min_relevance: 0.2,
   },
   flatten:        [],
   nav_order:      {},
@@ -58,11 +60,17 @@ function resolve_meta(raw) {
   const cfg = { ...DEFAULTS.meta, ...(raw || {}) }
   cfg.max_keywords  = parseInt(cfg.max_keywords, 10)
   cfg.page_tags     = parseInt(cfg.page_tags, 10)
+  cfg.section_tags  = parseInt(cfg.section_tags, 10)
   cfg.related_links = parseInt(cfg.related_links, 10)
+  cfg.min_relevance = Number(cfg.min_relevance)
   if (!(cfg.max_keywords > 0)) throw new Error(`mdsite.yaml: meta.max_keywords must be a positive integer`)
   if (!(cfg.page_tags > 0))    throw new Error(`mdsite.yaml: meta.page_tags must be a positive integer`)
+  if (!(cfg.section_tags > 0)) throw new Error(`mdsite.yaml: meta.section_tags must be a positive integer`)
   if (cfg.related_links < 0 || Number.isNaN(cfg.related_links)) {
     throw new Error(`mdsite.yaml: meta.related_links must be a non-negative integer`)
+  }
+  if (!(cfg.min_relevance >= 0) || cfg.min_relevance > 1 || Number.isNaN(cfg.min_relevance)) {
+    throw new Error(`mdsite.yaml: meta.min_relevance must be a number between 0 and 1`)
   }
   return cfg
 }
@@ -79,6 +87,7 @@ function write_site_config(config, dest_dir) {
   const values = {
     ...Object.fromEntries(keys.map(k => [k, config[k]])),
     page_tags: config.meta.page_tags,
+    section_tags: config.meta.section_tags,
   }
   const body = Object.entries(values)
     .map(([k, v]) => `  ${k}: ${JSON.stringify(v)}`)

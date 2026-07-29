@@ -2,12 +2,13 @@
  * Local keyword extraction + embedding-based scoring and grouping.
  *
  * For each page/section unit:
- *   1. Extract up to max_keywords candidate terms (frequency / n-grams)
- *   2. Score each candidate (and each user term) vs the unit title via embeddings
- *   3. Assign auto terms to a fixed group by similarity to group label prompts
- *   4. Force user/frontmatter terms into group "user"
- *   5. Merge user-first, then auto by score; keep up to max_keywords in metadata
- *      (UI displays the first page_tags of that list)
+ *   1. Extract a frequency-ranked keyword pool (oversampled)
+ *   2. Filter candidates (title words, stem/substring overlaps, shared words, user reserved)
+ *   3. Score survivors (and each user term) vs the unit title via embeddings
+ *   4. Assign auto terms to a fixed group by similarity to group label prompts
+ *   5. Force user/frontmatter terms into group "user"
+ *   6. Merge user-first, then auto by score; keep up to max_keywords in metadata
+ *      (UI displays the first page_tags / section_tags of that list)
  *
  * Embeddings: @xenova/transformers (all-MiniLM-L6-v2), vendored under models/.
  * Inject `embedder` in tests.
@@ -39,11 +40,40 @@ const STOPWORDS = new Set(`
   my your his her our their what which who whom
 `.trim().split(/\s+/))
 
+/** Pull more raw keywords than we keep so filtering still leaves a full pool. */
+const EXTRACT_OVERSAMPLE = 3
+
 
 function tokenize(text) {
   return plain_text(text)
     .toLowerCase()
     .match(/[a-z][a-z0-9+]{1,}(?:-[a-z0-9]+)*/g) || []
+}
+
+
+function light_stem(word) {
+  /** Cheap stem so file/files, config/configs collapse together. */
+  const w = String(word || '').toLowerCase()
+  if (w.length <= 3) return w
+  if (w.endsWith('ies') && w.length > 5) return w.slice(0, -3) + 'y'
+  if (w.endsWith('ses') && w.length > 5) return w.slice(0, -2)
+  if (w.endsWith('zes') && w.length > 5) return w.slice(0, -2)
+  if (w.endsWith('xes') && w.length > 5) return w.slice(0, -2)
+  if (w.endsWith('ches') && w.length > 6) return w.slice(0, -2)
+  if (w.endsWith('shes') && w.length > 6) return w.slice(0, -2)
+  if (w.endsWith('s') && !w.endsWith('ss') && w.length > 4) return w.slice(0, -1)
+  return w
+}
+
+
+function term_tokens(term) {
+  /** Content tokens for a candidate (stopwords dropped). */
+  return tokenize(term).filter(w => !STOPWORDS.has(w) && w.length > 2)
+}
+
+
+function term_stems(term) {
+  return term_tokens(term).map(light_stem)
 }
 
 
@@ -65,6 +95,62 @@ function extract_keywords(text, max_keywords) {
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, max_keywords)
     .map(([term]) => term)
+}
+
+
+function overlaps_title(term, title) {
+  /** True when any candidate token (or its stem) appears in the title/header. */
+  const title_stems = new Set(term_stems(title || ''))
+  if (!title_stems.size) return false
+  return term_stems(term).some(s => title_stems.has(s))
+}
+
+
+function stems_related(a, b) {
+  /** Same stem, or one is a long prefix of the other (config ≈ configuration). */
+  if (!a || !b) return false
+  if (a === b) return true
+  const min = 4
+  if (a.length >= min && b.length >= min && (a.startsWith(b) || b.startsWith(a))) return true
+  return false
+}
+
+
+function terms_conflict(a, b) {
+  /** True when two terms share a stem/prefix, or one is a long substring of the other.
+   *  Catches file/files, config/configuration, and repeated words across bigrams. */
+  const aa = String(a || '').toLowerCase().trim()
+  const bb = String(b || '').toLowerCase().trim()
+  if (!aa || !bb) return false
+  if (aa === bb) return true
+
+  const min_sub = 4
+  if (aa.length >= min_sub && bb.length >= min_sub && (aa.includes(bb) || bb.includes(aa))) {
+    return true
+  }
+
+  const a_stems = term_stems(aa)
+  const b_stems = term_stems(bb)
+  if (!a_stems.length || !b_stems.length) return false
+  return a_stems.some(as => b_stems.some(bs => stems_related(as, bs)))
+}
+
+
+function filter_candidates(candidates, { title = '', reserved = [] } = {}) {
+  /** Drop title words, terms that collide with reserved (user) tags, and near-duplicates.
+   *  Input should already be preference-ordered (higher frequency first). Kept order is stable. */
+  const kept = []
+  const reserved_list = (reserved || []).map(t => String(t).trim()).filter(Boolean)
+
+  for (const raw of candidates || []) {
+    const term = String(raw || '').trim()
+    if (!term) continue
+    if (overlaps_title(term, title)) continue
+    if (reserved_list.some(r => terms_conflict(term, r))) continue
+    if (kept.some(k => terms_conflict(term, k))) continue
+    kept.push(term)
+  }
+  return kept
 }
 
 
@@ -107,20 +193,21 @@ async function default_embedder(texts) {
 }
 
 
-async function tag_unit({ title, text, user_terms, max_keywords, page_tags, embedder }) {
+async function tag_unit({ title, text, user_terms, max_keywords, page_tags, min_relevance, embedder }) {
   /** Score + group keywords for one page or section. Returns merged tag list. */
   const embed = embedder || default_embedder
   const max_kw = Math.max(1, max_keywords || 32)
+  const min_rel = Math.max(0, Math.min(1, Number(min_relevance ?? 0.2)))
   // page_tags used by callers for display; pool size is max_keywords
   void page_tags
 
-  const auto_terms = extract_keywords(text, max_kw)
   const users = (user_terms || []).map(t => String(t).trim()).filter(Boolean)
+  const raw_pool = extract_keywords(text, max_kw * EXTRACT_OVERSAMPLE)
+  const auto_terms = filter_candidates(raw_pool, { title, reserved: users }).slice(0, max_kw)
 
-  // Candidates to embed: title, group prompts, user terms, auto terms
+  // Candidates to embed: title, group prompts, user terms, filtered auto terms
   const group_labels = AUTO_GROUPS.map(g => GROUP_PROMPTS[g])
-  const uniq_auto = auto_terms.filter(t => !users.some(u => u.toLowerCase() === t.toLowerCase()))
-  const to_embed = [title || '', ...group_labels, ...users, ...uniq_auto]
+  const to_embed = [title || '', ...group_labels, ...users, ...auto_terms]
   const vectors = await embed(to_embed.map(t => t || ' '))
 
   const title_vec = vectors[0]
@@ -145,16 +232,16 @@ async function tag_unit({ title, text, user_terms, max_keywords, page_tags, embe
     return { term, score: round4(score_term(vec)), group: USER_GROUP }
   })
 
-  const auto_tags = uniq_auto.map(term => {
+  const auto_tags = auto_terms.map(term => {
     const vec = vectors[i++]
     return {
       term,
       score: round4(score_term(vec)),
       group: assign_group(vec),
     }
-  })
+  }).filter(t => t.score >= min_rel)
 
-  // User first (still scored), then auto by descending title-relevance
+  // User first (still scored, always kept), then auto by descending title-relevance
   auto_tags.sort((a, b) => b.score - a.score || a.term.localeCompare(b.term))
   const merged = [...user_tags, ...auto_tags]
   return merged.slice(0, max_kw)
@@ -208,7 +295,8 @@ async function fill_related(pages, { related_links = 3, embedder } = {}) {
 
 
 module.exports = {
-  USER_GROUP, AUTO_GROUPS, GROUP_PROMPTS, STOPWORDS,
-  tokenize, extract_keywords, cosine, tag_unit, default_embedder,
+  USER_GROUP, AUTO_GROUPS, GROUP_PROMPTS, STOPWORDS, EXTRACT_OVERSAMPLE,
+  tokenize, light_stem, term_tokens, stems_related, overlaps_title, terms_conflict, filter_candidates,
+  extract_keywords, cosine, tag_unit, default_embedder,
   page_fingerprint, fill_related,
 }

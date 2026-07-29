@@ -117,8 +117,10 @@ nav_order: {}                # map of section slug → ordered list of page slug
 # Optional — local metadata tagging (always on during ingest)
 meta:
   max_keywords: 32           # tag pool stored per page/section
-  page_tags: 5               # chips below title and per section in PageInfo
+  page_tags: 5               # chips below title
+  section_tags: 8            # chips per section in PageInfo
   related_links: 3           # related pages per page (embedding similarity)
+  min_relevance: 0.2         # drop auto tags below this title-relevance score
 
 # Paths — resolved relative to this file
 content: ./docs              # source markdown directory

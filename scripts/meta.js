@@ -57,6 +57,7 @@ async function build_sections(section_nodes, cfg, embedder) {
       user_terms: [],
       max_keywords: cfg.max_keywords,
       page_tags: cfg.page_tags,
+      min_relevance: cfg.min_relevance,
       embedder,
     })
     out.push({
@@ -82,6 +83,7 @@ async function build_page({ slug, title, url, content, published, created, fm },
     user_terms,
     max_keywords: cfg.max_keywords,
     page_tags: cfg.page_tags,
+    min_relevance: cfg.min_relevance,
     embedder,
   })
 

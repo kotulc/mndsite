@@ -40,6 +40,7 @@ test('test_meta_sidebar_no_longer_renders_description_tags_or_keywords', () => {
 test('test_meta_sidebar_edit_link_renders_last', () => {
   /** With a Related block present, the edit link is still the final child. */
   useSection.mockReturnValue({ page: { links: ['/other'], related: [] } })
+  find_page.mockReturnValue({ name: 'Other', url: '/other' })
   const { container } = render(<MetaSidebar />)
   expect(container.querySelector('.meta-sidebar-content').lastElementChild)
     .toBe(screen.getByText('Edit this page'))
@@ -54,12 +55,22 @@ test('test_meta_sidebar_link_resolves_to_page_name_not_path', () => {
   expect(screen.queryByText('/configuration')).not.toBeInTheDocument()
 })
 
-test('test_meta_sidebar_unresolved_link_falls_back_to_raw_href', () => {
-  /** A link with no matching page (e.g. external) falls back to showing its raw href. */
+test('test_meta_sidebar_external_link_shows_hostname', () => {
+  /** Intentional external markdown links show the hostname, not the raw URL. */
   find_page.mockReturnValue(undefined)
-  useSection.mockReturnValue({ page: { links: ['https://example.com'], related: [] } })
+  useSection.mockReturnValue({ page: { links: ['https://example.com/path'], related: [] } })
   render(<MetaSidebar />)
-  expect(screen.getByText('https://example.com')).toBeInTheDocument()
+  expect(screen.getByText('example.com')).toBeInTheDocument()
+  expect(screen.getByText('example.com').closest('a')).toHaveAttribute('href', 'https://example.com/path')
+})
+
+test('test_meta_sidebar_drops_unresolved_internal_and_fragments', () => {
+  /** Fragment-only / unresolved internal paths are not shown in Related. */
+  find_page.mockReturnValue(undefined)
+  useSection.mockReturnValue({ page: { links: ['#theme', '/missing-page'], related: [] } })
+  render(<MetaSidebar />)
+  expect(screen.queryByText('#theme')).not.toBeInTheDocument()
+  expect(screen.queryByText('/missing-page')).not.toBeInTheDocument()
 })
 
 test('test_meta_sidebar_links_and_related_share_one_section', () => {

@@ -12,4 +12,5 @@ module.exports = {
   flatten: ["updates"],
   nav_order: {"":["about","getting-started","configuration"],"features":["overview","components"],"specifications":["format"],"updates":["welcome"]},
   page_tags: 5,
+  section_tags: 8,
 }

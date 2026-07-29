@@ -63,7 +63,9 @@ describe('load_config — meta block', () => {
   test('test_meta_defaults_applied', () => {
     /** Config without a meta block resolves to default keyword/page_tags limits. */
     const cfg = load_config(write_yaml('title: t'))
-    expect(cfg.meta).toEqual({ max_keywords: 32, page_tags: 5, related_links: 3 })
+    expect(cfg.meta).toEqual({
+      max_keywords: 32, page_tags: 5, section_tags: 8, related_links: 3, min_relevance: 0.2,
+    })
   })
 
   test('test_meta_partial_block_merges_defaults', () => {
@@ -109,6 +111,7 @@ describe('write_site_config — generated keys', () => {
     expect(out.description).toBe('d')
     expect(out.footer).toBe('f')
     expect(out.page_tags).toBe(8)
+    expect(out.section_tags).toBe(8)
     expect(out.theme).toEqual({
       color: 'emerald', typeset: 'sans', navbar: '', footer: '',
       hue: 161, saturation: 94, font_stack: '',
@@ -125,5 +128,6 @@ describe('write_site_config — generated keys', () => {
     expect(out).not.toHaveProperty('meta_sidebar')
     expect(out).not.toHaveProperty('extract')
     expect(out.page_tags).toBe(5)
+    expect(out.section_tags).toBe(8)
   })
 })

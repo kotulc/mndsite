@@ -29,10 +29,36 @@ function reading_time(text) {
 
 
 function extract_links(content) {
-  /** Collect unique markdown link hrefs and bare URLs from content (images excluded). */
+  /** Collect unique outbound markdown link hrefs for the Related sidebar.
+   *
+   *  Rules:
+   *  - Ignore fenced code blocks (example YAML/URLs must not become Related links)
+   *  - Only `[text](href)` markdown links — not bare URLs, not images
+   *  - Skip fragment-only (`#theme`), mailto:, tel:, javascript:
+   *  - Internal paths: keep path only (drop #fragment); strip trailing slash
+   *  - External: keep http(s) URLs from intentional markdown links
+   *  - Relative leftovers are ignored (ingest rewrites them to absolute first)
+   */
+  const text = String(content || '').replace(/```[\s\S]*?```/g, ' ')
   const links = new Set()
-  for (const m of String(content || '').matchAll(/(?<!\!)\[[^\]]*\]\(([^)\s]+)/g)) links.add(m[1])
-  for (const m of String(content || '').matchAll(/\bhttps?:\/\/[^\s)\]]+/g)) links.add(m[0])
+
+  for (const m of text.matchAll(/(?<!\!)\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)) {
+    let href = m[1]
+    if (!href) continue
+    if (href.startsWith('#')) continue
+    if (/^(mailto:|tel:|javascript:)/i.test(href)) continue
+
+    if (/^https?:\/\//i.test(href)) {
+      links.add(href.replace(/[.,;:!?)]+$/, ''))
+      continue
+    }
+
+    if (href.startsWith('/')) {
+      const path = href.split('#')[0].replace(/\/$/, '') || '/'
+      links.add(path)
+    }
+  }
+
   return [...links]
 }
 

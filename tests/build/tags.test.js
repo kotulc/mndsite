@@ -1,7 +1,10 @@
 /**
  * Unit tests for local keyword extraction and embedding-based tagging.
  */
-const { extract_keywords, tag_unit, cosine, fill_related, USER_GROUP } = require('../../scripts/tags')
+const {
+  extract_keywords, tag_unit, cosine, fill_related, USER_GROUP,
+  light_stem, overlaps_title, terms_conflict, filter_candidates,
+} = require('../../scripts/tags')
 
 
 async function fake_embedder(texts) {
@@ -25,11 +28,41 @@ describe('extract_keywords', () => {
 })
 
 
+describe('filter_candidates', () => {
+  test('test_light_stem_collapses_plurals', () => {
+    expect(light_stem('files')).toBe('file')
+    expect(light_stem('file')).toBe('file')
+    expect(light_stem('configs')).toBe('config')
+  })
+
+  test('test_overlaps_title_drops_header_words', () => {
+    expect(overlaps_title('pipeline', 'What the pipeline does')).toBe(true)
+    expect(overlaps_title('files', 'What the pipeline does')).toBe(false)
+    expect(overlaps_title('pipeline steps', 'What the pipeline does')).toBe(true)
+  })
+
+  test('test_terms_conflict_catches_substring_and_shared_words', () => {
+    expect(terms_conflict('file', 'files')).toBe(true)
+    expect(terms_conflict('config', 'configuration')).toBe(true)
+    expect(terms_conflict('yaml config', 'configuration')).toBe(true)
+    expect(terms_conflict('yaml', 'pipeline')).toBe(false)
+  })
+
+  test('test_filter_candidates_applies_title_reserved_and_dedupe', () => {
+    const kept = filter_candidates(
+      ['pipeline', 'files', 'file', 'yaml', 'configuration', 'config', 'extract'],
+      { title: 'What the pipeline does', reserved: ['yaml'] },
+    )
+    expect(kept).toEqual(['files', 'configuration', 'extract'])
+  })
+})
+
+
 describe('tag_unit', () => {
   test('test_tag_unit_user_tags_first_with_user_group', async () => {
     const tags = await tag_unit({
-      title: 'Configuration',
-      text: 'yaml extract pipeline configuration documentation keywords topics concepts',
+      title: 'Getting Started',
+      text: 'yaml extract pipeline documentation keywords topics concepts markdown site build',
       user_terms: ['my-tag'],
       max_keywords: 10,
       page_tags: 5,
@@ -39,6 +72,43 @@ describe('tag_unit', () => {
     expect(tags[0].score).toBeGreaterThanOrEqual(0)
     expect(tags.length).toBeGreaterThan(1)
     expect(tags.slice(1).every(t => t.group !== USER_GROUP || t.term === 'my-tag')).toBe(true)
+  })
+
+  test('test_tag_unit_excludes_title_words_and_near_duplicates', async () => {
+    const tags = await tag_unit({
+      title: 'What the pipeline does',
+      text: [
+        'The pipeline copies files and each file is rewritten.',
+        'files files files file file configuration config extract yaml markdown',
+      ].join(' '),
+      user_terms: [],
+      max_keywords: 10,
+      min_relevance: 0,
+      embedder: fake_embedder,
+    })
+    const terms = tags.map(t => t.term)
+    expect(terms).not.toContain('pipeline')
+    expect(terms).not.toContain('does')
+    expect(terms).not.toContain('what')
+    // Prefer one of file/files, not both
+    const file_like = terms.filter(t => /\bfiles?\b/.test(t))
+    expect(file_like.length).toBeLessThanOrEqual(1)
+    // Prefer one of config/configuration, not both
+    const config_like = terms.filter(t => t.includes('config'))
+    expect(config_like.length).toBeLessThanOrEqual(1)
+  })
+
+  test('test_tag_unit_drops_auto_tags_below_min_relevance', async () => {
+    const tags = await tag_unit({
+      title: 'zzzz',
+      text: 'yaml extract pipeline documentation keywords topics concepts markdown site build',
+      user_terms: ['keep-me'],
+      max_keywords: 10,
+      min_relevance: 0.99,
+      embedder: fake_embedder,
+    })
+    expect(tags[0]).toMatchObject({ term: 'keep-me', group: USER_GROUP })
+    expect(tags.slice(1).every(t => t.score >= 0.99)).toBe(true)
   })
 })
 

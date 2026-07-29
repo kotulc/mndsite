@@ -51,9 +51,9 @@ describe('section_tree', () => {
 
 
 describe('build_page', () => {
-  const content = '# My Page\n\nIntro line with a [link](/other) and https://example.com here.\n\n' +
+  const content = '# My Page\n\nIntro line with a [link](/other) and [example](https://example.com) here.\n\n' +
                   '## Section One\n\nSome words in the first section about configuration yaml extract.\n'
-  const cfg = { max_keywords: 8, page_tags: 5 }
+  const cfg = { max_keywords: 8, page_tags: 5, min_relevance: 0 }
 
   test('test_build_page_flat_fields', async () => {
     /** A page record carries name, url, slug, dates, metrics, links, related, tags, sections. */
@@ -102,6 +102,28 @@ describe('word_count / links', () => {
   })
 
   test('test_extract_links_skips_images', () => {
-    expect(extract_links('![x](/img.png) [y](/page) https://z.com')).toEqual(['/page', 'https://z.com'])
+    expect(extract_links('![x](/img.png) [y](/page)')).toEqual(['/page'])
+  })
+
+  test('test_extract_links_skips_code_fences_and_fragments', () => {
+    const md = [
+      'See [Theme](#theme) and [Meta](/specifications/metadata).',
+      '```yaml',
+      'repo_url: https://github.com/myuser/my-repo',
+      '```',
+      'Also [GitHub](https://github.com/kotulc/mdsite).',
+    ].join('\n')
+    expect(extract_links(md)).toEqual([
+      '/specifications/metadata',
+      'https://github.com/kotulc/mdsite',
+    ])
+  })
+
+  test('test_extract_links_ignores_bare_urls', () => {
+    expect(extract_links('Visit https://example.com for more.')).toEqual([])
+  })
+
+  test('test_extract_links_strips_hash_on_internal_paths', () => {
+    expect(extract_links('[Fields](/configuration#fields)')).toEqual(['/configuration'])
   })
 })

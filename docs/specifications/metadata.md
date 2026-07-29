@@ -55,13 +55,28 @@ Fixed group vocabulary: **`category`**, **`topic`**, **`concept`**, **`entity`**
 Embeddings use **Xenova/all-MiniLM-L6-v2** vendored at `models/Xenova/all-MiniLM-L6-v2/` (quantized ONNX +
 tokenizer files). Ingest loads from disk only — no Hugging Face download.
 
-Pipeline (always on during ingest):
+### Tagging pipeline
 
-1. Extract up to `meta.max_keywords` candidates from the unit text
-2. Score candidates (and frontmatter tags) against the unit title
-3. Group auto candidates; force FM tags to `user`
-4. Merge **user first**, then auto by descending score; store up to `max_keywords`
-5. UI shows the first `meta.page_tags` entries
+For each page and each section (always on during ingest):
+
+1. **Extract** a frequency-ranked unigram/bigram pool from the unit body (oversampled to
+   `meta.max_keywords × 3` so later filters still leave enough candidates)
+2. **Filter candidates** before embedding / selection:
+   - Drop any term that shares a content word (or light stem) with the unit **title/header**
+     — e.g. title “What the pipeline does” cannot yield tag `pipeline`
+   - Drop terms that conflict with reserved frontmatter/`user` tags (exact, shared stem, or
+     long substring — so FM `yaml` blocks auto `yaml config`)
+   - Among remaining candidates (still frequency-ordered), keep the first of each conflict
+     cluster — plurals/stems (`file`/`files`), shared tokens across bigrams, and long
+     substrings (`config`/`configuration`) collapse to one survivor
+3. Cap the filtered pool to `meta.max_keywords`
+4. **Embed** title, group-label prompts, user terms, and filtered auto terms
+5. **Score** each term against the title; assign auto terms to a group; force FM tags to `user`
+6. Drop auto tags below `meta.min_relevance` (default `0.2`); user/FM tags are always kept
+7. Merge **user first**, then auto by descending score; store up to `max_keywords`
+8. UI shows the first `meta.page_tags` on the page, and up to `meta.section_tags` per section
+
+Hover tooltips read `{Group} tag: relevance {score}` with score rounded to hundredths.
 
 Frontmatter:
 
@@ -74,15 +89,30 @@ tags: [yaml, extract]
 
 `desc` / `description` is optional — PageInfo Summary is omitted when absent.
 
+## Links
+
+`links` are outbound references extracted at ingest for the Related sidebar:
+
+1. Fenced code blocks are ignored (example `repo_url:` values never become Related links)
+2. Only markdown links `[text](href)` are collected — not bare URLs
+3. Fragment-only (`#theme`), `mailto:`, `tel:`, and `javascript:` are skipped
+4. Internal paths keep the path only (`/page#section` → `/page`)
+5. External `http(s)` URLs from intentional markdown links are kept
+
 ## Related
 
 After tagging, each page gets up to `meta.related_links` related pages via embedding
 similarity of a short fingerprint (`title` + optional `desc` + top tag terms). Entries
 are `{ name, url, score }`. Pages already listed in `links` are skipped.
 
+In the UI, Related shows resolved internal `links` (by page name), intentional external
+links (by hostname), then embedding `related` pages.
+
 ```yaml
 meta:
   max_keywords: 32
   page_tags: 5
+  section_tags: 8
   related_links: 3
+  min_relevance: 0.2
 ```

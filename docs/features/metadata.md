@@ -34,7 +34,7 @@ anything inline — tagged sections appear together in the PageInfo mosaic:
 | `metrics.reading_time` | derived | Displays as "N min read" |
 | `tags` (page) | ingest | First `page_tags` chips (default 5) from the merged tag list below the title |
 | `desc` | frontmatter `desc` / `description`, optional | SEO meta description and the Summary block in PageInfo when present |
-| `tags` (per section) | ingest | Section tags in the PageInfo mosaic, capped to `page_tags` chips each |
+| `tags` (per section) | ingest | Section tags in the PageInfo mosaic, capped to `section_tags` chips each (default 8) |
 | `links`, `related` | derived / ingest | Combined into a single "Related" list in the ToC sidebar (and mobile Contents panel) — internal links show the linked page's name, not its path |
 
 Frontmatter that steers structure and identity:
@@ -56,7 +56,7 @@ separated by a center dot. Returns null when neither field is present.
 **`TagList`** renders tags as chips. Each tag is `{ term, group }` with groups
 `category`, `topic`, `concept`, `entity`, or `user`. Returns null when empty. Used below
 the title (first `page_tags` from `page.tags`) and inside `PageInfo` (each section's
-capped tags).
+capped `section_tags`).
 
 **`PageInfo`** (`PageInfoToggle` + `PageInfoPanel`) — an Info button beside the page
 title expands an inline panel with the page **Summary** (`desc`) and a **Sections**

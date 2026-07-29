@@ -13,7 +13,9 @@ theme:
 meta:
   max_keywords: 32
   page_tags: 5
+  section_tags: 8
   related_links: 3
+  min_relevance: 0.1
 
 content: ./docs
 output: ./dist

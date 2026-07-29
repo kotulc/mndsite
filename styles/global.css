@@ -616,15 +616,44 @@ a.page-info-section-name:hover {
 .chip-topic,     .chip-topics     { background: hsl(265 70% 94%); color: hsl(265 45% 40%); }
 .chip-concept,   .chip-concepts   { background: hsl(35 80% 88%);  color: hsl(35 65% 28%); }
 .chip-entity,    .chip-entities   { background: hsl(340 75% 94%); color: hsl(340 55% 40%); }
-.chip-user       { background: hsl(160 45% 90%); color: hsl(160 40% 28%); }
+/* Author/frontmatter tags — same blue as category (taggly-era categories look) */
+.chip-user       { background: hsl(210 70% 92%); color: hsl(210 55% 32%); }
 .chip-custom     { background: hsl(150 55% 88%); color: hsl(150 50% 24%); }
 
 :is(html[class~="dark"]) .chip-category, :is(html[class~="dark"]) .chip-categories { background: hsl(210 35% 22%); color: hsl(210 70% 75%); }
 :is(html[class~="dark"]) .chip-topic,     :is(html[class~="dark"]) .chip-topics     { background: hsl(265 35% 24%); color: hsl(265 70% 80%); }
 :is(html[class~="dark"]) .chip-concept,   :is(html[class~="dark"]) .chip-concepts   { background: hsl(35 35% 20%);  color: hsl(35 70% 72%); }
 :is(html[class~="dark"]) .chip-entity,    :is(html[class~="dark"]) .chip-entities   { background: hsl(340 35% 22%); color: hsl(340 70% 80%); }
-:is(html[class~="dark"]) .chip-user       { background: hsl(160 25% 18%); color: hsl(160 50% 70%); }
+:is(html[class~="dark"]) .chip-user       { background: hsl(210 35% 22%); color: hsl(210 70% 75%); }
 :is(html[class~="dark"]) .chip-custom     { background: hsl(150 30% 18%); color: hsl(150 55% 70%); }
+
+/* Custom hover tooltip only — use data-tooltip so the browser does not also show native title */
+.chip[data-tooltip] {
+  position: relative;
+  cursor: help;
+}
+.chip[data-tooltip]:hover::after,
+.chip[data-tooltip]:focus-visible::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.35rem);
+  transform: translateX(-50%);
+  z-index: 30;
+  width: max-content;
+  max-width: 16rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.25rem;
+  background: var(--site-gray-800, #1f2937);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.3;
+  text-transform: none;
+  white-space: normal;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
 
 /* Post index listing */
 .post-index {

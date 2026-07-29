@@ -2,7 +2,7 @@
  * "Info" affordance for the page header. PageInfoToggle renders a small intelligence
  * icon beside the page title; clicking it expands PageInfoPanel below the header, which
  * shows an optional page description (frontmatter desc) and a per-section tag breakdown.
- * Each section shows at most `page_tags` chips. Sections pack into a content-sized mosaic.
+ * Each section shows at most `section_tags` chips. Sections pack into a content-sized mosaic.
  * Data comes from SectionContext. Open state is owned by theme.config.jsx's PageTitle.
  */
 import { useEffect } from 'react'
@@ -51,7 +51,7 @@ export function section_anchor(name) {
 function use_page_info() {
   const { page, sections } = useSection()
   const desc = (page && page.desc) || ''
-  const max_tags = siteConfig.page_tags ?? 5
+  const max_tags = siteConfig.section_tags ?? 8
   const tagged_sections = (sections || [])
     .filter(section_has_tags)
     .map(section => ({ ...section, tags: limit_tags(section.tags, max_tags) }))

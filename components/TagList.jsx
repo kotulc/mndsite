@@ -18,12 +18,13 @@ function group_variant(group) {
   return KNOWN_GROUPS.includes(group) ? group : 'custom'
 }
 
-function tag_tooltip({ term, group, score }) {
+function tag_tooltip({ group, score }) {
   const label = GROUP_LABELS[group] || (group ? group.charAt(0).toUpperCase() + group.slice(1) : 'Tag')
   if (typeof score === 'number' && !Number.isNaN(score)) {
-    return `${label}: ${term}, score ${score}`
+    const relevance = (Math.round(score * 100) / 100).toFixed(2)
+    return `${label} tag: relevance ${relevance}`
   }
-  return `${label}: ${term}`
+  return `${label} tag`
 }
 
 function normalize_tags(tags) {
@@ -50,7 +51,7 @@ export default function TagList({ tags = [] }) {
           key={`${t.group}-${t.term}`}
           label={t.term}
           variant={group_variant(t.group)}
-          title={tag_tooltip(t)}
+          tooltip={tag_tooltip(t)}
         />
       ))}
     </div>
