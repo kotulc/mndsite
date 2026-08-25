@@ -28,6 +28,10 @@ Reference content: 24 markdown files — 7 static pages and 16 dated blog posts 
 - `mdsite deploy --provider vercel|cloudflare|s3`
 - Credentials via environment variables; project ID via YAML
 
+**Phase 8 — Composed pages** *(planned)*
+- Page bodies assembled from page/topic/tag lists, not only their own markdown
+- Declared per page in frontmatter; folder structure mirrors as it does today
+
 
 ---
 
@@ -222,6 +226,101 @@ To be planned separately once Phase 1–6 are stable.
 - **Semantic search** — per-page static JSON index, client-side query component
 
 See [SPEC.md](SPEC.md) for current design notes on each.
+
+
+---
+
+## Phase 8 — Composed pages (planned)
+
+**Goal:** a page's main body is *assembled* from lists of pages, topics and tags rather than
+being only the markdown of that one file. What appears in the body is a configuration
+decision, changed without rewriting content.
+
+**Structure is unchanged and stays unchanged.** A directory tree of documents and folders
+mirrors into the site's page structure exactly as it does today. Phase 8 is about what a
+*body* holds, never about how pages are addressed or nested. Nothing here introduces a second
+way to name a page.
+
+Today the body is one markdown file, with one exception: a flattened directory emits
+`public/dir-feeds/<name>.json` and renders it through `DirFeed`. That exception is the whole
+idea in miniature — a body built from records instead of from prose. Phase 8 generalizes it.
+
+### What already exists to build on
+
+| | Is |
+|---|---|
+| `site-meta.json` | flat page and section records — name, url, tags, categories, metrics |
+| `public/dir-feeds/*.json` | a body assembled from records, per flattened directory |
+| `DirFeed`, `TagList`, `Chip` | the render side of that, already themed |
+| `scripts/tags.js` | local keyword + embedding tags, related links, relevance scores |
+| `ingest_page` | already parses each page's full frontmatter and carries it into the record |
+
+**The gap is not rendering, not metadata, and not addressing. It is that nothing lets a person
+say what a given body should contain.**
+
+### Composition is frontmatter
+
+A page says how its own body is built, in the frontmatter it already has:
+
+```yaml
+---
+title: Architecture
+compose:
+  - kind: prose
+  - kind: pages
+    from: guides/
+    order: date
+    limit: 10
+  - kind: tags
+    any: [seam, translator]
+    as: cards
+---
+```
+
+- **`kind: prose` is the page's own markdown**, placed like any other block. A page with no
+  `compose:` is the one-block case, so nothing has to be migrated and the default is today's
+  behaviour.
+- **Blocks select over `site-meta.json`**, which already carries every field they filter on.
+- **No manifest, no new config key, no side file.** The document collection stays
+  self-contained: a page carries how it is composed, so mirroring works exactly as it does
+  now and a page copied elsewhere brings its composition with it.
+- **Hand-authorable.** A person writes `compose:` the same way they write `tags:`.
+
+### Where composition comes from
+
+**Upstream, from whatever produced the collection.** mndmap scans a `docs/` tree, presents it
+as a reorganizable structure, and writes a new collection of documents and folders to a
+configured destination — with `compose:` in the frontmatter it emits.
+
+```
+docs/  ──mndmap──▶  a collection of documents and folders  ──▶  mdsite ingest  ──▶  site
+```
+
+**mdsite learns nothing about mndmap.** It ingests a directory of markdown, as it does today.
+Any tool, or a person with an editor, can produce the same thing.
+
+### Tasks
+
+1. Read `compose:` in `parse_fm` consumers and validate it at ingest — an unresolvable
+   selector is a build warning naming the page, never a silent empty block.
+2. Generalize `emit_feed` into a block resolver: given a block spec, return records.
+3. One `ComposedBody` component rendering a resolved block list; `DirFeed` becomes a preset.
+4. Wire ingest: resolve each page's blocks, emit the result alongside the MDX.
+5. Keep `compose:` out of the rendered page the way other frontmatter already is.
+
+### Done when
+
+A page whose body is a page list plus a tag-filtered card set builds and renders correctly,
+its selectors resolve against real content, and a page with no `compose:` key builds exactly
+as it does today.
+
+### Open
+
+- **Static or client-side resolution.** Static keeps the export pure; client-side would let a
+  reader re-filter. Static first.
+- **Whether `related_links` becomes a block kind** rather than staying sidebar-only.
+- **Which selectors earn their place.** `pages`, `topics` and `tags` are the named three;
+  resist adding a fourth until a real page wants it.
 
 
 ---
