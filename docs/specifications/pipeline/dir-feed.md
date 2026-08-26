@@ -10,7 +10,7 @@ scrolling inline feed instead of individual navigable pages.
 ## Config
 
 ```yaml
-# mdsite.yaml
+# mndsite.yaml
 flatten:
   - updates  # dir paths to render as inline feeds; '/' = site root
 ```

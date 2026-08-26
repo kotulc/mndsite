@@ -22,7 +22,7 @@ jobs:
         run: |
           FLAGS=""
           if [ -n "${{ vars.CONTENT_SOURCE }}" ]; then FLAGS="--content ${{ vars.CONTENT_SOURCE }}"; fi
-          node scripts/cli.js build --config mdsite.yaml $FLAGS
+          node scripts/cli.js build --config mndsite.yaml $FLAGS
         env:
           BASE_PATH: ${{ vars.BASE_PATH }}
 
@@ -50,7 +50,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/mdsite:latest
+          tags: ghcr.io/${{ github.repository_owner }}/mndsite:latest
 
   deploy:
     needs: build

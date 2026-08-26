@@ -1,17 +1,17 @@
-# mdsite renderer simplification plan
+# mndsite renderer simplification plan
 
 ## Status and authority
 
-This is the implementation plan for simplifying mdsite into the rendering and
+This is the implementation plan for simplifying mndsite into the rendering and
 static-build stage of the mndmap publishing pipeline.
 
 `docs/archive.md` retains prior plans and history. Where older documentation
-describes automatic local tagging or content enrichment inside mdsite, this
+describes automatic local tagging or content enrichment inside mndsite, this
 plan is authoritative.
 
 ## Product contract
 
-mdsite is a portable static site renderer for publication-ready Markdown and
+mndsite is a portable static site renderer for publication-ready Markdown and
 MDX.
 
 Its input is normally the destination emitted by mndmap:
@@ -20,11 +20,11 @@ Its input is normally the destination emitted by mndmap:
 source Markdown/MDX
   -> mndmap
   -> enriched and organized Markdown/MDX
-  -> mdsite
+  -> mndsite
   -> static website
 ```
 
-mdsite:
+mndsite:
 
 - reads a configured content directory;
 - mirrors that document tree into its framework content tree;
@@ -34,7 +34,7 @@ mdsite:
 - builds a static site; and
 - remains usable as a Docker/CI build step.
 
-mdsite does not:
+mndsite does not:
 
 - extract semantic keywords;
 - run embedding models;
@@ -66,7 +66,7 @@ mndmap owns:
 - future Taggly enrichment; and
 - atomic destination replacement.
 
-mdsite owns:
+mndsite owns:
 
 - Markdown/MDX integration with Next.js and Nextra;
 - static route rendering;
@@ -86,12 +86,12 @@ mdsite owns:
 - The configured content root is the site route tree.
 - `index.md` or `index.mdx` is the landing page for its directory.
 - Every generated mndmap folder/group has an ordinary index document.
-- mdsite does not flatten, regroup, or rename supplied paths.
+- mndsite does not flatten, regroup, or rename supplied paths.
 - File-system routes must match mndmap route calculations exactly.
 
 ### Frontmatter
 
-mdsite preserves and renders supplied frontmatter. Initial supported fields
+mndsite preserves and renders supplied frontmatter. Initial supported fields
 include:
 
 ```yaml
@@ -112,10 +112,10 @@ Rules:
   and length-capped.
 - Generated reading time uses plain-text words divided by 200, rounded up, with
   a minimum of one minute.
-- Tags and categories are rendered but never synthesized by mdsite.
+- Tags and categories are rendered but never synthesized by mndsite.
 - Reading time is displayed only when supplied.
 - Future Taggly fields must arrive through frontmatter and be versioned before
-  mdsite consumes them.
+  mndsite consumes them.
 - Unknown frontmatter is preserved and made available to MDX/theme components.
 
 ### Content and assets
@@ -123,19 +123,19 @@ Rules:
 - Markdown and MDX content is treated as publication-ready.
 - Inline SVG emitted by mndmap is preserved.
 - Diagram SVG appears after introductory prose and before child links or page
-  sections; mdsite does not reposition it.
+  sections; mndsite does not reposition it.
 - Complete mndflow graph JSON is not part of the handoff.
 - Internal links and local asset references are not semantically redirected by
-  mdsite.
+  mndsite.
 - mndmap's `_assets/` tree is copied into the static output without changing its
   relative contract.
 - Static MDX imports supported by the build are preserved.
-- mdsite may perform framework-required `.md` to `.mdx` adaptation, but that
+- mndsite may perform framework-required `.md` to `.mdx` adaptation, but that
   adaptation must not change document meaning, routes, headings, or metadata.
 
 ## Configuration contract
 
-`mdsite.yaml` remains focused on rendering and deployment:
+`mndsite.yaml` remains focused on rendering and deployment:
 
 ```yaml
 title: My Site
@@ -175,13 +175,13 @@ flatten
 
 `nav_order` remains the cross-page navigation contract. mndmap replaces it in
 the emitted destination config from physical organization and sibling
-positions. mdsite honors it without applying a second organization policy.
+positions. mndsite honors it without applying a second organization policy.
 
-The destination-root `mdsite.yaml` is produced with this precedence:
+The destination-root `mndsite.yaml` is produced with this precedence:
 
 1. an explicitly configured mndmap template;
-2. workspace-root `mdsite.yaml`;
-3. mdsite defaults.
+2. workspace-root `mndsite.yaml`;
+3. mndsite defaults.
 
 mndmap owns `content` and `nav_order`. It preserves user identity, theme,
 output, deployment, and unknown supported fields.
@@ -208,7 +208,7 @@ It must not call keyword extraction, embedding, tag grouping, or related-page
 scoring.
 
 Generated framework files remain internal build artifacts and are not part of
-the mndmap/mdsite handoff.
+the mndmap/mndsite handoff.
 
 ## Metadata presentation
 
@@ -248,7 +248,7 @@ UI.
 The supported build remains:
 
 ```sh
-mdsite build --config mdsite.yaml
+mndsite build --config mndsite.yaml
 ```
 
 The CLI:
@@ -257,7 +257,7 @@ The CLI:
 - mirrors content;
 - runs the Next.js/Nextra static build;
 - exits with the underlying failure status; and
-- writes only to configured/generated mdsite targets.
+- writes only to configured/generated mndsite targets.
 
 The Docker image:
 
@@ -276,7 +276,7 @@ The Docker image:
   SVG;
 - add a fixture contract test before deleting old behavior.
 
-Exit: current mdsite can ingest the fixture far enough to expose every
+Exit: current mndsite can ingest the fixture far enough to expose every
 incompatibility explicitly.
 
 ### M1 — Remove local semantic enrichment
@@ -301,7 +301,7 @@ scoring.
 - preserve inline SVG and supported static MDX imports;
 - remove duplicate link/image semantic rewriting now owned by mndmap.
 
-Exit: mdsite's built routes, headings, links, and assets match the mndmap
+Exit: mndsite's built routes, headings, links, and assets match the mndmap
 fixture contract.
 
 ### M3 — Adapt renderer metadata
@@ -331,9 +331,9 @@ theme, and deployment concerns.
 - verify pages, folders, `nav_order`, tags, categories, assets, MDX, feeds,
   inline diagrams, routes, and anchors;
 - compare clean-checkout image size and build time after model removal;
-- publish a pinned mdsite image supported by mndmap.
+- publish a pinned mndsite image supported by mndmap.
 
-Exit: `mndmap build -> mdsite build` succeeds on clean Linux and Windows
+Exit: `mndmap build -> mndsite build` succeeds on clean Linux and Windows
 workflows and produces the expected static site.
 
 ## Test plan
@@ -379,7 +379,7 @@ The shared fixture includes:
 
 This is an intentional responsibility change:
 
-- mdsite configurations using `meta` or `flatten` are rejected with migration
+- mndsite configurations using `meta` or `flatten` are rejected with migration
   guidance.
 - callers move organization into mndmap and metadata into source/frontmatter.
 - automatic local tags and related links disappear until a future Taggly
@@ -391,9 +391,9 @@ documented for users who need a transition period.
 
 ## Definition of done
 
-mdsite simplification is complete when:
+mndsite simplification is complete when:
 
-1. mdsite installs and builds without transformers or a vendored model.
+1. mndsite installs and builds without transformers or a vendored model.
 2. It performs no automatic tagging, grouping, or related-page scoring.
 3. It preserves the route tree, `nav_order`, content, frontmatter, links,
    assets, MDX, and inline diagrams supplied by mndmap.

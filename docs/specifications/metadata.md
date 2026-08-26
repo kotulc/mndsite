@@ -6,7 +6,7 @@ categories:
 
 # Metadata Contract
 
-`public/site-meta.json` is a **flat list of pages** produced by mdsite ingest. There is
+`public/site-meta.json` is a **flat list of pages** produced by mndsite ingest. There is
 no folder/root graph in this file. Optional enrichment (hashing, external NLP, graph
 tools) lives in the sibling **mndmeta** project.
 

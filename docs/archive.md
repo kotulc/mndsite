@@ -1,4 +1,4 @@
-# mdsite — Implementation Plan
+# mndsite — Implementation Plan
 
 Goal: go from a blank repo to a fully functional static site that renders the `examples/frww`
 content with preview and publish capabilities. Intelligence features (search, theming, logo)
@@ -25,7 +25,7 @@ Reference content: 24 markdown files — 7 static pages and 16 dated blog posts 
 - Reduced external dependencies
 
 **Phase 3 — Deploy adapters** *(planned)*
-- `mdsite deploy --provider vercel|cloudflare|s3`
+- `mndsite deploy --provider vercel|cloudflare|s3`
 - Credentials via environment variables; project ID via YAML
 
 **Phase 8 — Composed pages** *(planned)*
@@ -293,10 +293,10 @@ as a reorganizable structure, and writes a new collection of documents and folde
 configured destination — with `compose:` in the frontmatter it emits.
 
 ```
-docs/  ──mndmap──▶  a collection of documents and folders  ──▶  mdsite ingest  ──▶  site
+docs/  ──mndmap──▶  a collection of documents and folders  ──▶  mndsite ingest  ──▶  site
 ```
 
-**mdsite learns nothing about mndmap.** It ingests a directory of markdown, as it does today.
+**mndsite learns nothing about mndmap.** It ingests a directory of markdown, as it does today.
 Any tool, or a person with an editor, can produce the same thing.
 
 ### Tasks

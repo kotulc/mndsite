@@ -1,0 +1,19 @@
+title: mndsite
+description: Static documentation sites from plain markdown
+repo_url: https://github.com/kotulc/nlp-mndsite
+feed_url: updates
+theme_toggle: navbar
+toc: true
+
+theme:
+  color: default
+  typeset: sans
+
+content: ./docs
+output: ./dist
+
+nav_order:
+  "": [about, getting-started, configuration]
+  features: [overview, components]
+  specifications: [format]
+  updates: [welcome]

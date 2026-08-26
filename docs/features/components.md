@@ -63,18 +63,18 @@ Renders the site-wide footer: copyright year, build timestamp, and credits.
 ### GitHubLink
 
 Circular GitHub mark icon in the navbar. Returns `null` when `repo_url` is empty in
-`mdsite.yaml`. No props — reads config directly.
+`mndsite.yaml`. No props — reads config directly.
 
 ### ThemeToggle
 
 Cycles through system → light → dark using `useTheme()` from `next-themes`.
-Shown in the navbar when `theme_toggle: navbar` in `mdsite.yaml`; otherwise
+Shown in the navbar when `theme_toggle: navbar` in `mndsite.yaml`; otherwise
 Nextra's built-in sidebar toggle is used. Uses a mounted-state guard to prevent
 hydration mismatch.
 
 ### DirFeed
 
-Renders a flattened directory (from `flatten` in `mdsite.yaml`) as an inline scrolling
+Renders a flattened directory (from `flatten` in `mndsite.yaml`) as an inline scrolling
 feed. Fetches `public/dir-feeds/<name>.json` at runtime and renders each entry's title,
 date, reading time, chips, and content.
 
@@ -154,4 +154,4 @@ export default function MyWidget() {
 | `RelatedPages` | Semantic similarity-based "you might also like" links |
 
 These are Phase 2 features. Site-wide colors and fonts are already configurable today
-via the `theme` block in `mdsite.yaml` — see [Configuration](/configuration).
+via the `theme` block in `mndsite.yaml` — see [Configuration](/configuration).

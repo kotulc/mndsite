@@ -19,5 +19,5 @@ date: 2026-03-08
 - Reduced external dependencies
 
 **Phase 3 — Deploy adapters** *(planned)*
-- `mdsite deploy --provider vercel|cloudflare|s3`
+- `mndsite deploy --provider vercel|cloudflare|s3`
 - Credentials via environment variables; project ID via YAML

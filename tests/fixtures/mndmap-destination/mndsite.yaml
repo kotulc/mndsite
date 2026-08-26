@@ -1,0 +1,9 @@
+title: Fixture Site
+description: Cross-project mndmap destination fixture
+repo_url: https://github.com/kotulc/mndmap
+content: .
+output: ./dist
+
+nav_order:
+  docs: [readme, guide]
+  "docs/nested": [child]

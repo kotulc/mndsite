@@ -9,14 +9,17 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useSection } from './SectionContext'
 import TagList from './TagList'
-import siteConfig from '../site.config'
 
 function section_has_tags(node) {
   return Array.isArray(node.tags) && node.tags.length > 0
 }
 
+function section_has_content(node) {
+  return section_has_tags(node) || !!(node.name && node.name.trim())
+}
+
 export function limit_tags(tags, n) {
-  /** Keep the first n tags (already user-first, then by score). */
+  /** Keep the first n supplied tags. */
   if (!Array.isArray(tags) || n <= 0) return []
   return tags.slice(0, n)
 }
@@ -51,11 +54,11 @@ export function section_anchor(name) {
 function use_page_info() {
   const { page, sections } = useSection()
   const desc = (page && page.desc) || ''
-  const max_tags = siteConfig.section_tags ?? 8
+  const max_tags = 8
   const tagged_sections = (sections || [])
-    .filter(section_has_tags)
+    .filter(section_has_content)
     .map(section => ({ ...section, tags: limit_tags(section.tags, max_tags) }))
-    .filter(section => section_has_tags(section))
+    .filter(section => section_has_content(section))
   return { desc, tagged_sections, has_info: !!(desc || tagged_sections.length) }
 }
 

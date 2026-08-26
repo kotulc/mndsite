@@ -1,4 +1,4 @@
-# mdsite
+# mndsite
 
 A portable static site generator for markdown — drop it into any CI/CD pipeline as a build step.
 
@@ -7,7 +7,7 @@ A portable static site generator for markdown — drop it into any CI/CD pipelin
 
 ## Purpose
 
-`mdsite` is a Next.js + Nextra-based site generator designed to work at the end of a markdown
+`mndsite` is a Next.js + Nextra-based site generator designed to work at the end of a markdown
 publishing pipeline. The engine is packaged as a Docker image: mount your content and a YAML
 config, get a `dist/` folder. Publishing is left to the caller.
 
@@ -18,7 +18,7 @@ config file is all that's required to stand up a new site.
 ## How It Works
 
 1. Write markdown content in any folder structure
-2. Provide an `mdsite.yaml` config pointing at that content
+2. Provide an `mndsite.yaml` config pointing at that content
 3. Run the CLI or Docker container to ingest and build
 4. A fully-built static site appears in your output directory
 
@@ -58,5 +58,5 @@ or browse the [Features](/features) section for the full capability overview.
 - Reduced external dependencies
 
 **Phase 3 — Deploy adapters** *(planned)*
-- `mdsite deploy --provider vercel|cloudflare|s3`
+- `mndsite deploy --provider vercel|cloudflare|s3`
 - Credentials via environment variables; project ID via YAML

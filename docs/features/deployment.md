@@ -17,7 +17,7 @@ related:
 
 # Deployment
 
-mdsite outputs a static `dist/` directory that can be deployed to any static host.
+mndsite outputs a static `dist/` directory that can be deployed to any static host.
 The project ships a GitHub Pages workflow; Docker enables deployment from any CI/CD system.
 
 ## GitHub Pages
@@ -40,7 +40,7 @@ and uses the standard `actions/deploy-pages` two-job pattern.
 
 **2. Set BASE_PATH** *(project pages repos only)*
 - **Settings → Secrets and variables → Actions → Variables → New repository variable**
-- Name: `BASE_PATH`, Value: `/repo-name` (e.g. `/mdsite`)
+- Name: `BASE_PATH`, Value: `/repo-name` (e.g. `/mndsite`)
 
 **3. Push to main** — the workflow runs automatically.
 
@@ -63,20 +63,20 @@ time from the Actions tab without pushing a new commit.
 ## Docker
 
 The Docker image runs the full build pipeline in a container. Mount your workspace
-and the container writes to the output path in your `mdsite.yaml`.
+and the container writes to the output path in your `mndsite.yaml`.
 
 ```bash
 # Linux / macOS
 docker run --rm \
   -v $(pwd):/workspace \
-  ghcr.io/kotulc/mdsite:latest \
-  build --config /workspace/mdsite.yaml
+  ghcr.io/kotulc/mndsite:latest \
+  build --config /workspace/mndsite.yaml
 
 # Windows (PowerShell)
 docker run --rm `
   -v ${PWD}:/workspace `
-  ghcr.io/kotulc/mdsite:latest `
-  build --config /workspace/mdsite.yaml
+  ghcr.io/kotulc/mndsite:latest `
+  build --config /workspace/mndsite.yaml
 ```
 
 ### Using Docker in CI/CD
@@ -88,8 +88,8 @@ Add the build step to your workflow before your publish step:
   run: |
     docker run --rm \
       -v ${{ github.workspace }}:/workspace \
-      ghcr.io/kotulc/mdsite:latest \
-      build --config /workspace/mdsite.yaml
+      ghcr.io/kotulc/mndsite:latest \
+      build --config /workspace/mndsite.yaml
 
 - name: Publish
   # your own publish step here (Pages, Vercel, S3, etc.)
@@ -105,7 +105,7 @@ git push origin v1.0.0
 ```
 
 This triggers `.github/workflows/publish-image.yml`, which builds and pushes
-`ghcr.io/kotulc/mdsite:latest` and `ghcr.io/kotulc/mdsite:v1.0.0`.
+`ghcr.io/kotulc/mndsite:latest` and `ghcr.io/kotulc/mndsite:v1.0.0`.
 
 
 ## Local build

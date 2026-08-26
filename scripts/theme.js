@@ -1,7 +1,7 @@
 /**
- * Theme preset tables for the mdsite CLI.
+ * Theme preset tables for the mndsite CLI.
  * Maps named color palettes to Nextra primaryHue/primarySaturation values and named
- * typesets to system font stacks, resolving a mdsite.yaml theme block for site.config.js.
+ * typesets to system font stacks, resolving a mndsite.yaml theme block for site.config.js.
  */
 
 
@@ -38,10 +38,10 @@ function resolve_theme(theme) {
   const { color, typeset, navbar = '', footer = '' } = theme
 
   if (!(color in COLOR_PRESETS)) {
-    throw new Error(`mdsite.yaml: unknown theme.color '${color}' (valid: ${Object.keys(COLOR_PRESETS).join(', ')})`)
+    throw new Error(`mndsite.yaml: unknown theme.color '${color}' (valid: ${Object.keys(COLOR_PRESETS).join(', ')})`)
   }
   if (!(typeset in TYPESETS)) {
-    throw new Error(`mdsite.yaml: unknown theme.typeset '${typeset}' (valid: ${Object.keys(TYPESETS).join(', ')})`)
+    throw new Error(`mndsite.yaml: unknown theme.typeset '${typeset}' (valid: ${Object.keys(TYPESETS).join(', ')})`)
   }
 
   const { hue, saturation } = COLOR_PRESETS[color]

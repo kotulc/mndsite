@@ -32,7 +32,7 @@ npm install
 
 **2. Configure the site**
 
-Create an `mdsite.yaml` in your project root (or copy the included one):
+Create an `mndsite.yaml` in your project root (or copy the included one):
 
 ```yaml
 title: My Site
@@ -64,7 +64,7 @@ docs/
 **4. Build the site**
 
 ```bash
-node scripts/cli.js build --config mdsite.yaml
+node scripts/cli.js build --config mndsite.yaml
 ```
 
 This ingests content, rewrites image paths, generates navigation files,

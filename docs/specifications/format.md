@@ -6,7 +6,7 @@ categories:
 
 # Feature Specification
 
-Feature specifications for mdsite. Each spec defines the purpose, requirements,
+Feature specifications for mndsite. Each spec defines the purpose, requirements,
 and named test cases for a feature area.
 
 ## Development Process
@@ -46,4 +46,4 @@ One-paragraph description of purpose.
 - [Navtree Naming](navtree-naming) — how page and directory labels are derived for navigation
 - [Page Metadata](page-metadata) — date, reading time, category and tag chips
 - [Post Index](post-index) — reverse-chronological dated post listing
-- [Site Configuration](site-configuration) — all `mdsite.yaml` fields and their effects
+- [Site Configuration](site-configuration) — all `mndsite.yaml` fields and their effects

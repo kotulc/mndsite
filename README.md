@@ -1,4 +1,4 @@
-# mdsite
+# mndsite
 
 A portable static site generator for markdown — drop it into any CI/CD pipeline as a build step.
 
@@ -8,7 +8,7 @@ static website ready to deploy anywhere.
 
 ## Purpose
 
-`mdsite` is a Next.js + Nextra-based site generator designed to work at the end of a markdown
+`mndsite` is a Next.js + Nextra-based site generator designed to work at the end of a markdown
 publishing pipeline. The engine is packaged as a Docker image: mount your content and a YAML
 config, get a `dist/` folder. Publishing is left to the caller.
 
@@ -19,7 +19,7 @@ config file is all that's required to stand up a new site.
 ## How It Works
 
 1. Write markdown content in any folder structure
-2. Provide an `mdsite.yaml` config pointing at that content
+2. Provide an `mndsite.yaml` config pointing at that content
 3. Run the CLI or Docker container to ingest and build
 4. A fully-built static site appears in your output directory
 
@@ -31,11 +31,10 @@ or browse the [Features](/features) section for the full capability overview.
 
 - **Markdown → MDX** — automatic conversion, any folder structure
 - **Images** — copied and path-rewritten automatically; corrupt EXIF data stripped
-- **Reading time** — estimated and injected into every page's frontmatter
-- **Tags and categories** — rendered as pill chips below each title and in the PageInfo panel
-- **Related links** — outbound + related pages in the ToC sidebar (and mobile Contents panel)
-- **Nav ordering** — configure page and folder order via `nav_order` in YAML or `order:` in frontmatter
-- **Per-page feed** — scroll to the bottom of any page to load the next one inline
+- **Reading time** — displayed when supplied in frontmatter
+- **Tags and categories** — rendered from frontmatter as pill chips below each title
+- **Related links** — outbound links and frontmatter `related` entries in the ToC sidebar
+- **Nav ordering** — configure page and folder order via `nav_order` from mndmap or YAML
 - **Theme toggle** — light / dark / system toggle in the navbar
 - **GitHub header icon** — circular GitHub repo link, auto-shown from `repo_url`
 - **YAML config** — single file drives the entire build
@@ -72,12 +71,12 @@ npm test                   # run all tests
 For config-driven builds (required for Docker and CI), use the CLI:
 
 ```bash
-node scripts/cli.js build --config mdsite.yaml
+node scripts/cli.js build --config mndsite.yaml
 ```
 
 | Flag | Description |
 |---|---|
-| `--config <path>` | **(required)** Path to an `mdsite.yaml` config file |
+| `--config <path>` | **(required)** Path to an `mndsite.yaml` config file |
 | `--content <path>` | Override the content directory from YAML |
 | `--output <path>` | Override the output directory from YAML |
 
@@ -85,7 +84,7 @@ The CLI reads the YAML, ingests content, generates `site.config.js`, runs Next.j
 and exits with the build's exit code.
 
 
-## mdsite.yaml Reference
+## mndsite.yaml Reference
 
 Full schema with defaults:
 
@@ -130,12 +129,12 @@ output: ./dist               # output directory for built site
 ### BASE_PATH environment variable
 
 If your site is served from a subpath (e.g. `https://username.github.io/repo-name`),
-set the `BASE_PATH` environment variable at build time — do not add it to `mdsite.yaml`.
+set the `BASE_PATH` environment variable at build time — do not add it to `mndsite.yaml`.
 
 ```bash
-BASE_PATH=/repo-name node scripts/cli.js build --config mdsite.yaml
+BASE_PATH=/repo-name node scripts/cli.js build --config mndsite.yaml
 # or via Docker:
-docker run --rm -e BASE_PATH=/repo-name -v $(pwd):/workspace ghcr.io/kotulc/mdsite build --config /workspace/mdsite.yaml
+docker run --rm -e BASE_PATH=/repo-name -v $(pwd):/workspace ghcr.io/kotulc/mndsite build --config /workspace/mndsite.yaml
 ```
 
 For GitHub Pages the deploy workflow reads `BASE_PATH` from a repository Actions variable
@@ -148,7 +147,7 @@ no base path — `npx serve dist` works as-is.
 ### Build the image
 
 ```bash
-docker build -t mdsite .
+docker build -t mndsite .
 ```
 
 ### Run a build
@@ -157,15 +156,15 @@ docker build -t mdsite .
 # Linux / macOS
 docker run --rm \
   -v $(pwd):/workspace \
-  mdsite build --config /workspace/mdsite.yaml
+  mndsite build --config /workspace/mndsite.yaml
 
 # Windows (PowerShell)
 docker run --rm `
   -v ${PWD}:/workspace `
-  mdsite build --config /workspace/mdsite.yaml
+  mndsite build --config /workspace/mndsite.yaml
 ```
 
-The container mounts your workspace, reads `mdsite.yaml`, and writes the built site to the
+The container mounts your workspace, reads `mndsite.yaml`, and writes the built site to the
 `output` path defined in the YAML (default: `./dist` relative to the YAML file).
 
 ### Using from another project
@@ -177,11 +176,11 @@ Pull the published image from GHCR and add a build step to your CI:
   run: |
     docker run --rm \
       -v ${{ github.workspace }}:/workspace \
-      ghcr.io/kotulc/mdsite:latest \
-      build --config /workspace/mdsite.yaml
+      ghcr.io/kotulc/mndsite:latest \
+      build --config /workspace/mndsite.yaml
 ```
 
-Ship an `mdsite.yaml` in your repo root pointing at your docs folder:
+Ship an `mndsite.yaml` in your repo root pointing at your docs folder:
 
 ```yaml
 title: My Project
@@ -191,7 +190,7 @@ output: ./dist
 ```
 
 If the site is served from a subpath, pass `BASE_PATH` as an environment variable at
-build time (see above) — it does not belong in `mdsite.yaml`.
+build time (see above) — it does not belong in `mndsite.yaml`.
 
 Then add your own publish step (GitHub Pages, Vercel, S3, etc.) after the build step.
 
@@ -207,7 +206,7 @@ on every push to `main`. One-time setup:
 
 **2. Set BASE_PATH** *(project pages repos only)*
 - **Settings → Secrets and variables → Actions → Variables → New repository variable**
-- Name: `BASE_PATH`, Value: `/repo-name` (e.g. `/mdsite`)
+- Name: `BASE_PATH`, Value: `/repo-name` (e.g. `/mndsite`)
 
 **3. Push to main**
 
@@ -231,5 +230,5 @@ git push origin v1.0.0
 ```
 
 The publish workflow (`.github/workflows/publish-image.yml`) builds and pushes:
-- `ghcr.io/kotulc/mdsite:latest`
-- `ghcr.io/kotulc/mdsite:v1.0.0`
+- `ghcr.io/kotulc/mndsite:latest`
+- `ghcr.io/kotulc/mndsite:v1.0.0`

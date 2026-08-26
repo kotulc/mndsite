@@ -8,9 +8,9 @@ jest.mock('../../site.config', () => ({ title: 'testsite', footer: '' }))
 afterEach(() => { siteConfig.footer = '' })
 
 test('test_site_footer_default_credits', () => {
-  /** Without a footer config value the default mdsite/Nextra credits render. */
+  /** Without a footer config value the default mndsite/Nextra credits render. */
   render(<SiteFooter />)
-  expect(screen.getByText('mdsite')).toBeInTheDocument()
+  expect(screen.getByText('mndsite')).toBeInTheDocument()
   expect(screen.getByText('Nextra')).toBeInTheDocument()
 })
 

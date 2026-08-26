@@ -17,7 +17,7 @@ related:
 
 # Configuration
 
-All site-level settings live in `mdsite.yaml` at your project root.
+All site-level settings live in `mndsite.yaml` at your project root.
 The CLI reads this file at build time and generates the internal `site.config.js`
 consumed by Next.js and Nextra.
 
@@ -29,7 +29,7 @@ consumed by Next.js and Nextra.
 | `description` | string | `""` | SEO meta description added to every page's `<head>` |
 | `repo_url` | string | `""` | GitHub repo link shown as an icon in the header; leave empty to hide |
 | `feed_url` | string | `""` | Slug of the section used as the per-page continuation feed |
-| `footer` | string | `""` | Custom footer credits text; empty keeps "Powered by mdsite and Nextra" |
+| `footer` | string | `""` | Custom footer credits text; empty keeps "Powered by mndsite and Nextra" |
 | `theme_toggle` | string | `"navbar"` | Where the light/dark toggle appears: `"navbar"` or `"sidebar"` |
 | `toc` | boolean | `true` | Right sidebar: "On This Page" section navigation |
 | `reading_time` | boolean | `true` | Show estimated reading time in page headers and feeds |
@@ -106,7 +106,7 @@ Leave empty to keep Nextra's default white/dark backgrounds.
 
 ## Tagging
 
-During ingest, mdsite always runs local keyword extraction and embedding-based tagging.
+During ingest, mndsite always runs local keyword extraction and embedding-based tagging.
 Output lands in `public/site-meta.json` — a flat list of pages, not frontmatter. Tags use
 fixed groups (`category`, `topic`, `concept`, `entity`, `user`); frontmatter `tags` and
 `categories` merge into `user` (still scored). The UI shows the first `page_tags` chips
@@ -148,12 +148,12 @@ the explicit entries; dated pages sort newest-first.
 ## BASE_PATH environment variable
 
 If your site is served from a subpath (e.g. `username.github.io/repo-name`), pass
-`BASE_PATH` as an environment variable at build time — do not put it in `mdsite.yaml`:
+`BASE_PATH` as an environment variable at build time — do not put it in `mndsite.yaml`:
 
 ```bash
-BASE_PATH=/repo-name node scripts/cli.js build --config mdsite.yaml
+BASE_PATH=/repo-name node scripts/cli.js build --config mndsite.yaml
 # or via Docker:
-docker run --rm -e BASE_PATH=/repo-name -v $(pwd):/workspace ghcr.io/kotulc/mdsite ...
+docker run --rm -e BASE_PATH=/repo-name -v $(pwd):/workspace ghcr.io/kotulc/mndsite ...
 ```
 
 For GitHub Pages, the deploy workflow reads `BASE_PATH` from a repository Actions variable
@@ -168,14 +168,14 @@ Set them under **Settings → Secrets and variables → Actions → Variables**.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CONTENT_SOURCE` | `docs` | Path to content directory, relative to repo root |
-| `BASE_PATH` | _(empty)_ | Subpath prefix for project pages repos (e.g. `/mdsite`) |
+| `BASE_PATH` | _(empty)_ | Subpath prefix for project pages repos (e.g. `/mndsite`) |
 
 ## CLI overrides
 
 The `--content` and `--output` flags override the corresponding YAML fields at runtime:
 
 ```bash
-node scripts/cli.js build --config mdsite.yaml \
+node scripts/cli.js build --config mndsite.yaml \
   --content /path/to/content \
   --output /path/to/output
 ```

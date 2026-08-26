@@ -6,7 +6,7 @@ categories:
 
 # Site Configuration
 
-All site-level settings are authored in `mdsite.yaml`. At build time the CLI generates
+All site-level settings are authored in `mndsite.yaml`. At build time the CLI generates
 `site.config.js` from the YAML; both the ingest pipeline and Next.js/Nextra read from
 the generated file at their respective run times.
 

@@ -38,7 +38,7 @@ across ingest runs. Do not edit `pages/_app.jsx` directly.
 
 `styles/global.css` defines a set of `--site-*` design tokens at the top of the
 file. They adapt to light/dark mode automatically, and the primary shades derive
-from the `theme.color` palette configured in `mdsite.yaml`:
+from the `theme.color` palette configured in `mndsite.yaml`:
 
 ```css
 /* Gray scale */
@@ -102,7 +102,7 @@ renders the left nav and right TOC column outside of `main`, so no custom flex
 layout is needed.
 
 Consumer components can render in Nextra's right TOC column via `toc.extraContent`
-in `theme.config.jsx` — mdsite uses this slot for `MetaSidebar` (see
+in `theme.config.jsx` — mndsite uses this slot for `MetaSidebar` (see
 [Metadata Display](/features/metadata)):
 
 ```

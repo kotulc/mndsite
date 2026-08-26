@@ -16,9 +16,9 @@ related:
     url: /features
 ---
 
-# Introducing mdsite
+# Introducing mndsite
 
-This site is built with mdsite — a static site template for publishing markdown
+This site is built with mndsite — a static site template for publishing markdown
 content with zero per-page configuration.
 
 ![Rendered page preview](images/example.svg)
@@ -37,8 +37,8 @@ metadata, and producing a post index.
 
 ## Source structure
 
-This post lives at `docs/updates/introducing-mdsite.md` in the repository.
-The pipeline mirrors it to `pages/updates/introducing-mdsite.mdx` and adds it
+This post lives at `docs/updates/introducing-mndsite.md` in the repository.
+The pipeline mirrors it to `pages/updates/introducing-mndsite.mdx` and adds it
 to `posts-index.json`, so it appears in the [Updates](/updates) index automatically.
 
 The image above (`images/example.svg`) is stored next to this file at
