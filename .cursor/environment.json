@@ -1,0 +1,10 @@
+{
+  "name": "mdsite",
+  "install": "npm ci && node scripts/cli.js build --config mdsite.yaml",
+  "terminals": [
+    {
+      "name": "dev",
+      "command": "npm run dev"
+    }
+  ]
+}
