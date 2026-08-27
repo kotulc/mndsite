@@ -1,6 +1,6 @@
 /**
- * Shared markdown → text helpers used by meta building and keyword extraction.
- * (Split out of the old graph.js; content hashing lives in mndmeta now.)
+ * Shared markdown → text helpers used when building page metadata:
+ * plain text, word count, reading time, outbound links, and heading trees.
  */
 const MIN_LEVEL = 2
 const MAX_LEVEL = 3

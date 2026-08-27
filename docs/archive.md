@@ -1,6 +1,6 @@
 # mndsite — Implementation Plan
 
-> **Historical document.** This archive describes earlier plans and experiments, including local semantic tagging, `flatten` directory feeds, and per-page continuation feeds — all removed from mndsite. For the current mndmap/mndsite split and workflow, see [About](/about), [Content Pipeline](/features/content-pipeline), and `plan.md` in the repository root.
+> **Historical document.** This archive describes earlier plans and experiments, including local semantic tagging, `flatten` directory feeds, and per-page continuation feeds — all removed from mndsite. For the current mndmap/mndsite split and workflow, see [About](/about), [Content Pipeline](/features/content-pipeline), and the [Simplification Plan](/updates/simplification).
 
 Goal: go from a blank repo to a fully functional static site that renders the `examples/frww`
 content with preview and publish capabilities. Intelligence features (search, theming, logo)
@@ -227,7 +227,7 @@ To be planned separately once Phase 1–6 are stable.
 - **Logo generation** — seeded SVG composition from Bootstrap icons + background shapes
 - **Semantic search** — per-page static JSON index, client-side query component
 
-See `SPEC.md` in the repository root for current design notes on each.
+See the [Technical Specification](/specifications/specification) for design notes on each.
 
 
 ---
@@ -336,4 +336,5 @@ as it does today.
 - **`examples/frww` is the reference source**: use it as the default ingest target
   during development (`npm run ingest` with no arguments).
 - **Document before automating**: every manual step must be written down before it
-  is scripted. See the Development Philosophy section in SPEC.md.
+  is scripted. See the Development Philosophy section of the
+  [Technical Specification](/specifications/specification).
