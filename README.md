@@ -1,40 +1,48 @@
 # mndsite
 
-A portable static site generator for markdown — drop it into any CI/CD pipeline as a build step.
+A portable static site renderer for publication-ready Markdown and MDX — drop it into any CI/CD pipeline as a build step.
 
-Point it at a directory of markdown files with a YAML config, and it outputs a fully-built
-static website ready to deploy anywhere.
+Point it at a directory of content with a YAML config, and it outputs a fully-built static website ready to deploy anywhere.
 
 
 ## Purpose
 
-`mndsite` is a Next.js + Nextra-based site generator designed to work at the end of a markdown
-publishing pipeline. The engine is packaged as a Docker image: mount your content and a YAML
-config, get a `dist/` folder. Publishing is left to the caller.
+`mndsite` is a Next.js + Nextra-based static site renderer designed to work at the end of a markdown publishing pipeline. In the typical workflow, **mndmap** organizes source markdown, enriches frontmatter, and emits a destination directory; `mndsite` mirrors that tree, builds navigation, and produces a `dist/` folder. Publishing is left to the caller.
 
-It is also designed to be configured as easily by an AI agent as by a human — a small YAML
-config file is all that's required to stand up a new site.
+Raw markdown directories also work when content is already publication-ready — the same YAML config and CLI apply.
+
+The engine is packaged as a Docker image: mount your content and config, get a static site.
 
 
 ## How It Works
 
-1. Write markdown content in any folder structure
+```text
+source Markdown/MDX
+  → mndmap (optional — organization, metadata, assets)
+  → mndsite ingest + build
+  → dist/
+```
+
+1. Prepare a content directory (from mndmap or your own markdown tree)
 2. Provide an `mndsite.yaml` config pointing at that content
 3. Run the CLI or Docker container to ingest and build
 4. A fully-built static site appears in your output directory
 
-See [Getting Started](/getting-started) to have a site running in minutes,
-or browse the [Features](/features) section for the full capability overview.
+See [Getting Started](docs/getting-started.md) to have a site running in minutes,
+or browse [Features](docs/features/overview.md) for the full capability overview.
 
 
 ## Features
 
-- **Markdown → MDX** — automatic conversion, any folder structure
-- **Images** — copied and path-rewritten automatically; corrupt EXIF data stripped
+- **Markdown → MDX** — automatic conversion; mirrors any folder structure without regrouping
+- **MDX and inline SVG** — publication-ready MDX and diagrams preserved from upstream
+- **`_assets/` handoff** — static assets copied to `public/_assets/` with path rewriting
+- **Images** — legacy `images/` subtrees copied and path-rewritten; corrupt EXIF stripped
 - **Reading time** — displayed when supplied in frontmatter
 - **Tags and categories** — rendered from frontmatter as pill chips below each title
 - **Related links** — outbound links and frontmatter `related` entries in the ToC sidebar
-- **Nav ordering** — configure page and folder order via `nav_order` from mndmap or YAML
+- **Nav ordering** — sibling order via `nav_order` from mndmap or YAML
+- **Custom components** — optional consumer React components synced each build
 - **Theme toggle** — light / dark / system toggle in the navbar
 - **GitHub header icon** — circular GitHub repo link, auto-shown from `repo_url`
 - **YAML config** — single file drives the entire build
@@ -56,14 +64,15 @@ npm install
 
 ### Local Development
 
-The fastest path is to edit `site.config.js` directly and use the npm scripts:
+Configure via `mndsite.yaml` (or copy the included one), then:
 
 ```bash
-npm run ingest docs        # ingest from docs/ (default)
-npm run dev                # development server with hot reload
-npm run build              # production build → dist/
-npm run preview            # serve dist/ locally
-npm test                   # run all tests
+npm run ingest              # mirror docs/ into pages/ (default source)
+npm run dev                 # development server with hot reload
+npm run watch               # re-ingest on markdown changes (second terminal)
+npm run build               # production build → dist/
+npm run preview             # serve dist/ locally
+npm test                    # run all tests
 ```
 
 ### CLI Usage
@@ -101,6 +110,7 @@ footer: ""                   # custom footer credits; empty keeps the default
 # Optional — layout
 theme_toggle: navbar         # "navbar" or "sidebar"
 toc: true                    # show table of contents
+reading_time: true           # show reading time when present in frontmatter
 
 # Optional — theme presets (see docs/configuration.md for all values)
 theme:
@@ -109,22 +119,21 @@ theme:
   navbar: ""                 # navbar background: "primary" (theme tint) or any CSS color
   footer: ""                 # footer background: "primary" (theme tint) or any CSS color
 
-# Optional — ingest behavior
-flatten: []                  # list of section slugs to flatten (no subfolder in nav)
+# Optional — navigation
 nav_order: {}                # map of section slug → ordered list of page slugs
 
-# Optional — local metadata tagging (always on during ingest)
-meta:
-  max_keywords: 32           # tag pool stored per page/section
-  page_tags: 5               # chips below title
-  section_tags: 8            # chips per section in PageInfo
-  related_links: 3           # related pages per page (embedding similarity)
-  min_relevance: 0.2         # drop auto tags below this title-relevance score
+# Optional — consumer extensions
+components: ""               # React components mirrored into components/custom/
+assets: ""                   # static files mirrored into public/assets/
 
 # Paths — resolved relative to this file
 content: ./docs              # source markdown directory
 output: ./dist               # output directory for built site
 ```
+
+### Removed configuration keys
+
+`meta` and `flatten` are no longer supported. Move tagging, related-link scoring, and directory organization upstream to **mndmap** or into frontmatter. Config files that still contain these keys fail at load time with migration guidance.
 
 ### BASE_PATH environment variable
 
