@@ -1,5 +1,5 @@
 /**
- * Tests for the consumer assets extension point: mdsite.yaml `assets:` dir is
+ * Tests for the consumer assets extension point: mndsite.yaml `assets:` dir is
  * mirrored into public/assets/ each build so pages can fetch static data files.
  */
 const fs   = require('fs')
@@ -14,7 +14,7 @@ const ASSETS = path.join(__dirname, '..', '..', 'public', 'assets')
 let src_dir
 
 beforeEach(() => {
-  src_dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdsite-assets-'))
+  src_dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mndsite-assets-'))
 })
 
 afterEach(() => {

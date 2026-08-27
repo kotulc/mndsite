@@ -23,7 +23,7 @@ export default function SiteFooter() {
       ) : (
         <span>
           Powered by{' '}
-          <a href="https://github.com/kotulc/mdsite" target="_blank" rel="noopener noreferrer">mdsite</a>
+          <a href="https://github.com/kotulc/mndsite" target="_blank" rel="noopener noreferrer">mndsite</a>
           {' '}and{' '}
           <a href="https://nextra.site" target="_blank" rel="noopener noreferrer">Nextra</a>
         </span>

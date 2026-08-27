@@ -31,11 +31,11 @@ function use_page_meta() {
 
 
 function PageMeta() {
-  /** Renders published date, reading time (unless disabled), and top page_tags chips. */
+  /** Renders published date, supplied reading time, and frontmatter tags. */
   const meta = use_page_meta()
   const metrics = meta.metrics || {}
   const mins = siteConfig.reading_time === false ? null : metrics.reading_time
-  const chips = Array.isArray(meta.tags) ? meta.tags.slice(0, siteConfig.page_tags ?? 5) : []
+  const chips = Array.isArray(meta.tags) ? meta.tags.slice(0, 8) : []
   return (
     <>
       <PageHeader date={meta.published} reading_time={mins} />

@@ -38,7 +38,7 @@ across ingest runs. Do not edit `pages/_app.jsx` directly.
 
 `styles/global.css` defines a set of `--site-*` design tokens at the top of the
 file. They adapt to light/dark mode automatically, and the primary shades derive
-from the `theme.color` palette configured in `mdsite.yaml`:
+from the `theme.color` palette configured in `mndsite.yaml`:
 
 ```css
 /* Gray scale */
@@ -102,7 +102,7 @@ renders the left nav and right TOC column outside of `main`, so no custom flex
 layout is needed.
 
 Consumer components can render in Nextra's right TOC column via `toc.extraContent`
-in `theme.config.jsx` — mdsite uses this slot for `MetaSidebar` (see
+in `theme.config.jsx` — mndsite uses this slot for `MetaSidebar` (see
 [Metadata Display](/features/metadata)):
 
 ```
@@ -122,13 +122,13 @@ scrollbar independent of the page's own scroll — that default is left in place
 
 ## Chips
 
-Extracted tags, categories, keywords, and filter/action chips render as rectangular
+Frontmatter tags, categories, and filter/action chips render as rectangular
 chips via the shared `Chip` component. Variants:
 
 | Class | Color | Used for |
 |-------|-------|---------|
 | `.chip.chip-categories` / `.chip-topics` / `.chip-concepts` / `.chip-entities` | One fixed color per standard group | `TagList` chips (every group except `keywords`) |
-| `.chip.chip-custom` | Fixed fallback color | Any `extract_concepts` group outside the standard four |
+| `.chip.chip-custom` | Fixed fallback color | Unknown tag groups outside the standard vocabulary |
 | `.chip.chip-tag` | Gray | Default Chip variant / keyword-style chips |
 | `.chip.chip-danger` | Red | Destructive-action chips (filters, per-entry actions) |
 
