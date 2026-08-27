@@ -12,34 +12,32 @@ complexity: 1
 related:
   - title: Getting Started
     url: /getting-started
-  - title: Features
-    url: /features
+  - title: Content Pipeline
+    url: /features/content-pipeline
 ---
 
-# Introducing mdsite
+# Introducing mndsite
 
-This site is built with mdsite — a static site template for publishing markdown
-content with zero per-page configuration.
+This site is built with mndsite — a static site renderer for publication-ready markdown and MDX.
 
 ![Rendered page preview](images/example.svg)
 
-Everything you see on this page is driven by the frontmatter at the top of this
-markdown file: the date, the "announcement" category chip, and the tags. Reading time
-is estimated automatically from the word count and injected by the pipeline.
+Everything you see on this page comes from frontmatter: the date, the "announcement" category chip, and the tags. Reading time appears when supplied in frontmatter (typically filled by mndmap upstream).
 
 ## How it works
 
-Write your content as plain markdown. Run one command. Get a fully built static site.
+In the full pipeline, **mndmap** organizes and enriches source content; **mndsite** mirrors that destination and builds the static site:
 
-The [content pipeline](/features/content-pipeline) handles the rest:
-converting markdown to MDX, copying and path-rewriting images, generating navigation
-metadata, and producing a post index.
+```text
+source → mndmap → destination → mndsite → dist/
+```
+
+For standalone use, write markdown with frontmatter, run one build command, and get a fully built static site. The [content pipeline](/features/content-pipeline) handles mirroring, asset copying, navigation generation, and static export.
 
 ## Source structure
 
-This post lives at `docs/updates/introducing-mdsite.md` in the repository.
-The pipeline mirrors it to `pages/updates/introducing-mdsite.mdx` and adds it
-to `posts-index.json`, so it appears in the [Updates](/updates) index automatically.
+This post lives at `docs/updates/welcome.md` in the repository.
+The pipeline mirrors it to `pages/updates/welcome.mdx`.
 
 The image above (`images/example.svg`) is stored next to this file at
 `docs/updates/images/example.svg`. The pipeline copies it to
@@ -49,4 +47,4 @@ The image above (`images/example.svg`) is stored next to this file at
 
 - Read the [Getting Started](/getting-started) guide
 - Browse the [Features](/features) section
-- Fork the repo and point it at your own content
+- Point mndsite at your own mndmap destination or markdown tree

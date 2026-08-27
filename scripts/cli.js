@@ -1,5 +1,5 @@
 /**
- * mdsite CLI — entry point for the Docker container.
+ * mndsite CLI — entry point for the Docker container.
  * Usage: node scripts/cli.js build --config <path> [--content <path>] [--output <path>]
  */
 const path               = require('path')
@@ -12,7 +12,6 @@ const ROOT = path.join(__dirname, '..')
 
 
 function parse_args(argv) {
-  /** Parse command and named flags from process.argv (flags without a value are true). */
   const args    = argv.slice(2)
   const command = args[0]
   const flags   = {}
@@ -26,7 +25,6 @@ function parse_args(argv) {
 
 
 async function cmd_build(flags) {
-  /** Load config, ingest content, build static site to output path. */
   if (!flags.config) {
     console.error('Error: --config <path> is required')
     process.exit(1)
@@ -36,10 +34,10 @@ async function cmd_build(flags) {
   if (flags.content) config.content = path.resolve(flags.content)
   if (flags.output)  config.output  = path.resolve(flags.output)
 
-  process.env.MDSITE_OUTPUT = config.output
+  process.env.MNDSITE_OUTPUT = config.output
   write_site_config(config)
 
-  console.log(`\nmdsite build`)
+  console.log(`\nmndsite build`)
   console.log(`  config:  ${flags.config}`)
   console.log(`  content: ${config.content}`)
   console.log(`  output:  ${config.output}\n`)
@@ -57,14 +55,12 @@ async function cmd_build(flags) {
 }
 
 
-// --- Main ---
-
 const { command, flags } = parse_args(process.argv)
 
 if (command === 'build') {
   cmd_build(flags).catch(err => { console.error(err.message); process.exit(1) })
 } else {
   console.error(`Unknown command: ${command || '(none)'}`)
-  console.error('Usage: mdsite build --config <path>')
+  console.error('Usage: mndsite build --config <path>')
   process.exit(1)
 }

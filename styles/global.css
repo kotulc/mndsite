@@ -1,7 +1,7 @@
-/* Mobile-first global styles for mdsite */
+/* Mobile-first global styles for mndsite */
 
 /* Site design tokens — primary shades derive from Nextra's theme-injected hue/saturation
-   (set via theme.color in mdsite.yaml), so custom classes follow the configured palette */
+   (set via theme.color in mndsite.yaml), so custom classes follow the configured palette */
 :root {
   --site-hs: var(--nextra-primary-hue, 212deg) var(--nextra-primary-saturation, 100%);
   --site-primary-100: hsl(var(--site-hs) 94%);

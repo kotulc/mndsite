@@ -4,8 +4,8 @@ const withNextra = require('nextra')({
 })
 
 const basePath = process.env.NODE_ENV === 'production' ? (process.env.BASE_PATH || '') : ''
-const distDir = process.env.MDSITE_OUTPUT
-  ? require('path').relative(__dirname, process.env.MDSITE_OUTPUT)
+const distDir = process.env.MNDSITE_OUTPUT
+  ? require('path').relative(__dirname, process.env.MNDSITE_OUTPUT)
   : 'dist'
 
 module.exports = withNextra({
@@ -15,5 +15,8 @@ module.exports = withNextra({
   images: { unoptimized: true },
   basePath,
   assetPrefix: basePath,
-  env: { NEXT_PUBLIC_BUILD_TIME: new Date().toISOString() },
+  env: {
+    NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
+    NEXT_PUBLIC_BASE_PATH: basePath,
+  },
 })

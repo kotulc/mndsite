@@ -1,238 +1,404 @@
-# mdsite — Implementation Plan
+# mndsite renderer simplification plan
 
-Goal: go from a blank repo to a fully functional static site that renders the `examples/frww`
-content with preview and publish capabilities. Intelligence features (search, theming, logo)
-are deferred to later phases.
+## Status and authority
 
-Reference content: 24 markdown files — 7 static pages and 16 dated blog posts organized under
-`pages/` and `posts/<year>/`, with `title`, `date`, `categories`, and `tags` frontmatter.
+This is the implementation plan for simplifying mndsite into the rendering and
+static-build stage of the mndmap publishing pipeline.
 
+`docs/archive.md` retains prior plans and history. Where older documentation
+describes automatic local tagging or content enrichment inside mndsite, this
+plan is authoritative.
 
-## Roadmap
+## Product contract
 
-**Phase 1 — Core engine** *(complete)*
-- Next.js + Nextra docs theme
-- YAML config + CLI wrapper
-- Docker image, GHCR publishing
-- GitHub Pages deployment
-- Metadata display (tags, chips, sidebar metrics, reading time)
-- Per-page continuation feed
-- Nav ordering via config and frontmatter
+mndsite is a portable static site renderer for publication-ready Markdown and
+MDX.
 
-**Phase 2 — Custom components** *(planned)*
-- Semantic search integration
-- Semantic theming pipeline
-- Reduced external dependencies
+Its input is normally the destination emitted by mndmap:
 
-**Phase 3 — Deploy adapters** *(planned)*
-- `mdsite deploy --provider vercel|cloudflare|s3`
-- Credentials via environment variables; project ID via YAML
+```text
+source Markdown/MDX
+  -> mndmap
+  -> enriched and organized Markdown/MDX
+  -> mndsite
+  -> static website
+```
 
+mndsite:
 
----
+- reads a configured content directory;
+- mirrors that document tree into its framework content tree;
+- reads manual and mndmap-owned frontmatter;
+- derives renderer metadata required by the Next.js/Nextra application;
+- renders navigation, page metadata, feeds, and custom components;
+- builds a static site; and
+- remains usable as a Docker/CI build step.
 
-## Phase 1 — Project Bootstrap
+mndsite does not:
 
-**Goal:** A running Next.js + Nextra dev server with an empty site.
+- extract semantic keywords;
+- run embedding models;
+- generate tags or categories;
+- score related pages;
+- reorganize pages or folders;
+- rewrite content according to a second organization policy; or
+- require mndmap runtime state.
 
-### Tasks
-1. Initialize `package.json` with core dependencies:
-   - `next`, `react`, `react-dom`
-   - `nextra`, `nextra-theme-docs`
-2. Add `next.config.js` with Nextra plugin wired in
-3. Add `theme.config.js` — minimal Nextra docs theme config (site title, logo placeholder)
-4. Add `site.config.js` — schema stub with required fields:
-   ```js
-   // site name, base_url, base_path, content_style, theme_mood, logo_seed
-   ```
-5. Create directory structure per SPEC:
-   - `content/`, `components/`, `pages/`, `public/`
-6. Add a placeholder `content/index.mdx`
-7. Verify `next dev` runs and serves the empty site
+Raw Markdown remains technically acceptable when it already satisfies the
+input contract, but enrichment and organization belong upstream.
 
-### Done when
-`next dev` starts without errors and the browser shows the Nextra shell.
+## Boundary with mndmap
 
+The handoff is a directory of ordinary Markdown/MDX documents and assets.
+There is no required SQLite database, organization manifest, graph file, or
+mndmap-specific metadata sidecar.
 
----
+mndmap owns:
 
-## Phase 2 — Content Integration
+- source parsing and structural identity;
+- file, folder, group, page, and section organization;
+- destination-only segment overrides;
+- output paths and sibling order;
+- generated folder/group landing pages;
+- internal link and MDX reference rewriting;
+- local asset collection and rewriting;
+- inline mndflow diagrams;
+- future Taggly enrichment; and
+- atomic destination replacement.
 
-**Goal:** All example content renders correctly with proper routing and images.
+mndsite owns:
 
-### Tasks
-1. Copy `examples/frww/pages/` → `content/pages/`
-   and `examples/frww/posts/` → `content/posts/`
-2. Rename `.md` → `.mdx` where needed (Nextra expects MDX)
-3. Copy image assets to `public/images/` and rewrite relative image paths in content
-4. Add `_meta.js` at each folder level to define display order and section labels:
-   - `content/pages/_meta.js` — static page ordering
-   - `content/posts/_meta.js` — year-folder ordering (newest first)
-   - `content/posts/<year>/_meta.js` — per-year post ordering by date
-5. Add a root `content/index.mdx` that serves as the home page (or redirect to `pages/home`)
-6. Verify all 24 pages render without build errors
+- Markdown/MDX integration with Next.js and Nextra;
+- static route rendering;
+- navigation UI;
+- metadata presentation;
+- theme and custom components;
+- feeds derived from supplied metadata;
+- base-path handling;
+- static export;
+- Docker packaging; and
+- deployment adapters and documentation.
 
-### Done when
-`next dev` renders all pages and posts with correct content and working images.
+## Input contract
 
+### Directory structure
 
----
+- The configured content root is the site route tree.
+- `index.md` or `index.mdx` is the landing page for its directory.
+- Every generated mndmap folder/group has an ordinary index document.
+- mndsite does not flatten, regroup, or rename supplied paths.
+- File-system routes must match mndmap route calculations exactly.
 
-## Phase 2b — Generalized Source Layout
+### Frontmatter
 
-**Goal:** `npm run ingest` accepts any folder structure of markdown files, not just the
-two-level `pages/` + `posts/<year>/` layout of `examples/frww`.
+mndsite preserves and renders supplied frontmatter. Initial supported fields
+include:
 
-### Background
-The current ingest script hardcodes two source paths (`<src>/pages/` and
-`<src>/posts/<year>/`). Any content source with a different structure will fail. The fix is
-to walk the source tree generically and mirror it into the site content directory (`pages/`).
+```yaml
+title: Page title
+description: Optional description
+reading_time: 4
+date: 2026-08-25
+tags: [manual, tags]
+categories: [manual, categories]
+```
 
-### Tasks
-1. Rewrite `ingest_static_pages()` and `ingest_posts()` in `scripts/ingest.js` as a single
-   recursive `ingest_dir(src_dir, dest_dir)` function that:
-   - Walks any directory tree
-   - Converts `.md` → `.mdx`, renaming `home.md`/`index.md` → `index.mdx`
-   - Copies adjacent `images/` subdirectory to `public/images/<relative-path>/`
-   - Rewrites image references in each MDX file to the new absolute path
-   - Strips corrupt JPEG EXIF segments from copied images
-   - Injects `reading_time` into frontmatter
-2. Update `_meta.json` generation:
-   - For each directory, collect all pages and sort by `date` frontmatter (newest-first)
-     if any page has a date; otherwise sort alphabetically by slug
-   - Retain `home`/`index` as the first entry regardless of sort order
-3. Update `write_posts_index()` to collect all pages that have a `date` field (not just
-   those under `posts/<year>/`) and write them to `public/posts-index.json`
-4. Update `write_posts_page()` to place the `PostIndex` page at a configurable location
-   (default: `pages/posts/index.mdx`) or omit it if no dated posts exist
-5. Verify that `examples/frww` still ingests correctly under the new generic walker
-6. Add a test fixture with a flat/non-standard source layout and verify correct output
+Rules:
 
-### Done when
-`npm run ingest -- path/to/any/markdown/tree` produces a correctly structured and routed
-site regardless of the source folder layout.
+- Existing manual metadata remains valid.
+- mndmap may fill missing `description` and `reading_time` but does not
+  overwrite supplied values.
+- Generated descriptions use the first non-heading prose paragraph, normalized
+  and length-capped.
+- Generated reading time uses plain-text words divided by 200, rounded up, with
+  a minimum of one minute.
+- Tags and categories are rendered but never synthesized by mndsite.
+- Reading time is displayed only when supplied.
+- Future Taggly fields must arrive through frontmatter and be versioned before
+  mndsite consumes them.
+- Unknown frontmatter is preserved and made available to MDX/theme components.
 
+### Content and assets
 
----
+- Markdown and MDX content is treated as publication-ready.
+- Inline SVG emitted by mndmap is preserved.
+- Diagram SVG appears after introductory prose and before child links or page
+  sections; mndsite does not reposition it.
+- Complete mndflow graph JSON is not part of the handoff.
+- Internal links and local asset references are not semantically redirected by
+  mndsite.
+- mndmap's `_assets/` tree is copied into the static output without changing its
+  relative contract.
+- Static MDX imports supported by the build are preserved.
+- mndsite may perform framework-required `.md` to `.mdx` adaptation, but that
+  adaptation must not change document meaning, routes, headings, or metadata.
 
-## Phase 3 — Page Components & Metadata Display
+## Configuration contract
 
-**Goal:** Tags, dates, and categories are visible in the UI; posts have a browsable index.
+`mndsite.yaml` remains focused on rendering and deployment:
 
-### Tasks
-1. **PageHeader component** (`components/PageHeader.jsx`)
-   - Displays: page title, publication date (formatted), reading time estimate
-   - Reads from Nextra's `frontMatter` prop passed to each page
-2. **TagList component** (`components/TagList.jsx`)
-   - Renders `categories` and `tags` as styled chips/pills below the header
-3. **PostIndex component** (`components/PostIndex.jsx`)
-   - Lists all posts sorted by date (newest first)
-   - Shows title, date, categories — links to post page
-   - Used on `content/posts/index.mdx`
-4. Wire components into the Nextra theme via `theme.config.js` `main` or page-level MDX imports
-5. Add basic mobile-first CSS: readable body width, responsive images, chip styles
+```yaml
+title: My Site
+description: ""
+repo_url: ""
 
-### Done when
-A post page shows its header with date + reading time, category/tag chips below the title,
-and the posts index lists all 16 posts in date order.
+content: .
+output: ./dist
 
+nav_order: {}
 
----
+theme_toggle: navbar
+toc: true
 
-## Phase 4 — Build & Deployment
+theme:
+  color: default
+  typeset: sans
+  navbar: ""
+  footer: ""
+```
 
-**Goal:** `next build` succeeds cleanly; the site can be previewed locally and published to
-GitHub Pages.
+Remove enrichment configuration:
 
-### Tasks
-1. Confirm `next build` + `next export` produces a valid `out/` directory
-2. Add `base_path` support in `next.config.js` (read from `site.config.js`) to handle
-   GitHub Pages project URLs (e.g. `username.github.io/repo`)
-3. Add npm scripts to `package.json`:
-   - `dev` → `next dev`
-   - `build` → `next build`
-   - `export` → `next export`
-   - `preview` → `next start` (or `npx serve out/`)
-4. Add `.github/workflows/deploy.yml`:
-   - Trigger: push to `main`
-   - Steps: `npm install` → `npm run build` → `npm run export` → push `out/` to `gh-pages`
-5. Test full round-trip: build → export → `npx serve out/` → verify locally
+```text
+meta.max_keywords
+meta.page_tags
+meta.section_tags
+meta.related_links
+meta.min_relevance
+```
 
-### Done when
-`npm run preview` serves the exported site locally with all pages, images, and navigation
-working. The GitHub Actions workflow file is present and syntactically valid.
+Remove organization configuration that conflicts with mndmap output:
 
+```text
+flatten
+```
 
----
+`nav_order` remains the cross-page navigation contract. mndmap replaces it in
+the emitted destination config from physical organization and sibling
+positions. mndsite honors it without applying a second organization policy.
 
-## Phase 5 — Testing
+The destination-root `mndsite.yaml` is produced with this precedence:
 
-**Goal:** Key functionality is covered by automated tests.
+1. an explicitly configured mndmap template;
+2. workspace-root `mndsite.yaml`;
+3. mndsite defaults.
 
-### Tasks
-1. Add `jest.config.js` + `@testing-library/react` for component tests
-2. Unit tests (`tests/components/`):
-   - `test_page_header` — renders title, date, reading time from frontmatter
-   - `test_tag_list` — renders correct number of chips for given tags/categories
-   - `test_post_index` — renders posts in descending date order
-3. Build smoke test (`tests/build/`):
-   - Assert `next build` exits 0
-   - Assert `out/` contains expected page paths (index, posts, pages)
-4. Add `npm test` script
+mndmap owns `content` and `nav_order`. It preserves user identity, theme,
+output, deployment, and unknown supported fields.
 
-### Done when
-`npm test` passes all unit tests; build smoke test confirms a clean export.
+`BASE_PATH` remains an environment/build concern.
 
+## Ingest contract
 
----
+The simplified ingest step:
 
-## Phase 6 — Single-Command Automation
+1. validates the configured content root;
+2. clears generated framework content and static-asset targets;
+3. recursively mirrors Markdown and MDX;
+4. preserves frontmatter and body content;
+5. copies `_assets/` and other explicitly supported static files;
+6. generates framework navigation metadata from directory structure and
+   `nav_order`;
+7. extracts only the metadata required by renderer components;
+8. creates framework-required redirect/index files only when the input
+   contract explicitly permits it; and
+9. returns deterministic diagnostics.
 
-**Goal:** All steps from Phases 1–4 are reproducible via a single `npm run setup` command.
-A fresh clone + two commands (`npm install && npm run setup`) should produce a running,
-previewable site.
+It must not call keyword extraction, embedding, tag grouping, or related-page
+scoring.
 
-### Tasks
-1. Create `scripts/setup.js`:
-   - Accepts `--source <dir>` (content directory, default `examples/frww`) and optional
-     `--build` flag to run `next build` after ingestion
-   - Validates Node.js version and that `npm install` has been run
-   - Validates required `site.config.js` fields — warns on missing values
-   - Runs `scripts/ingest.js` with the resolved source directory
-   - Optionally runs `next build` and reports pass/fail for each step
-2. Add `"setup": "node scripts/setup.js"` npm script
-3. Test: delete `pages/`, `public/images/`, and `node_modules/`; run `npm install &&
-   npm run setup`; confirm the site builds cleanly from scratch
-4. Enumerate any remaining steps that still require manual input (e.g. editing
-   `site.config.js`) — these become the explicit agent interface boundary
+Generated framework files remain internal build artifacts and are not part of
+the mndmap/mndsite handoff.
 
-### Done when
-`npm install && npm run setup` on a fresh clone produces a clean build with all example
-content. All remaining manual steps are explicitly listed and minimal.
+## Metadata presentation
 
+Renderer components may continue to show:
 
----
+- page title and description;
+- date and supplied reading time;
+- tags and categories;
+- outbound links;
+- explicitly supplied related links;
+- section information derived from headings; and
+- feed entries derived from supplied date/category/tag metadata.
 
-## Phase 7 — Intelligence Features (deferred)
+The internal `site-meta.json` file may remain as a renderer optimization, but:
 
-To be planned separately once Phase 1–6 are stable.
+- it is derived only from input documents and frontmatter;
+- it is not an enrichment authority;
+- it contains no locally generated semantic tags or similarity scores; and
+- its schema is tested against representative mndmap output.
 
-- **Semantic theming** — `(content_style, theme_mood)` → color palette via associative map
-- **Logo generation** — seeded SVG composition from Bootstrap icons + background shapes
-- **Semantic search** — per-page static JSON index, client-side query component
+Components must handle absent optional metadata without placeholder or broken
+UI.
 
-See [SPEC.md](SPEC.md) for current design notes on each.
+## Navigation
 
+- Directory structure defines hierarchy.
+- Generated `nav_order` maps define sibling order.
+- `index` remains the directory landing route.
+- Paths omitted from `nav_order` use deterministic slug ordering after listed
+  entries.
+- Generated mndmap landing pages appear as ordinary pages.
+- Folder navigation labels come from landing-page title when present, then a
+  deterministic slug-to-title fallback.
 
----
+## CLI and Docker
 
-## Conventions
+The supported build remains:
 
-- **Pipeline-agnostic**: this template accepts raw markdown directly — no upstream
-  pre-processing required. Any tool (or no tool) can populate the content source.
-- **Content is gitignored**: `pages/*.mdx`, `pages/posts/`, and `public/images/` are
-  all generated by `npm run ingest` and never committed.
-- **`examples/frww` is the reference source**: use it as the default ingest target
-  during development (`npm run ingest` with no arguments).
-- **Document before automating**: every manual step must be written down before it
-  is scripted. See the Development Philosophy section in SPEC.md.
+```sh
+mndsite build --config mndsite.yaml
+```
+
+The CLI:
+
+- validates configuration and input before deleting generated framework state;
+- mirrors content;
+- runs the Next.js/Nextra static build;
+- exits with the underlying failure status; and
+- writes only to configured/generated mndsite targets.
+
+The Docker image:
+
+- contains no vendored embedding model;
+- contains no transformer runtime required only for enrichment;
+- accepts a mounted mndmap destination as `content`;
+- writes the static site to `output`; and
+- remains reproducible from a pinned image tag.
+
+## Delivery stages
+
+### M0 — Pin the cross-project contract
+
+- pin the mndmap revision and representative emitted fixture;
+- document routes, anchors, `nav_order`, metadata, `_assets/`, MDX, and inline
+  SVG;
+- add a fixture contract test before deleting old behavior.
+
+Exit: current mndsite can ingest the fixture far enough to expose every
+incompatibility explicitly.
+
+### M1 — Remove local semantic enrichment
+
+- remove `scripts/tags.js`;
+- remove keyword, group, and related-page generation from `scripts/meta.js` and
+  `scripts/ingest.js`;
+- remove `@xenova/transformers`;
+- remove the vendored MiniLM model;
+- remove enrichment config and tests;
+- retain rendering of supplied tags and categories.
+
+Exit: install and ingest require no model, transformer runtime, or semantic
+scoring.
+
+### M2 — Make ingest a faithful adapter
+
+- preserve supplied frontmatter and Markdown/MDX bodies;
+- mirror the route tree without flattening or regrouping;
+- sort navigation from generated or user-supplied `nav_order`;
+- copy `_assets/` faithfully;
+- preserve inline SVG and supported static MDX imports;
+- remove duplicate link/image semantic rewriting now owned by mndmap.
+
+Exit: mndsite's built routes, headings, links, and assets match the mndmap
+fixture contract.
+
+### M3 — Adapt renderer metadata
+
+- derive internal renderer metadata from supplied frontmatter;
+- update PageHeader, TagList, PageInfo, MetaSidebar, feeds, and ToC integrations;
+- make optional fields safe;
+- remove assumptions that tags or related links always exist.
+
+Exit: manual metadata renders correctly and documents with no enrichment render
+without degraded layout.
+
+### M4 — Simplify configuration and documentation
+
+- remove `meta` and `flatten`; retain `nav_order` as the upstream navigation
+  contract;
+- update `README.md`, configuration docs, examples, Docker docs, and workflows;
+- show `mndmap build` as the recommended upstream step;
+- keep standalone raw-input behavior within the publication-ready contract.
+
+Exit: documented configuration contains only rendering, content, output,
+theme, and deployment concerns.
+
+### M5 — Cross-project verification and release
+
+- build the pinned mndmap fixture locally and in Docker;
+- verify pages, folders, `nav_order`, tags, categories, assets, MDX, feeds,
+  inline diagrams, routes, and anchors;
+- compare clean-checkout image size and build time after model removal;
+- publish a pinned mndsite image supported by mndmap.
+
+Exit: `mndmap build -> mndsite build` succeeds on clean Linux and Windows
+workflows and produces the expected static site.
+
+## Test plan
+
+### Unit
+
+- config rejects removed enrichment and flattening keys with migration help;
+- frontmatter parsing and preservation;
+- deterministic `nav_order` sorting;
+- folder title fallback;
+- metadata extraction without generation;
+- optional tag/category/related fields;
+- `_assets/` path preservation;
+- route and anchor parity.
+
+### Integration
+
+- ingest representative mndmap Markdown and MDX;
+- preserve inline SVG;
+- preserve links already rewritten by mndmap;
+- copy assets without a second path policy;
+- build nested folders and generated landing pages;
+- render with and without optional metadata;
+- build under `BASE_PATH`;
+- verify static export.
+
+### Cross-project fixture
+
+The shared fixture includes:
+
+- non-default mndmap source and destination names;
+- nested folders and generated groups;
+- ordered sibling pages;
+- moved sections and destination-only overrides;
+- manual tags, categories, date, and description;
+- Markdown links to moved pages and headings;
+- images and non-image assets;
+- static MDX imports;
+- generated landing and opt-in page diagrams; and
+- duplicate-title cases that prove route and anchor diagnostics occur upstream.
+
+## Migration and compatibility
+
+This is an intentional responsibility change:
+
+- mndsite configurations using `meta` or `flatten` are rejected with migration
+  guidance.
+- callers move organization into mndmap and metadata into source/frontmatter.
+- automatic local tags and related links disappear until a future Taggly
+  integration emits them upstream.
+- no compatibility shim runs the old enrichment path.
+
+The last image supporting local semantic enrichment remains pinned and
+documented for users who need a transition period.
+
+## Definition of done
+
+mndsite simplification is complete when:
+
+1. mndsite installs and builds without transformers or a vendored model.
+2. It performs no automatic tagging, grouping, or related-page scoring.
+3. It preserves the route tree, `nav_order`, content, frontmatter, links,
+   assets, MDX, and inline diagrams supplied by mndmap.
+4. Renderer components display supplied metadata and tolerate its absence.
+5. Configuration contains no competing organization or enrichment policy.
+6. The Docker image consumes a mndmap destination and produces the expected
+   static site.
+7. Shared cross-project fixtures pass on clean checkouts.

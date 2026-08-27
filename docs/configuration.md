@@ -11,15 +11,17 @@ fields: 14
 related:
   - title: Getting Started
     url: /getting-started
+  - title: Content Pipeline
+    url: /features/content-pipeline
   - title: Deployment
     url: /features/deployment
 ---
 
 # Configuration
 
-All site-level settings live in `mdsite.yaml` at your project root.
-The CLI reads this file at build time and generates the internal `site.config.js`
-consumed by Next.js and Nextra.
+All site-level settings live in `mndsite.yaml`. In a mndmap workflow, mndmap emits this file at the destination root — it owns `content` and `nav_order` while preserving your theme, output, and deployment fields.
+
+The CLI reads the YAML at build time and generates the internal `site.config.js` consumed by Next.js and Nextra.
 
 ## Fields
 
@@ -28,26 +30,20 @@ consumed by Next.js and Nextra.
 | `title` | string | *(required)* | Site name — shown in the logo, footer, and page titles |
 | `description` | string | `""` | SEO meta description added to every page's `<head>` |
 | `repo_url` | string | `""` | GitHub repo link shown as an icon in the header; leave empty to hide |
-| `feed_url` | string | `""` | Slug of the section used as the per-page continuation feed |
-| `footer` | string | `""` | Custom footer credits text; empty keeps "Powered by mdsite and Nextra" |
+| `feed_url` | string | `""` | Section slug linked from the navbar feed icon |
+| `footer` | string | `""` | Custom footer credits text; empty keeps "Powered by mndsite and Nextra" |
 | `theme_toggle` | string | `"navbar"` | Where the light/dark toggle appears: `"navbar"` or `"sidebar"` |
 | `toc` | boolean | `true` | Right sidebar: "On This Page" section navigation |
-| `reading_time` | boolean | `true` | Show estimated reading time in page headers and feeds |
-| `meta.max_keywords` | integer | `32` | Max tag terms stored per page/section after ingest |
-| `meta.page_tags` | integer | `5` | Max chips shown below the page title |
-| `meta.section_tags` | integer | `8` | Max chips shown per section in the PageInfo mosaic |
-| `meta.related_links` | integer | `3` | Related pages attached per page via embedding similarity |
-| `meta.min_relevance` | number | `0.2` | Drop auto tags whose title-relevance score is below this (0–1); user/FM tags are kept |
+| `reading_time` | boolean | `true` | Show reading time when present in frontmatter |
 | `theme.color` | string | `"default"` | Named accent palette — see [Theme](#theme) below |
 | `theme.typeset` | string | `"sans"` | Named body font stack — see [Theme](#theme) below |
 | `theme.navbar` | string | `""` | Navbar background: `"primary"` (theme tint) or any CSS color |
 | `theme.footer` | string | `""` | Footer background: `"primary"` (theme tint) or any CSS color |
-| `flatten` | list | `[]` | Section slugs rendered as inline feeds rather than individual pages |
 | `nav_order` | object | `{}` | Explicit nav ordering per directory — see below |
 | `content` | path | `./docs` | Source markdown directory (resolved relative to this file) |
 | `output` | path | `./dist` | Output directory for the built site (resolved relative to this file) |
-| `components` | path | `""` | Optional directory of consumer React components, mirrored into `components/custom/` each build — content MDX can import them, e.g. `import Widget from '../components/custom/Widget'` |
-| `assets` | path | `""` | Optional directory of consumer static files (JSON data, etc.), mirrored into `public/assets/` each build — pages can fetch them at `${basePath}/assets/<file>` |
+| `components` | path | `""` | Optional directory of consumer React components, mirrored into `components/custom/` each build |
+| `assets` | path | `""` | Optional directory of static files mirrored into `public/assets/` each build |
 
 ## Example
 
@@ -61,7 +57,20 @@ theme:
   typeset: serif
 content: ./docs
 output: ./dist
+nav_order:
+  "": [getting-started, configuration]
 ```
+
+## Removed configuration keys
+
+These keys are **rejected at load time** with migration guidance:
+
+| Key | Move to |
+|-----|---------|
+| `meta` (tagging, related-link limits) | **mndmap** or frontmatter |
+| `flatten` (inline directory feeds) | **mndmap** organization |
+
+mndsite configuration is limited to rendering, content paths, navigation order, theme, and deployment.
 
 ## Theme
 
@@ -72,10 +81,6 @@ buttons, in both light and dark mode. Available palettes:
 
 `default` · `slate` · `gray` · `blue` · `indigo` · `violet` · `rose` · `orange` ·
 `amber` · `emerald` · `teal` · `cyan`
-
-`default` is Nextra's stock blue. Palette hues follow the standard Tailwind colors.
-Warm palettes (`amber`, `orange`) have lower link contrast on white — they suit
-accent-light pages better than link-heavy ones.
 
 **`theme.typeset`** sets the body font from a curated system-font stack — zero network
 requests, no layout shift:
@@ -88,12 +93,8 @@ requests, no layout shift:
 | `geometric` | Avenir / Montserrat / Corbel |
 | `mono` | System monospace |
 
-Code blocks always render monospace regardless of typeset. Unknown `color` or
-`typeset` names fail the build with the list of valid values.
-
 **`theme.navbar`** and **`theme.footer`** override the navbar and footer backgrounds.
-Set `"primary"` for a soft tint derived from `theme.color` (adapts to dark mode), or any
-CSS color (e.g. `"#1e293b"`, `"hsl(215 20% 95%)"`) applied as-is in both modes:
+Set `"primary"` for a soft tint derived from `theme.color`, or any CSS color applied as-is:
 
 ```yaml
 theme:
@@ -102,38 +103,26 @@ theme:
   footer: "hsl(161 30% 96%)"
 ```
 
-Leave empty to keep Nextra's default white/dark backgrounds.
+## Metadata and tagging
 
-## Tagging
+mndsite does **not** run local keyword extraction, embedding models, or related-page scoring.
+During ingest it derives `public/site-meta.json` from supplied frontmatter and page content only:
 
-During ingest, mdsite always runs local keyword extraction and embedding-based tagging.
-Output lands in `public/site-meta.json` — a flat list of pages, not frontmatter. Tags use
-fixed groups (`category`, `topic`, `concept`, `entity`, `user`); frontmatter `tags` and
-`categories` merge into `user` (still scored). The UI shows the first `page_tags` chips
-from each page's merged tag list, and up to `section_tags` chips per section in PageInfo.
-
-Embeddings use **Xenova/all-MiniLM-L6-v2** vendored at `models/Xenova/all-MiniLM-L6-v2/`.
-Ingest loads from disk only — no Hugging Face download. After all pages are tagged,
-`fill_related` scores pairwise page similarity and writes `related` (`{ name, url, score }`).
+- `tags` and `categories` from frontmatter
+- `related` from frontmatter `related` entries
+- `links` from markdown link targets in the page body
+- `metrics.word_count` computed from body text
+- `metrics.reading_time` from frontmatter when present
 
 Optional page summary: set `desc` or `description` in frontmatter — PageInfo shows it when present.
 
-```yaml
-meta:
-  max_keywords: 32       # tag pool stored per page/section
-  page_tags: 5           # chips below title
-  section_tags: 8        # chips per section in PageInfo
-  related_links: 3       # related pages per page (skips urls already in links)
-  min_relevance: 0.2     # drop auto tags below this title-relevance score
-```
-
-See the [Metadata Contract](/specifications/metadata) spec for the full schema. Hashing,
-incremental graph enrichment, and external NLP live in the sibling **mndmeta** project.
+See the [Metadata Contract](/specifications/metadata) spec for the full schema.
 
 ## Nav ordering
 
-By default the pipeline sorts pages newest-first by `date`, or alphabetically.
-Use `nav_order` to define explicit ordering at any directory level:
+Use `nav_order` to pin sibling order at any directory level. Slugs not listed sort alphabetically after the pinned entries.
+
+In a mndmap workflow, mndmap generates `nav_order` from physical organization and sibling positions; mndsite honors it without applying a second policy.
 
 ```yaml
 nav_order:
@@ -142,18 +131,16 @@ nav_order:
 ```
 
 The key `""` refers to the source root. Other keys are subdirectory slugs.
-Folders and pages can be mixed. Slugs not listed append alphabetically after
-the explicit entries; dated pages sort newest-first.
 
 ## BASE_PATH environment variable
 
 If your site is served from a subpath (e.g. `username.github.io/repo-name`), pass
-`BASE_PATH` as an environment variable at build time — do not put it in `mdsite.yaml`:
+`BASE_PATH` as an environment variable at build time — do not put it in `mndsite.yaml`:
 
 ```bash
-BASE_PATH=/repo-name node scripts/cli.js build --config mdsite.yaml
+BASE_PATH=/repo-name node scripts/cli.js build --config mndsite.yaml
 # or via Docker:
-docker run --rm -e BASE_PATH=/repo-name -v $(pwd):/workspace ghcr.io/kotulc/mdsite ...
+docker run --rm -e BASE_PATH=/repo-name -v $(pwd):/workspace ghcr.io/kotulc/mndsite ...
 ```
 
 For GitHub Pages, the deploy workflow reads `BASE_PATH` from a repository Actions variable
@@ -168,14 +155,14 @@ Set them under **Settings → Secrets and variables → Actions → Variables**.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CONTENT_SOURCE` | `docs` | Path to content directory, relative to repo root |
-| `BASE_PATH` | _(empty)_ | Subpath prefix for project pages repos (e.g. `/mdsite`) |
+| `BASE_PATH` | _(empty)_ | Subpath prefix for project pages repos (e.g. `/mndsite`) |
 
 ## CLI overrides
 
 The `--content` and `--output` flags override the corresponding YAML fields at runtime:
 
 ```bash
-node scripts/cli.js build --config mdsite.yaml \
-  --content /path/to/content \
+node scripts/cli.js build --config mndsite.yaml \
+  --content /path/to/mndmap/destination \
   --output /path/to/output
 ```

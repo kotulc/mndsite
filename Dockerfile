@@ -7,4 +7,4 @@ RUN npm ci --omit=dev
 COPY . .
 
 ENTRYPOINT ["node", "scripts/cli.js"]
-CMD ["build", "--config", "/workspace/mdsite.yaml"]
+CMD ["build", "--config", "/workspace/mndsite.yaml"]

@@ -1,5 +1,5 @@
 /**
- * Tests for the consumer components extension point: mdsite.yaml `components:` dir
+ * Tests for the consumer components extension point: mndsite.yaml `components:` dir
  * is mirrored into components/custom/ each build so content MDX can import from it.
  */
 const fs   = require('fs')
@@ -14,7 +14,7 @@ const CUSTOM = path.join(__dirname, '..', '..', 'components', 'custom')
 let src_dir
 
 beforeEach(() => {
-  src_dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdsite-components-'))
+  src_dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mndsite-components-'))
 })
 
 afterEach(() => {

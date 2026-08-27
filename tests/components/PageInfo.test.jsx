@@ -3,7 +3,7 @@ import { PageInfoToggle, PageInfoPanel, limit_tags, layout_section_rows, section
 import { useSection } from '../../components/SectionContext'
 
 jest.mock('../../components/SectionContext', () => ({ useSection: jest.fn() }))
-jest.mock('../../site.config', () => ({ section_tags: 5 }))
+jest.mock('../../site.config', () => ({}))
 jest.mock('next/router', () => ({
   useRouter: () => ({ events: { on: jest.fn(), off: jest.fn() } }),
 }))
@@ -74,30 +74,33 @@ test('test_page_info_panel_closes_on_escape', () => {
 })
 
 test('test_page_info_panel_returns_null_when_no_info', () => {
-  useSection.mockReturnValue({ page: { desc: null }, sections: [{ name: 'x', tags: [] }] })
+  useSection.mockReturnValue({ page: { desc: null }, sections: [] })
   const { container } = render(<PageInfoPanel open={true} on_close={() => {}} />)
   expect(container).toBeEmptyDOMElement()
 })
 
-test('test_page_info_panel_limits_section_tags_to_section_tags', () => {
+test('test_page_info_panel_limits_section_tags', () => {
   useSection.mockReturnValue({
     page: { desc: null },
     sections: [{
       name: 'Busy',
       tags: [
-        { term: 'c1', group: 'category', score: 1 },
-        { term: 'c2', group: 'category', score: 0.9 },
-        { term: 't1', group: 'topic', score: 0.8 },
-        { term: 't2', group: 'topic', score: 0.7 },
-        { term: 'x1', group: 'concept', score: 0.6 },
-        { term: 'x2', group: 'concept', score: 0.5 },
+        { term: 'c1', group: 'category' },
+        { term: 'c2', group: 'category' },
+        { term: 't1', group: 'topic' },
+        { term: 't2', group: 'topic' },
+        { term: 'x1', group: 'concept' },
+        { term: 'x2', group: 'concept' },
+        { term: 'x3', group: 'concept' },
+        { term: 'x4', group: 'concept' },
+        { term: 'x5', group: 'concept' },
       ],
     }],
   })
   render(<PageInfoPanel open={true} on_close={() => {}} />)
   expect(screen.getByText('c1')).toBeInTheDocument()
   expect(screen.getByText('x1')).toBeInTheDocument()
-  expect(screen.queryByText('x2')).not.toBeInTheDocument()
+  expect(screen.queryByText('x5')).not.toBeInTheDocument()
 })
 
 test('test_limit_tags_slices_array', () => {

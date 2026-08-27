@@ -18,10 +18,14 @@ related:
 
 # Features
 
-mdsite is a thin, opinionated layer on top of Next.js and Nextra. Each feature
-is either automatic (no configuration needed) or driven by a single frontmatter field.
+mndsite is a thin, opinionated layer on top of Next.js and Nextra. It renders publication-ready content supplied by **mndmap** (or a standalone markdown tree) into a static site. Each feature is either automatic mirroring behavior or driven by frontmatter and `mndsite.yaml`.
 
-- [Content Pipeline](content-pipeline) — how markdown becomes a static site
-- [Metadata Display](metadata) — dates, reading time, tags, and categories
+```text
+mndmap  →  organize, enrich, rewrite  →  destination/
+mndsite →  mirror, present, export    →  dist/
+```
+
+- [Content Pipeline](content-pipeline) — mndmap/mndsite split and ingest behavior
+- [Metadata Display](metadata) — dates, reading time, tags, and categories from frontmatter
 - [Styling](styling) — custom CSS, Nextra theme variables, layout structure
-- [Deployment](deployment) — GitHub Actions and Docker deployment options
+- [Deployment](deployment) — GitHub Actions, Docker, and CI/CD workflows
