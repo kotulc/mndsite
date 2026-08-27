@@ -227,7 +227,7 @@ To be planned separately once Phase 1–6 are stable.
 - **Logo generation** — seeded SVG composition from Bootstrap icons + background shapes
 - **Semantic search** — per-page static JSON index, client-side query component
 
-See [SPEC.md](SPEC.md) for current design notes on each.
+See `SPEC.md` in the repository root for current design notes on each.
 
 
 ---

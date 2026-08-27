@@ -80,7 +80,7 @@ node scripts/cli.js build --config mndsite.yaml
 
 1. **Mirrors `.md` and `.mdx`** — any file named `home.md`, `index.md`, or `index.mdx` becomes `index.mdx` (the section landing page). All other files keep their slug. Routes match the source tree; nothing is flattened or regrouped.
 
-2. **Copies `_assets/`** — the content-root `_assets/` tree is copied to `public/_assets/` (mndmap handoff contract). Relative `../_assets/` and `./_assets/` references in markdown and MDX imports are rewritten for static export.
+2. **Copies `_assets/`** — the content-root `_assets/` tree is copied to `public/_assets/` (mndmap handoff contract). Relative `../_assets/` and `./_assets/` markdown references are rewritten to public URLs; SVG images become an `<img>` that resolves `BASE_PATH` at build time. Module imports from `_assets/` are left alone and reported as unresolvable — `public/` is outside the module graph.
 
 3. **Copies legacy `images/`** — an `images/` folder next to markdown files is copied to `public/images/<relative-path>/`.
 
@@ -88,7 +88,7 @@ node scripts/cli.js build --config mndsite.yaml
 
 5. **Preserves inline SVG** — SVG blocks from upstream are kept; braces inside `<style>` are escaped for MDX safety.
 
-6. **Strips frontmatter from pages** — metadata lives in `site-meta.json`, not in output MDX.
+6. **Preserves frontmatter** — the supplied block is kept verbatim on the output page, so Nextra and theme components can read unknown fields; renderer metadata is mirrored into `site-meta.json`.
 
 7. **Generates `_meta.json`** — navigation labels and sibling order at every directory level:
    - `nav_order` in `mndsite.yaml` pins listed slugs first in declared order

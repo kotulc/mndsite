@@ -4,7 +4,7 @@
  * and writes flat page metadata to public/site-meta.json.
  *
  * - Renames .md → .mdx (home.md or index.md at any level → index.mdx)
- * - Strips frontmatter from output pages — metadata lives in site-meta.json
+ * - Preserves frontmatter on output pages; renderer metadata mirrors to site-meta.json
  * - Copies _assets/ and images/ subtrees to public/
  * - Auto-generates _meta.json at each level; sort order: nav_order > alpha
  *
@@ -19,13 +19,27 @@ const { strip_dir } = require('./fix-exif')
 const meta = require('./meta')
 
 
-const ROOT      = path.join(__dirname, '..')
-const PAGES     = path.join(ROOT, 'pages')
-const PUB_IMG   = path.join(ROOT, 'public', 'images')
-const PUB_ASSET = path.join(ROOT, 'public', '_assets')
-const PUB_DIR   = path.join(ROOT, 'public')
-const SITE_META = path.join(PUB_DIR, 'site-meta.json')
+const ROOT = path.join(__dirname, '..')
+const MD_LINK = /\]\((?!https?:)([^)\s]+\.mdx?)(?:#[^)]*)?\)/g
+const ASSET_IMPORT = /^import\s.*from\s+['"](\S*_assets\/\S+)['"]/gm
 
+
+function build_targets(root) {
+  /** Generated framework targets. `config.root` redirects them (tests use a temp tree). */
+  const pub = path.join(root, 'public')
+  return {
+    pages:  path.join(root, 'pages'),
+    custom: path.join(root, 'components', 'custom'),
+    public: pub,
+    images: path.join(pub, 'images'),
+    assets: path.join(pub, '_assets'),
+    meta:   path.join(pub, 'site-meta.json'),
+  }
+}
+
+
+let TARGET = build_targets(ROOT)
+let _warnings = []
 
 let _config = null
 function get_config() { return _config || require('../site.config') }
@@ -40,6 +54,21 @@ function parse_fm(content) {
 
 function strip_fm(content) {
   return content.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '').replace(/^\s*\n/, '')
+}
+
+
+function fm_block(content) {
+  /** The frontmatter block as supplied, kept verbatim on the emitted page. */
+  const match = content.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/)
+  return match ? match[0].replace(/\n*$/, '\n\n') : ''
+}
+
+
+function check_refs(body, url) {
+  /** Collect references the build cannot resolve — upstream owns link and import rewriting.
+   *  Internal .md links 404 once exported; _assets/ imports leave the module graph. */
+  for (const match of body.matchAll(MD_LINK)) _warnings.push(`${url} → ${match[1]}`)
+  for (const match of body.matchAll(ASSET_IMPORT)) _warnings.push(`${url} → import ${match[1]}`)
 }
 
 
@@ -59,11 +88,10 @@ function rewrite_asset_refs(content) {
   let out = content
     .replace(/\]\(\.\.\/_assets\//g, '](/_assets/')
     .replace(/\]\(\.\/_assets\//g, '](/_assets/')
-    .replace(/from\s+['"]\.\.\/_assets\//g, "from '/_assets/")
-    .replace(/from\s+['"]\.\/_assets\//g, "from '/_assets/")
-  // Nextra's image pipeline rejects SVG markdown images — emit plain HTML instead.
+  // Nextra's image pipeline rejects SVG markdown images — emit an <img> instead. Raw tags
+  // skip the pipeline's base-path handling, so resolve it from the build environment.
   out = out.replace(/!\[([^\]]*)\]\(\/_assets\/([^)]+\.svg)\)/gi,
-    '<img src="/_assets/$2" alt="$1" />')
+    '<img src={`${process.env.NEXT_PUBLIC_BASE_PATH || \'\'}/_assets/$2`} alt="$1" />')
   return out
 }
 
@@ -153,7 +181,7 @@ function copy_images(src_dir, rel) {
   /** Copy src_dir/images/ into public/images/<rel>/ for legacy standalone content. */
   const img_url  = '/images' + (rel ? `/${rel}` : '')
   const img_src  = path.join(src_dir, 'images')
-  const img_dest = path.join(PUB_IMG, rel)
+  const img_dest = path.join(TARGET.images, rel)
 
   if (fs.existsSync(img_src) && fs.statSync(img_src).isDirectory()) {
     copy_dir(img_src, img_dest)
@@ -167,7 +195,7 @@ function copy_content_assets(src_dir) {
   /** Copy content-root _assets/ into public/_assets/ (mndmap handoff contract). */
   const asset_src = path.join(src_dir, '_assets')
   if (!fs.existsSync(asset_src) || !fs.statSync(asset_src).isDirectory()) return []
-  return copy_dir(asset_src, PUB_ASSET)
+  return copy_dir(asset_src, TARGET.assets)
 }
 
 
@@ -177,15 +205,18 @@ function ingest_page(src_entry, dest_dir, rel, slug, base, img_url) {
 
   const dest = path.join(dest_dir, `${slug}.mdx`)
   const body = prepare_body(raw, img_url)
-  fs.writeFileSync(dest, body)
+  fs.writeFileSync(dest, fm_block(raw) + body)
 
   const title = fm.title || first_h1(body) || slug_to_title(base)
   const parts = [...(rel ? rel.split('/') : []), ...(slug === 'index' ? [] : [slug])]
+  const url   = '/' + parts.join('/') || '/'
+  check_refs(body, url)
+
   return meta.build_page({
     slug,
     title,
-    url:       '/' + parts.join('/') || '/',
-    content:   fs.readFileSync(dest, 'utf8'),
+    url,
+    content:   body,
     published: fm.date ? String(fm.date).slice(0, 10) : '',
     created:   fs.statSync(src_entry).mtime.toISOString().slice(0, 10),
     fm,
@@ -238,7 +269,7 @@ function ingest_dir(src_dir, dest_dir, rel) {
 
 
 function sync_components(components_dir) {
-  const dest = path.join(ROOT, 'components', 'custom')
+  const dest = TARGET.custom
   fs.rmSync(dest, { recursive: true, force: true })
   fs.mkdirSync(dest, { recursive: true })
 
@@ -253,7 +284,7 @@ function sync_components(components_dir) {
 
 
 function sync_assets(assets_dir) {
-  const dest = path.join(PUB_DIR, 'assets')
+  const dest = path.join(TARGET.public, 'assets')
   fs.rmSync(dest, { recursive: true, force: true })
 
   if (!assets_dir || !fs.existsSync(assets_dir)) return []
@@ -265,26 +296,29 @@ function sync_assets(assets_dir) {
 
 async function run(config) {
   _config = config
+  _warnings = []
+  TARGET = build_targets(config.root || ROOT)
   const src = config.content
 
   console.log(`\nIngesting from: ${src}`)
 
-  fs.rmSync(PAGES,     { recursive: true, force: true })
-  fs.rmSync(PUB_IMG,   { recursive: true, force: true })
-  fs.rmSync(PUB_ASSET, { recursive: true, force: true })
-  fs.rmSync(SITE_META, { force: true })
+  fs.rmSync(TARGET.pages,  { recursive: true, force: true })
+  fs.rmSync(TARGET.images, { recursive: true, force: true })
+  fs.rmSync(TARGET.assets, { recursive: true, force: true })
+  fs.rmSync(TARGET.meta,   { force: true })
 
   const assets = copy_content_assets(src)
   if (assets.length) console.log(`  Copied _assets/ (${assets.length} file(s))`)
 
-  const { pages } = ingest_dir(src, PAGES, '')
+  const { pages } = ingest_dir(src, TARGET.pages, '')
 
   pages.sort((a, b) => a.url.localeCompare(b.url))
-  fs.writeFileSync(SITE_META, JSON.stringify({ pages }, null, 2) + '\n')
+  fs.mkdirSync(TARGET.public, { recursive: true })
+  fs.writeFileSync(TARGET.meta, JSON.stringify({ pages }, null, 2) + '\n')
   console.log(`  Wrote site metadata (${pages.length} pages) to public/site-meta.json`)
 
   const app_src = path.join(ROOT, '_app.jsx')
-  if (fs.existsSync(app_src)) fs.copyFileSync(app_src, path.join(PAGES, '_app.jsx'))
+  if (fs.existsSync(app_src)) fs.copyFileSync(app_src, path.join(TARGET.pages, '_app.jsx'))
 
   const custom = sync_components(config.components)
   if (custom.length) console.log(`  Synced ${custom.length} custom component(s) into components/custom/`)
@@ -292,15 +326,21 @@ async function run(config) {
   const extra = sync_assets(config.assets)
   if (extra.length) console.log(`  Synced ${extra.length} asset(s) into public/assets/`)
 
+  if (_warnings.length) {
+    console.warn(`  Warning: ${_warnings.length} unresolvable reference(s) — upstream must emit final routes`)
+    for (const link of _warnings.slice(0, 5)) console.warn(`    ${link}`)
+  }
+
   console.log(`  Mirrored source tree into pages/`)
   console.log('Done.\n')
 
+  TARGET = build_targets(ROOT)
   _config = null
 }
 
 
 module.exports = {
-  parse_fm, strip_fm, first_h1, sort_entries, extract_content,
+  parse_fm, strip_fm, fm_block, first_h1, sort_entries, extract_content,
   norm_path, slug_to_title, sync_assets, sync_components, run,
 }
 

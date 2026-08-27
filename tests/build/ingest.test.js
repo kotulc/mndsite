@@ -136,12 +136,13 @@ describe('site meta output', () => {
     expect(Array.isArray(page.tags)).toBe(true)
   })
 
-  test('test_pages_have_no_frontmatter', () => {
+  test('test_pages_preserve_frontmatter', () => {
     for (const f of ['getting-started.mdx', 'configuration.mdx']) {
       const p = path.join(PAGES, f)
       if (!fs.existsSync(p)) return
       const content = fs.readFileSync(p, 'utf8')
-      expect(content.startsWith('---')).toBe(false)
+      expect(content.startsWith('---\n')).toBe(true)
+      expect(content).toContain('\n---\n')
     }
   })
 })

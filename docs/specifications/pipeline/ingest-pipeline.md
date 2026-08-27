@@ -21,6 +21,9 @@ Organization and semantic enrichment are upstream concerns (**mndmap**). mndsite
 7. REQ-7: `public/site-meta.json` is a flat `{ pages: [...] }` list derived from frontmatter and content — no generated tags or embedding scores
 8. REQ-8: Top-level imports and leading H1 are stripped from extracted content; imports inside code fences are preserved
 9. REQ-9: Inline SVG blocks are preserved with MDX-safe brace escaping
+10. REQ-10: Supplied frontmatter is kept verbatim on the emitted page; site-meta metrics and links are derived from the body alone
+11. REQ-11: `_assets/` SVG images render through an `<img>` whose source resolves `BASE_PATH` at build time
+12. REQ-12: Ingest warns on references the build cannot resolve — internal `.md` links and `_assets/` module imports
 
 ## Test Cases
 
@@ -33,10 +36,13 @@ Organization and semantic enrichment are upstream concerns (**mndmap**). mndsite
 - `test_extract_strips_leading_h1` — leading H1 removed (REQ-8)
 - `test_extract_strips_top_level_imports` — top-level imports removed (REQ-8)
 - `test_site_meta_page_fields` — page record shape from frontmatter (REQ-7)
-- `test_pages_have_no_frontmatter` — output MDX has no frontmatter block (REQ-7)
+- `test_pages_preserve_frontmatter` — output MDX keeps its frontmatter block (REQ-10)
 
-`tests/build/mndmap-fixture.test.js`
+`tests/build/mndmap-fixture.test.js` — ingests the fixture into a temp root
 
 - `preserves nested folder structure` — route tree matches mndmap destination (REQ-2)
 - `copies _assets to public/_assets` — asset handoff (REQ-5)
+- `preserves supplied frontmatter on emitted pages` — unknown fields survive (REQ-10)
+- `emits no extension links` — upstream supplies final routes (REQ-12)
+- `rewrites _assets svg to a base-path aware image` — asset image source (REQ-11)
 - `derives metadata from frontmatter only` — no generated tags or scores (REQ-7)

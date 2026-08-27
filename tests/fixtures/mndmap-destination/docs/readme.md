@@ -9,6 +9,6 @@ categories: [docs]
 
 # Readme
 
-Welcome to the fixture site. See [guide](guide.md) for details.
+Welcome to the fixture site. See [guide](/docs/guide) for details.
 
 ![diagram](../_assets/diagram.svg)

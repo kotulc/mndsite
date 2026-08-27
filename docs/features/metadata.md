@@ -21,7 +21,7 @@ Metadata is surfaced automatically on every page — no MDX imports required.
 All renderer metadata lives in the generated [site metadata](/specifications/metadata)
 (`public/site-meta.json`), which `theme.config.jsx` indexes by page URL.
 
-Source frontmatter is optional input. When present it fills node fields and is stripped from the output page; pages without it get a title from the first heading or the file slug. **mndsite does not synthesize tags, categories, or related links** — those come from frontmatter (typically filled by mndmap upstream) or from outbound links parsed from page content.
+Source frontmatter is optional input. When present it fills node fields and stays on the output page; pages without it get a title from the first heading or the file slug. **mndsite does not synthesize tags, categories, or related links** — those come from frontmatter (typically filled by mndmap upstream) or from outbound links parsed from page content.
 
 ## Displayed fields
 
