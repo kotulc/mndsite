@@ -122,13 +122,13 @@ scrollbar independent of the page's own scroll — that default is left in place
 
 ## Chips
 
-Extracted tags, categories, keywords, and filter/action chips render as rectangular
+Frontmatter tags, categories, and filter/action chips render as rectangular
 chips via the shared `Chip` component. Variants:
 
 | Class | Color | Used for |
 |-------|-------|---------|
 | `.chip.chip-categories` / `.chip-topics` / `.chip-concepts` / `.chip-entities` | One fixed color per standard group | `TagList` chips (every group except `keywords`) |
-| `.chip.chip-custom` | Fixed fallback color | Any `extract_concepts` group outside the standard four |
+| `.chip.chip-custom` | Fixed fallback color | Unknown tag groups outside the standard vocabulary |
 | `.chip.chip-tag` | Gray | Default Chip variant / keyword-style chips |
 | `.chip.chip-danger` | Red | Destructive-action chips (filters, per-entry actions) |
 

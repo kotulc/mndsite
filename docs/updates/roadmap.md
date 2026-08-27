@@ -4,17 +4,18 @@ date: 2026-03-08
 
 # Roadmap
 
-**Phase 1 — Core engine** *(complete)*
+**Phase 1 — Core renderer** *(complete)*
 - Next.js + Nextra docs theme
 - YAML config + CLI wrapper
 - Docker image, GHCR publishing
 - GitHub Pages deployment
-- Metadata display (tags, chips, sidebar metrics, reading time)
-- Per-page continuation feed
-- Nav ordering via config and frontmatter
+- Metadata display from supplied frontmatter
+- mndmap destination fixture contract
+- Nav ordering via `nav_order`
+- Removed local semantic enrichment (tags, embeddings, flatten)
 
 **Phase 2 — Custom components** *(planned)*
-- Semantic search integration
+- Semantic search integration (index from upstream pipeline)
 - Semantic theming pipeline
 - Reduced external dependencies
 

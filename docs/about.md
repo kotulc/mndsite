@@ -1,23 +1,45 @@
 # mndsite
 
-A portable static site generator for markdown — drop it into any CI/CD pipeline as a build step.
+A portable static site renderer for publication-ready Markdown and MDX — drop it into any CI/CD pipeline as a build step.
 
 ![Content pipeline](images/pipeline.svg)
 
 
 ## Purpose
 
-`mndsite` is a Next.js + Nextra-based site generator designed to work at the end of a markdown
-publishing pipeline. The engine is packaged as a Docker image: mount your content and a YAML
-config, get a `dist/` folder. Publishing is left to the caller.
+`mndsite` is a Next.js + Nextra-based static site renderer designed to work at the end of a markdown publishing pipeline. In the typical workflow, **mndmap** organizes source markdown, enriches frontmatter, rewrites links and assets, and emits a destination directory; `mndsite` mirrors that tree, builds navigation, and produces a `dist/` folder. Publishing is left to the caller.
 
-It is also designed to be configured as easily by an AI agent as by a human — a small YAML
-config file is all that's required to stand up a new site.
+Raw markdown directories also work when content is already publication-ready — the same YAML config and CLI apply.
+
+The engine is packaged as a Docker image: mount your content and config, get a static site.
+
+
+## Pipeline split
+
+```text
+source Markdown/MDX
+  → mndmap (optional — organization, metadata, assets, nav_order)
+  → destination directory + mndsite.yaml
+  → mndsite ingest + build
+  → dist/
+```
+
+| Concern | Owner |
+|---------|--------|
+| Folder/group organization, destination layout | **mndmap** |
+| Internal link and asset rewriting | **mndmap** |
+| Description, reading time, tags, related links (when generated) | **mndmap** / frontmatter |
+| Emitted `nav_order` and `content` paths | **mndmap** |
+| `.md` → `.mdx` adaptation, Nextra integration | **mndsite** |
+| Navigation UI, theme, metadata presentation | **mndsite** |
+| Static export, Docker packaging, deployment docs | **mndsite** |
+
+mndsite does not run embedding models, synthesize tags, score related pages, flatten directories, or apply a second organization policy.
 
 
 ## How It Works
 
-1. Write markdown content in any folder structure
+1. Prepare a content directory (from mndmap or your own markdown tree)
 2. Provide an `mndsite.yaml` config pointing at that content
 3. Run the CLI or Docker container to ingest and build
 4. A fully-built static site appears in your output directory
@@ -28,32 +50,34 @@ or browse the [Features](/features) section for the full capability overview.
 
 ## Features
 
-- **Markdown → MDX** — automatic conversion, any folder structure
-- **Images** — copied and path-rewritten automatically; corrupt EXIF data stripped
-- **Reading time** — estimated and injected into every page's frontmatter
-- **Tags and categories** — rendered as pill chips below each title and in the PageInfo panel
-- **Related links** — outbound + related pages in the ToC sidebar (and mobile Contents panel)
-- **Nav ordering** — configure page and folder order via `nav_order` in YAML or `order:` in frontmatter
-- **Per-page feed** — scroll to the bottom of any page to load the next one inline
+- **Markdown → MDX** — automatic conversion; mirrors any folder structure without regrouping
+- **MDX and inline SVG** — publication-ready MDX and diagrams preserved from upstream
+- **`_assets/` handoff** — static assets copied to `public/_assets/` with path rewriting
+- **Images** — legacy `images/` subtrees copied and path-rewritten; corrupt EXIF stripped
+- **Reading time** — displayed when supplied in frontmatter
+- **Tags and categories** — rendered from frontmatter as pill chips below each title
+- **Related links** — outbound links and frontmatter `related` entries in the ToC sidebar
+- **Nav ordering** — sibling order via `nav_order` from mndmap or YAML
+- **Custom components** — optional consumer React components synced each build
 - **Theme toggle** — light / dark / system toggle in the navbar
 - **GitHub header icon** — circular GitHub repo link, auto-shown from `repo_url`
-- **YAML config** — single file drives the entire build
+- **YAML config** — single file drives rendering and deployment
 - **Docker** — packaged as a container for use in any CI/CD pipeline
 
 
 ## Roadmap
 
-**Phase 1 — Core engine** *(complete)*
+**Phase 1 — Core renderer** *(complete)*
 - Next.js + Nextra docs theme
 - YAML config + CLI wrapper
 - Docker image, GHCR publishing
 - GitHub Pages deployment
-- Metadata display (tags, chips, sidebar metrics, reading time)
-- Per-page continuation feed
-- Nav ordering via config and frontmatter
+- Metadata display from supplied frontmatter
+- mndmap destination fixture contract
+- Nav ordering via `nav_order`
 
 **Phase 2 — Custom components** *(planned)*
-- Semantic search integration
+- Semantic search integration (signals from upstream pipeline)
 - Semantic theming pipeline
 - Reduced external dependencies
 

@@ -1,5 +1,7 @@
 # mndsite — Implementation Plan
 
+> **Historical document.** This archive describes earlier plans and experiments, including local semantic tagging, `flatten` directory feeds, and per-page continuation feeds — all removed from mndsite. For the current mndmap/mndsite split and workflow, see [About](/about), [Content Pipeline](/features/content-pipeline), and `plan.md` in the repository root.
+
 Goal: go from a blank repo to a fully functional static site that renders the `examples/frww`
 content with preview and publish capabilities. Intelligence features (search, theming, logo)
 are deferred to later phases.

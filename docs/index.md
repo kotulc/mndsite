@@ -1,8 +1,10 @@
 ---
 title: mndsite
-description: Static documentation sites from plain markdown
+description: Static site renderer for publication-ready Markdown and MDX
 ---
 
 # mndsite
 
-Static documentation sites from plain markdown. Start with [About](/about) or [Getting Started](/getting-started).
+Static documentation sites from markdown. In the full pipeline, **mndmap** organizes and enriches source content; **mndsite** mirrors that destination and builds the static site.
+
+Start with [About](/about), [Getting Started](/getting-started), or the [Content Pipeline](/features/content-pipeline) overview.

@@ -20,6 +20,24 @@ related:
 mndsite outputs a static `dist/` directory that can be deployed to any static host.
 The project ships a GitHub Pages workflow; Docker enables deployment from any CI/CD system.
 
+## Full pipeline in CI
+
+When content passes through mndmap first, chain the builds in your workflow:
+
+```yaml
+- name: Organize and enrich content
+  run: mndmap build --config mndmap.yaml
+
+- name: Build static site
+  run: |
+    docker run --rm \
+      -v ${{ github.workspace }}:/workspace \
+      ghcr.io/kotulc/mndsite:latest \
+      build --config /workspace/destination/mndsite.yaml
+```
+
+For standalone repos that commit markdown directly to `docs/`, skip the mndmap step and point mndsite at `./docs` (the default).
+
 ## GitHub Pages
 
 The included workflow (`.github/workflows/deploy.yml`) runs on every push to `main`
@@ -27,10 +45,9 @@ and uses the standard `actions/deploy-pages` two-job pattern.
 
 **Workflow overview:**
 1. Checks out the repository and installs dependencies (`npm ci`)
-2. Runs ingest against the configured content source
-3. Runs `npm run build` — Next.js static export → `dist/`
-4. Uploads `dist/` as a Pages artifact
-5. A separate deploy job publishes the artifact to GitHub Pages
+2. Runs `node scripts/cli.js build --config mndsite.yaml` (ingest + static export → `dist/`)
+3. Uploads `dist/` as a Pages artifact
+4. A separate deploy job publishes the artifact to GitHub Pages
 
 ### One-time setup
 
@@ -63,7 +80,7 @@ time from the Actions tab without pushing a new commit.
 ## Docker
 
 The Docker image runs the full build pipeline in a container. Mount your workspace
-and the container writes to the output path in your `mndsite.yaml`.
+(mndmap destination or standalone content) and the container writes to the output path in your `mndsite.yaml`.
 
 ```bash
 # Linux / macOS
@@ -78,6 +95,8 @@ docker run --rm `
   ghcr.io/kotulc/mndsite:latest `
   build --config /workspace/mndsite.yaml
 ```
+
+The image contains no embedding model or transformer runtime — it expects publication-ready content.
 
 ### Using Docker in CI/CD
 
@@ -111,6 +130,6 @@ This triggers `.github/workflows/publish-image.yml`, which builds and pushes
 ## Local build
 
 ```bash
-npm run build      # production build → dist/
+node scripts/cli.js build --config mndsite.yaml
 npm run preview    # serve dist/ locally
 ```

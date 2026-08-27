@@ -4,68 +4,108 @@ categories:
   - features
 tags:
   - ingest
-  - images
+  - mndmap
   - routing
 readability: 72
-steps: 8
+steps: 7
 related:
   - title: Metadata Display
     url: /features/metadata
   - title: Getting Started
     url: /getting-started
+  - title: Configuration
+    url: /configuration
 ---
 
 # Content Pipeline
 
-The content pipeline (`scripts/ingest.js`) mirrors a markdown source tree into
-the Next.js `pages/` directory. Run it directly:
+The content pipeline (`scripts/ingest.js`) mirrors a publication-ready Markdown/MDX tree into the Next.js `pages/` directory and writes renderer metadata to `public/site-meta.json`. It is the **mndsite** stage of the publishing workflow — organization and enrichment happen upstream in **mndmap**.
 
-    npm run ingest -- path/to/source
+## Pipeline workflow
 
-Or use the CLI for a config-driven build:
+```text
+source Markdown/MDX
+  → mndmap
+      • parse and organize folders/groups
+      • rewrite internal links and local assets
+      • fill description, reading_time (when missing)
+      • emit destination/ + mndsite.yaml (content, nav_order)
+  → mndsite ingest
+      • mirror routes without regrouping
+      • copy _assets/ and images/
+      • derive site-meta.json from frontmatter
+      • generate _meta.json navigation
+  → mndsite build (Next.js static export)
+  → dist/
+```
 
-    node scripts/cli.js build --config mndsite.yaml
+### mndmap owns
 
+- Source parsing and structural identity
+- File, folder, group, and section organization
+- Destination layout and sibling order (`nav_order`)
+- Internal link and MDX reference rewriting
+- Local asset collection into `_assets/`
+- Inline mndflow diagram SVG
+- Future Taggly metadata enrichment
 
-## What the pipeline does
+### mndsite owns
 
-1. **Converts `.md` → `.mdx`** — any file named `home.md` or `index.md` becomes
-   `index.mdx` (the section's landing page). All other files keep their slug.
-   If no index file exists at a level, the first sorted page is used automatically
-   (a transparent redirect is generated so the directory URL resolves correctly).
+- `.md` → `.mdx` framework adaptation (no semantic content changes)
+- Mirroring the route tree exactly as supplied
+- Copying `_assets/` to `public/_assets/` with path rewriting
+- Legacy `images/` subtree copy and path rewrite
+- Renderer metadata extraction (frontmatter + link parsing)
+- Navigation `_meta.json` from directory structure + `nav_order`
+- Static build and export
 
-2. **Copies images** — an `images/` folder next to any `.md` files is copied to
-   `public/images/<relative-path>/`.
+mndsite does **not** extract keywords, run embeddings, flatten directories, score related pages, or rewrite links semantically.
 
-3. **Rewrites image refs** — `](images/photo.jpg)` becomes `](/images/rel/path/photo.jpg)`
-   so images resolve correctly from any URL depth.
+## Running ingest
 
-4. **Strips corrupt EXIF** — JPEG files with broken EXIF segments are cleaned
-   automatically (`scripts/fix-exif.js`).
+Directly (uses root `mndsite.yaml` or `site.config.js` defaults):
 
-5. **Injects reading time** — word count ÷ 200, minimum 1 minute, written into
-   the page's frontmatter as `reading_time`.
+```bash
+npm run ingest              # default: docs/
+npm run ingest -- path/to/destination
+```
 
-6. **Ensures h1 heading** — if the copied page body has no `# Heading`, one is prepended
-   using the frontmatter `title` (falling back to the file slug). This is required because
-   page metadata (date, reading time, category and tag chips) is injected immediately after
-   the h1 via a component override — without a heading they would not render.
+Config-driven build (matches Docker and CI):
 
-7. **Generates `_meta.json`** — navigation ordering at every directory level.
-   Sort order:
-   - `nav_order` array in `mndsite.yaml` pins listed pages first in declared order
-   - Remaining pages: newest-first if any have a `date` field, alphabetical otherwise
+```bash
+node scripts/cli.js build --config mndsite.yaml
+```
 
-8. **Flattens directories** — directories listed in `mndsite.yaml` `flatten` field
-   are rendered as a single scrolling inline feed instead of individual navigable pages.
-   A `public/dir-feeds/<name>.json` file is written with each page's full content,
-   and the directory's `index.mdx` uses the `DirFeed` component to render them inline.
-   Individual page URLs remain deep-linkable; non-index entries are hidden from the sidebar.
+## What ingest does
+
+1. **Mirrors `.md` and `.mdx`** — any file named `home.md`, `index.md`, or `index.mdx` becomes `index.mdx` (the section landing page). All other files keep their slug. Routes match the source tree; nothing is flattened or regrouped.
+
+2. **Copies `_assets/`** — the content-root `_assets/` tree is copied to `public/_assets/` (mndmap handoff contract). Relative `../_assets/` and `./_assets/` references in markdown and MDX imports are rewritten for static export.
+
+3. **Copies legacy `images/`** — an `images/` folder next to markdown files is copied to `public/images/<relative-path>/`.
+
+4. **Rewrites image refs** — `](images/photo.jpg)` becomes `](/images/rel/path/photo.jpg)` for legacy standalone content.
+
+5. **Preserves inline SVG** — SVG blocks from upstream are kept; braces inside `<style>` are escaped for MDX safety.
+
+6. **Strips frontmatter from pages** — metadata lives in `site-meta.json`, not in output MDX.
+
+7. **Generates `_meta.json`** — navigation labels and sibling order at every directory level:
+   - `nav_order` in `mndsite.yaml` pins listed slugs first in declared order
+   - Remaining siblings sort alphabetically by slug
+   - Directory labels come from the index page title, then a slug-to-title fallback
+
+8. **Writes `site-meta.json`** — flat page list derived from frontmatter and content (tags, related, links, word count, sections). No local tagging or embedding step.
 
 ## Source layout rules
 
-- Any folder structure is valid — depth is unlimited; no index page is required
-- `home.md` or `index.md` at any level → that section's landing page
-- No index file → first sorted page at that level becomes the landing page
-- `images/` next to `.md` files → copied and path-rewritten automatically
-- Root-level pages with `date` fields are treated as site pages, not blog posts
+- The configured content root is the site route tree
+- `index.md`, `index.mdx`, or `home.md` at any level → that section's landing page
+- mndsite does not create redirect indexes or synthesize landing pages — mndmap emits index documents for generated folders/groups
+- `_assets/` at the content root → copied to `public/_assets/`
+- `images/` next to markdown → copied and path-rewritten for legacy layouts
+- Internal links should already resolve in the supplied content (rewritten by mndmap when used)
+
+## Cross-project contract
+
+The repository includes an mndmap destination fixture at `tests/fixtures/mndmap-destination/` and contract tests in `tests/build/mndmap-fixture.test.js`. These verify route preservation, `_assets/` copying, and frontmatter-only metadata derivation.
