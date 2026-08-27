@@ -1,4 +1,6 @@
-# mdsite — Technical Specification
+# mndsite — Technical Specification
+
+> **Historical document.** This spec predates the mndmap/mndsite simplification. For the current renderer contract, pipeline split, and configuration, see `README.md`, `plan.md`, and `docs/`.
 
 
 ## Development Philosophy

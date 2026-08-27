@@ -1,6 +1,6 @@
 {
-  "name": "mdsite",
-  "install": "npm ci && node scripts/cli.js build --config mdsite.yaml",
+  "name": "mndsite",
+  "install": "npm ci && node scripts/cli.js build --config mndsite.yaml",
   "terminals": [
     {
       "name": "dev",
