@@ -32,7 +32,6 @@ The CLI reads the YAML at build time and generates the internal `site.config.js`
 | `repo_url` | string | `""` | GitHub repo link shown as an icon in the header; leave empty to hide |
 | `feed_url` | string | `""` | Section slug linked from the navbar feed icon |
 | `footer` | string | `""` | Custom footer credits text; empty keeps "Powered by mndsite and Nextra" |
-| `theme_toggle` | string | `"navbar"` | Where the light/dark toggle appears: `"navbar"` or `"sidebar"` |
 | `theme.color` | string | `"default"` | Named accent palette — see [Theme](#theme) below |
 | `theme.typeset` | string | `"sans"` | Named body font stack — see [Theme](#theme) below |
 | `theme.navbar` | string | `""` | Navbar background: `"primary"` (theme tint) or any CSS color |
@@ -43,7 +42,6 @@ The CLI reads the YAML at build time and generates the internal `site.config.js`
 | `collections` | object | `{ default: all }` | Named facet presets; `default` names the active one |
 | `sidebar.views` | list | `[tree]` | Left tree views: `tree` plus any facet name |
 | `display` | object | see below | Rendered elements per zone, in display order — see [Display](#display) |
-| `limits` | object | `header_chips: 8`, `related: 6` | Caps on chips and Related entries |
 | `edit` | object | see below | "Edit this page" targets — **only used when `repo_url` is set** |
 | `content` | path | `./docs` | Source markdown directory (resolved relative to this file) |
 | `output` | path | `./dist` | Output directory for the built site (resolved relative to this file) |
@@ -74,6 +72,8 @@ These keys are **rejected at load time** with migration guidance:
 |-----|---------|
 | `meta` (tagging, related-link limits) | **mndmap** or frontmatter |
 | `flatten` (inline directory feeds) | **mndmap** organization |
+| `theme_toggle` (navbar/sidebar) | `display.navbar` — include or omit `theme` |
+| `limits` (chip and Related caps) | Removed — content renders as supplied |
 | `toc` (boolean) | `display.toc` — drop `sections` |
 | `reading_time` (boolean) | `display.header` — drop `reading_time` |
 
@@ -146,10 +146,10 @@ display:
   info: [description]                    # Info panel contents
   toc: [sections, related, edit]         # right sidebar, top to bottom
   navbar: [theme, feed, github]          # navbar icons, left to right
-limits:
-  header_chips: 8
-  related: 6
 ```
+
+`theme` in `display.navbar` is the only switch for the light/dark toggle — there is no
+sidebar placement. Chips and Related entries render as supplied; nothing is truncated.
 
 `header` also accepts any facet name. Listing a facet there places its chips at that
 position whatever its `ui` — so `header: [date, version, tags]` shows the version value

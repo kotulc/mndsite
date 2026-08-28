@@ -55,7 +55,6 @@ function PageMeta() {
   const meta = use_page_meta()
   const header = siteConfig.display.header
   const chips = facet_chips(meta.facets, header_facet_names(header))
-    .slice(0, siteConfig.limits.header_chips)
 
   return (
     <>
@@ -142,12 +141,12 @@ export default {
   logo: <span style={{ fontWeight: 600 }}>{siteConfig.title}</span>,
   primaryHue: siteConfig.theme.hue,
   primarySaturation: siteConfig.theme.saturation,
-  darkMode: siteConfig.theme_toggle !== 'navbar',
+  darkMode: false,   // the navbar toggle is ours; Nextra's sidebar copy is never used
   navbar: {
     extraContent: (
       <div className="navbar-icons">
         {siteConfig.display.navbar.map(item => {
-          if (item === 'theme') return siteConfig.theme_toggle === 'navbar' ? <ThemeToggle key={item} /> : null
+          if (item === 'theme') return <ThemeToggle key={item} />
           if (item === 'feed') return <FeedLink key={item} />
           if (item === 'github') return <GitHubLink key={item} />
           return null

@@ -35,7 +35,6 @@ theme:
   typeset: sans                # sans, serif, humanist, geometric, mono
   navbar: ""                   # "primary" or any CSS color
   footer: ""                   # "primary" or any CSS color
-theme_toggle: navbar           # navbar | sidebar
 
 # ---- Frontmatter keys (built) ---------------------------------------------
 fields:
@@ -87,9 +86,7 @@ display:
   info: [description]                    # Info panel contents
   toc: [sections, related, edit]         # right sidebar, top to bottom
   navbar: [theme, feed, github]          # navbar icons; "search" joins when stage 4 lands
-limits:
-  header_chips: 8              # chips shown under the title
-  related: 6                   # entries in the Related list
+                                         # "theme" is the only theme-toggle switch
 
 # ---- Search (planned) -----------------------------------------------------
 search:
@@ -129,6 +126,7 @@ One mechanism: omit the element from its `display` list. No feature has a second
 | Related list | `related` from `display.toc` |
 | Edit-this-page link | `edit` from `display.toc`, or clear `repo_url` (which disables edit links entirely) |
 | Search | `search.enabled: false`, or `search` from `display.navbar` |
+| Theme toggle | `theme` from `display.navbar` |
 | Facet tabs in the left tree | leave `sidebar.views` as `[tree]` |
 
 Reordering is the same edit: change list order.
@@ -158,6 +156,8 @@ Reordering is the same edit: change list order.
 | `meta`, `flatten` config keys | done | Rejected at load with migration guidance |
 | `page.tags` in `site-meta.json` | done | Replaced by `facets` + `identity` |
 | `toc` and `reading_time` booleans | done | Superseded by `display` lists; rejected at load with migration guidance |
+| `theme_toggle` (and the sidebar toggle) | done | `display.navbar` is the only switch; sidebar placement dropped |
+| `limits` (chip and Related caps) | done | Counts are authored frontmatter — truncating hides what the author wrote |
 | `_assets/` module imports in MDX | done | `public/` is outside the module graph; ingest warns instead |
 
 ## Kept
@@ -197,7 +197,7 @@ against the built HTML. It reaches a reader only through a mapping:
 ## Build order
 
 1. **Facets and metadata** — done: config schema, frontmatter projection, generated chip colors.
-2. **Display lists** — done: `display` and `limits` replace the booleans and hardcoded counts.
+2. **Display lists** — done: `display` replaces the booleans; `limits` and `theme_toggle` cut.
 3. **Left tree filtering** — `sidebar.views` tabs, chips as filters, query params, build-time default collection.
 4. **Version rollup** — `fields.identity` + `rollup`, in-place version switching.
 5. **Search** — index emitted at ingest, `/search` route rendering results in the page body.

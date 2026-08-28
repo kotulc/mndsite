@@ -4,8 +4,6 @@ repo_url: https://github.com/kotulc/mndsite
 feed_url: updates
 footer: ""
 
-theme_toggle: navbar
-
 theme:
   color: default
   typeset: sans
@@ -66,10 +64,6 @@ display:
   info: [description]
   toc: [sections, related, edit]
   navbar: [theme, feed, github]
-
-limits:
-  header_chips: 8
-  related: 6
 
 # "Edit this page" targets. Used only when repo_url is set; path defaults to the content
 # directory relative to this file, and url defaults to a template for the repo_url host.

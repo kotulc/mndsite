@@ -15,7 +15,6 @@ jest.mock('remark-gfm', () => ({ __esModule: true, default: () => {} }))
 jest.mock('../../site.config', () => ({
   display: { header: ['date', 'reading_time', 'facets'] },
   facets: { categories: { field: 'categories', label: 'Category', ui: 'chips' } },
-  limits: { header_chips: 8 },
 }))
 
 const ENTRIES = [{

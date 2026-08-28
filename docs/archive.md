@@ -1,4 +1,11 @@
-# mndsite — Implementation Plan
+---
+title: Archive
+description: Earlier plans and experiments, kept for history
+categories:
+  - reference
+---
+
+# Archive: Implementation Plan
 
 > **Historical document.** This archive describes earlier plans and experiments, including local semantic tagging, `flatten` directory feeds, and per-page continuation feeds — all removed from mndsite. For the current mndmap/mndsite split and workflow, see [About](/about), [Content Pipeline](/features/content-pipeline), and the [Simplification Plan](/updates/simplification).
 

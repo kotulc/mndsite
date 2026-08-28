@@ -97,7 +97,7 @@ export default function MetaSidebar() {
 
   const order = siteConfig.display.toc.filter(item => item === 'related' || item === 'edit')
   const items = order.includes('related')
-    ? related_items(page).slice(0, siteConfig.limits.related)
+    ? related_items(page)
     : []
   const has_edit = order.includes('edit') && !!siteConfig.repo_url
   if (!items.length && !has_edit) return null

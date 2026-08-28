@@ -9,7 +9,6 @@ jest.mock('../../components/SectionContext', () => ({
 jest.mock('../../components/MetaSidebar', () => () => <div data-testid="meta-sidebar" />)
 jest.mock('../../site.config', () => ({
   display: { toc: ['sections', 'related', 'edit'] },
-  limits: { related: 6 },
 }))
 jest.mock('next/router', () => ({
   useRouter: () => ({ events: { on: jest.fn(), off: jest.fn() } }),

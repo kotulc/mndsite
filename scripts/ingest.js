@@ -7,6 +7,7 @@
  * - Preserves frontmatter on output pages; renderer metadata mirrors to site-meta.json
  * - Copies _assets/ and images/ subtrees to public/
  * - Auto-generates _meta.json at each level; sort order: nav_order > alpha
+ * - Generates a redirect index.mdx for any directory that supplies no landing page
  *
  * Does not extract keywords, run embeddings, flatten directories, or rewrite links.
  *
@@ -72,9 +73,12 @@ function check_refs(body, url) {
 }
 
 
-function first_h1(content) {
-  const match = content.replace(/```[\s\S]*?```/g, '').match(/^#\s+(.+)$/m)
-  return match ? match[1].trim() : ''
+function fallback_title(src_entry, rel, slug, base) {
+  /** Title when frontmatter supplies none: the filename stem, or for a directory landing
+   *  page the directory it titles — the site title at the content root. Never the H1. */
+  if (slug !== 'index') return slug_to_title(base)
+  if (!rel) return get_config().title || slug_to_title(base)
+  return slug_to_title(path.basename(path.dirname(src_entry)))
 }
 
 
@@ -157,6 +161,32 @@ function sort_entries(nodes, rel) {
 }
 
 
+function auto_index(dest_dir, sorted, rel) {
+  /** Generate a redirect index.mdx to the first leaf page, so a directory that supplies no
+   *  landing page still resolves. AutoRedirect handles BASE_PATH. No-op when one exists. */
+  if (fs.existsSync(path.join(dest_dir, 'index.mdx'))) return null
+
+  const first = sorted.find(n => fs.existsSync(path.join(dest_dir, `${n.slug}.mdx`)))
+  if (!first) return null
+
+  const url = rel ? `/${rel}/${first.slug}/` : `/${first.slug}/`
+  const import_path = '../'.repeat(rel ? rel.split('/').length + 1 : 1) + 'components/AutoRedirect'
+
+  fs.writeFileSync(path.join(dest_dir, 'index.mdx'), [
+    '---',
+    `title: ${first.name}`,
+    'auto_redirect: true',
+    '---',
+    '',
+    `import AutoRedirect from '${import_path}'`,
+    '',
+    `<AutoRedirect to="${url}" />`,
+  ].join('\n') + '\n')
+
+  return first
+}
+
+
 function write_meta(dest_path, entries) {
   const lines = entries.map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)}`)
   fs.writeFileSync(dest_path, `{\n${lines.join(',\n')}\n}\n`)
@@ -209,7 +239,7 @@ function ingest_page(src_entry, dest_dir, rel, slug, base, img_url) {
 
   const config = get_config()
   const fields = config.fields || {}
-  const title = meta.field_value(fm, fields.title || 'title') || first_h1(body) || slug_to_title(base)
+  const title = meta.field_value(fm, fields.title || 'title') || fallback_title(src_entry, rel, slug, base)
   const parts = [...(rel ? rel.split('/') : []), ...(slug === 'index' ? [] : [slug])]
   const url   = '/' + parts.join('/') || '/'
   check_refs(body, url)
@@ -259,11 +289,14 @@ function ingest_dir(src_dir, dest_dir, rel) {
     })
   }
 
-  const sorted = sort_entries(nav_nodes, rel)
-  const index  = sorted.find(n => n.slug === 'index')
+  const sorted    = sort_entries(nav_nodes, rel)
+  const generated = auto_index(dest_dir, sorted, rel)
+  const index     = sorted.find(n => n.slug === 'index')
   const title  = index ? index.name : slug_to_title(path.basename(src_dir))
 
+  // A generated index only redirects — hide it so it does not duplicate its target's entry.
   const meta_pairs = sorted.map(n => [n.slug, n.name])
+  if (generated) meta_pairs.unshift(['index', { display: 'hidden' }])
   write_meta(path.join(dest_dir, '_meta.json'), meta_pairs)
 
   return { pages, title }
@@ -342,7 +375,7 @@ async function run(config) {
 
 
 module.exports = {
-  parse_fm, strip_fm, fm_block, first_h1, sort_entries, extract_content,
+  parse_fm, strip_fm, fm_block, fallback_title, auto_index, sort_entries, extract_content,
   norm_path, slug_to_title, sync_assets, sync_components, run,
 }
 

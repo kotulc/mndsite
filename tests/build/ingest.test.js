@@ -106,7 +106,12 @@ describe('pages output ordering', () => {
 
   test('test_pages_updates_meta_follows_nav_order', () => {
     const meta = JSON.parse(fs.readFileSync(path.join(PAGES, 'updates', '_meta.json'), 'utf8'))
-    expect(Object.keys(meta)[0]).toBe('welcome')
+    expect(Object.keys(meta).filter(k => k !== 'index')[0]).toBe('welcome')
+  })
+
+  test('test_generated_index_is_hidden_from_nav', () => {
+    const meta = JSON.parse(fs.readFileSync(path.join(PAGES, 'updates', '_meta.json'), 'utf8'))
+    expect(meta.index).toEqual({ display: 'hidden' })
   })
 })
 

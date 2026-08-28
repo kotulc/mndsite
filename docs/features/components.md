@@ -67,7 +67,7 @@ Circular GitHub mark icon in the navbar. Returns `null` when `repo_url` is empty
 ### ThemeToggle
 
 Cycles through system → light → dark using `useTheme()` from `next-themes`.
-Shown in the navbar when `theme_toggle: navbar` in `mndsite.yaml`; otherwise
+Shown in the navbar when `display.navbar` lists `theme` in `mndsite.yaml`; otherwise
 Nextra's built-in sidebar toggle is used.
 
 ### FeedLink

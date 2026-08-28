@@ -5,7 +5,6 @@ module.exports = {
   feed_url: "updates",
   description: "Static documentation sites from plain markdown",
   footer: "",
-  theme_toggle: "navbar",
   theme: {"color":"default","typeset":"sans","navbar":"","footer":"","hue":{"light":212,"dark":204},"saturation":100,"font_stack":""},
   nav_order: {"":["about","getting-started","configuration"],"features":["overview","components"],"specifications":["format"],"updates":["welcome"]},
   fields: {"title":"title","description":["description","desc"],"date":"date","reading_time":"reading_time","related":"related","identity":"doc_id"},
@@ -13,6 +12,5 @@ module.exports = {
   collections: {"default":"all"},
   sidebar: {"views":["tree"]},
   display: {"title_row":["info","contents"],"header":["date","reading_time","facets"],"info":["description"],"toc":["sections","related","edit"],"navbar":["theme","feed","github"]},
-  limits: {"header_chips":8,"related":6},
   edit: {"branch":"main","path":"docs","url":"{repo_url}/edit/{branch}/{file}"},
 }

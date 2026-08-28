@@ -107,9 +107,6 @@ repo_url: ""                 # shows a GitHub icon in the navbar when set
 feed_url: ""                 # slug of the section used as the per-page feed
 footer: ""                   # custom footer credits; empty keeps the default
 
-# Optional — layout
-theme_toggle: navbar         # "navbar" or "sidebar"
-
 # Optional — theme presets (see docs/configuration.md for all values)
 theme:
   color: default             # accent palette: default, slate, blue, emerald, rose, ...
@@ -149,9 +146,6 @@ display:
   info: [description]                    # Info panel contents
   toc: [sections, related, edit]         # right sidebar, top to bottom
   navbar: [theme, feed, github]          # navbar icons, left to right
-limits:
-  header_chips: 8              # chips shown under the title
-  related: 6                   # entries in the Related list
 
 # Optional — "Edit this page" targets; used ONLY when repo_url is set
 edit:

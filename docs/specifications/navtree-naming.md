@@ -13,9 +13,11 @@ In a mndmap workflow, folder labels typically come from generated landing-page t
 
 ## Requirements
 
-1. REQ-1: A page's navtree label is its `title` frontmatter value when present; otherwise `slug_to_title(filename_stem)` (e.g., `my-page.md` → "My Page", `home.md` → "Home")
-2. REQ-2: `home.md` and `index.md` both produce `index.mdx`, but their title fallback derives from the original filename stem — `home.md` → "Home", `index.md` → "Index"
-3. REQ-3: A directory's navtree label is its index page's title; when no index page exists it falls back to `slug_to_title(directory_name)`
+1. REQ-1: A page's navtree label is its `title` frontmatter value when present; otherwise `slug_to_title(filename_stem)` (e.g., `my-page.md` → "My Page"). Page headings are never read — frontmatter is the only override
+2. REQ-2: `home.md` and `index.md` both produce `index.mdx`; without a frontmatter title they take the name of the directory they land, and the site title at the content root
+3. REQ-3: A directory's navtree label is its index page's title; when no index page exists it falls back to `slug_to_title(directory_name)` — the same value REQ-2 gives an untitled index page
+4. REQ-4: A directory with no index document gets a generated redirect `index.mdx` pointing at its first sorted page, so every directory route resolves without the author creating a landing page
+5. REQ-5: A generated index is marked `display: hidden` in `_meta.json`, so it does not appear as a second nav entry beside the page it redirects to
 
 ## Test Cases
 

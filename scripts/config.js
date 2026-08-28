@@ -16,6 +16,8 @@ const REMOVED_KEYS = {
   meta: 'Move tagging and related-link configuration upstream to mndmap or frontmatter.',
   flatten: 'Move directory organization upstream to mndmap.',
   toc: "Use display.toc — remove 'sections' to hide the section list.",
+  theme_toggle: "Use display.navbar — include or omit 'theme'; the sidebar toggle is gone.",
+  limits: 'Removed — chips and Related entries render as supplied.',
   reading_time: "Use display.header — remove 'reading_time' to hide it.",
 }
 
@@ -47,7 +49,6 @@ const DEFAULTS = {
   feed_url:       '',
   description:    '',
   footer:         '',
-  theme_toggle:   'navbar',
   theme:          { color: 'default', typeset: 'sans', navbar: '', footer: '' },
   display: {
     title_row: ['info', 'contents'],
@@ -56,7 +57,6 @@ const DEFAULTS = {
     toc:       ['sections', 'related', 'edit'],
     navbar:    ['theme', 'feed', 'github'],
   },
-  limits:         { header_chips: 8, related: 6 },
   edit:           { branch: 'main', path: null, url: '' },
   nav_order:      {},
   fields: {
@@ -192,17 +192,6 @@ function resolve_display(raw, facets) {
 }
 
 
-function resolve_limits(raw) {
-  const cfg = { ...DEFAULTS.limits, ...(raw || {}) }
-  for (const [key, value] of Object.entries(cfg)) {
-    if (!Number.isInteger(value) || value < 0) {
-      throw new Error(`mndsite.yaml: limits.${key} must be a non-negative integer`)
-    }
-  }
-  return cfg
-}
-
-
 function content_in_repo(config_dir, content_dir) {
   /** Repo-relative location of the content root, assuming mndsite.yaml sits at the repo
    *  root. Anything outside that directory is unrepresentable — fall back to the root. */
@@ -244,7 +233,6 @@ function load_config(yaml_path) {
   cfg.collections = resolve_collections(raw.collections, cfg.facets)
   cfg.sidebar     = resolve_sidebar(raw.sidebar, cfg.facets)
   cfg.display     = resolve_display(raw.display, cfg.facets)
-  cfg.limits      = resolve_limits(raw.limits)
 
   cfg.content = path.resolve(dir, cfg.content)
   cfg.output  = path.resolve(dir, cfg.output)
@@ -259,9 +247,9 @@ function load_config(yaml_path) {
 function write_site_config(config, dest_dir) {
   const dir  = dest_dir || path.join(__dirname, '..')
   const keys = [
-    'title', 'repo_url', 'feed_url', 'description', 'footer', 'theme_toggle',
+    'title', 'repo_url', 'feed_url', 'description', 'footer',
     'theme', 'nav_order', 'fields', 'facets', 'collections', 'sidebar',
-    'display', 'limits', 'edit',
+    'display', 'edit',
   ]
   const values = Object.fromEntries(keys.map(k => [k, config[k]]))
   const body = Object.entries(values)

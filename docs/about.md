@@ -1,4 +1,19 @@
-# mndsite
+---
+title: About
+description: What mndsite is, how it fits the mndmap pipeline, and what it does not do
+categories:
+  - reference
+tags:
+  - overview
+  - pipeline
+related:
+  - title: Getting Started
+    url: /getting-started
+  - title: Content Pipeline
+    url: /features/content-pipeline
+---
+
+# About mndsite
 
 A portable static site renderer for publication-ready Markdown and MDX — drop it into any CI/CD pipeline as a build step.
 

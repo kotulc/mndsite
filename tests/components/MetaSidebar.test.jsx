@@ -7,7 +7,6 @@ jest.mock('../../components/SectionContext', () => ({ useSection: jest.fn(), fin
 jest.mock('../../site.config', () => ({
   repo_url: 'https://github.com/x/y',
   display: { toc: ['sections', 'related', 'edit'] },
-  limits: { related: 6 },
   edit: { branch: 'main', path: 'docs', url: '{repo_url}/edit/{branch}/{file}' },
 }))
 jest.mock('next/link', () => ({ __esModule: true, default: ({ href, children }) => <a href={href}>{children}</a> }))
