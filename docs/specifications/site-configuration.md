@@ -35,7 +35,8 @@ At build time the CLI generates `site.config.js` from the YAML; both the ingest 
 | `flatten` | Rejected — move directory organization to mndmap |
 | `toc`, `reading_time` | Rejected — use `display.toc` / `display.header` |
 | `theme_toggle` | Rejected — use `display.navbar`; the sidebar toggle is gone |
-| `limits` | Rejected — chips and Related entries render as supplied |
+| `limits` | Rejected — content renders as supplied |
+| `display.title_row`, `display.info` | Rejected — use `display.contents` and `display.toc` |
 
 Site sub-path deployment uses the `BASE_PATH` environment variable at build time
 (handled by Next.js `basePath`), not a YAML field.

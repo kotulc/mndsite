@@ -26,6 +26,6 @@ mndsite →  mirror, present, export    →  dist/
 ```
 
 - [Content Pipeline](content-pipeline) — mndmap/mndsite split and ingest behavior
-- [Metadata Display](metadata) — dates, reading time, tags, and categories from frontmatter
+- [Metadata Display](metadata) — dates, facets, sidebar, and Contents panel from config + frontmatter
 - [Styling](styling) — custom CSS, Nextra theme variables, layout structure
 - [Deployment](deployment) — GitHub Actions, Docker, and CI/CD workflows

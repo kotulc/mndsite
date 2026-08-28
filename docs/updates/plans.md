@@ -28,7 +28,8 @@ Phase 2 focuses on intelligence features that consume signals from the upstream 
 
 - Markdown/MDX mirroring with any source folder structure
 - `_assets/` and legacy `images/` copy with path rewriting
-- Metadata display from frontmatter (tags, categories, reading time, related links)
+- Metadata display from configured `fields`, `facets`, and `display`
+- Breadcrumbs, PageContents sidebar, and inline Contents panel
 - Nav ordering via `nav_order` (emitted by mndmap or authored in YAML)
 - Light / dark / system theme toggle in the navbar
 - GitHub repo icon in the navbar, driven by `repo_url` in config

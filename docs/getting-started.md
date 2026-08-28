@@ -66,6 +66,16 @@ content: ./docs
 output: ./dist
 nav_order:
   "": [about, getting-started]
+fields:
+  title: title
+  description: [description, desc]
+  date: date
+facets:
+  categories: { field: categories, label: Category, color: blue }
+  tags:       { field: tags,       label: Tag,      color: violet }
+display:
+  header: [date, reading_time, facets]
+  toc: [description, sections, related, edit]
 ```
 
 If deploying to a subpath (e.g. GitHub Pages project repo), set `BASE_PATH=/repo-name`
@@ -94,8 +104,9 @@ docs/
 node scripts/cli.js build --config mndsite.yaml
 ```
 
-This mirrors content into `pages/`, copies assets, derives renderer metadata from frontmatter,
-generates navigation files, and produces a fully-built static site in `dist/`.
+This mirrors content into `pages/` (preserving frontmatter), copies assets, derives
+`site-meta.json` from configured `fields` and `facets`, generates navigation files,
+and produces a fully-built static site in `dist/`.
 
 **5. Preview locally**
 
@@ -109,21 +120,22 @@ npm run dev        # development server with hot reload
 For iterating on content without a full build each time:
 
 ```bash
-npm run ingest              # mirror docs/ into pages/ (default source)
+npm run ingest              # mirror docs/ into pages/ and regenerate site.config.js
 npm run dev                 # hot-reload dev server
 npm run watch               # re-ingest on markdown changes (second terminal)
 ```
 
 ## Frontmatter fields
 
-Add these to the top of any markdown file to control how it is displayed.
-When using mndmap, missing fields such as `description` and `reading_time` may be filled upstream; mndsite renders supplied values and never overwrites them.
+Frontmatter is inert unless named in `fields` or `facets`. When using mndmap, missing
+fields such as `description` and `reading_time` may be filled upstream; mndsite renders
+supplied values and never overwrites them.
 
 ```yaml
 ---
 title: My Page
 date: 2026-01-15
-desc: Optional summary for the PageInfo panel
+desc: Optional summary for the sidebar Description block
 categories:
   - tutorial
 tags:
@@ -137,10 +149,12 @@ related:
 
 | Field | Required | Notes |
 |-------|----------|-------|
-| `title` | recommended | Falls back to the first `# heading`, then the file slug |
-| `date` | optional | Shown as publish date below the title |
-| `desc` / `description` | optional | Summary in the PageInfo panel |
-| `categories` | optional | Rendered as category-group chips |
-| `tags` | optional | Rendered as user-group chips |
-| `reading_time` | optional | Minutes; shown when present and `reading_time` is listed in `display.header` |
-| `related` | optional | `{ title, url }` entries merged into the Related sidebar |
+| `title` | recommended | From `fields.title`; else filename stem (or directory name for index pages) |
+| `date` | optional | Shown when `date` is listed in `display.header` |
+| `desc` / `description` | optional | Shown when `description` is listed in `display.toc` |
+| `categories`, `tags` | optional | Rendered when declared in `facets` and listed in `display.header` |
+| `reading_time` | optional | Shown when listed in `display.header` |
+| `related` | optional | `{ title, url }` entries in the Related block |
+| `doc_id` | optional | Stable identity for variant grouping (default `fields.identity` key) |
+
+Page headings are not read for titles or navigation labels — frontmatter and filenames only.

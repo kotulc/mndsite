@@ -4,13 +4,22 @@ repo_url: https://github.com/kotulc/mndsite
 feed_url: updates
 footer: ""
 
+content: ./docs
+output: ./dist
+
+nav_order:
+  "": [about, getting-started, configuration]
+  features: [overview, components]
+  specifications: [format]
+  updates: [welcome]
+
 theme:
   color: default
   typeset: sans
   navbar: ""
   footer: ""
 
-# Frontmatter keys mdsite reads. Frontmatter is inert unless named here or in facets.
+# Frontmatter keys mndsite reads. Frontmatter is inert unless named here or in facets.
 fields:
   title: title
   description: [description, desc]
@@ -70,12 +79,3 @@ edit:
   branch: main
   path: docs
   url: ""
-
-content: ./docs
-output: ./dist
-
-nav_order:
-  "": [about, getting-started, configuration]
-  features: [overview, components]
-  specifications: [format]
-  updates: [welcome]

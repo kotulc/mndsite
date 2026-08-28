@@ -19,9 +19,9 @@ Organization and semantic enrichment are upstream concerns (**mndmap**). mndsite
 5. REQ-5: Content-root `_assets/` is copied to `public/_assets/` with path rewriting for static export
 6. REQ-6: Legacy `images/` subtrees are copied to `public/images/<rel>/` with markdown path rewriting
 7. REQ-7: `public/site-meta.json` is a flat `{ pages: [...] }` list derived from frontmatter and content — no generated tags or embedding scores
-8. REQ-8: Top-level imports and leading H1 are stripped from extracted content; imports inside code fences are preserved
+8. REQ-8: `extract_content()` strips frontmatter, imports, and leading H1 for utilities; imports inside code fences are preserved
 9. REQ-9: Inline SVG blocks are preserved with MDX-safe brace escaping
-10. REQ-10: Supplied frontmatter is kept verbatim on the emitted page; site-meta metrics and links are derived from the body alone
+10. REQ-10: Supplied frontmatter is kept verbatim on the emitted page; `site-meta.json` is derived separately
 11. REQ-11: `_assets/` SVG images render through an `<img>` whose source resolves `BASE_PATH` at build time
 12. REQ-12: Ingest warns on references the build cannot resolve — internal `.md` links and `_assets/` module imports
 

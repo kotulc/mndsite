@@ -97,46 +97,36 @@ built-in styles.
 
 ## Page layout structure
 
-The `main` key in `theme.config.jsx` wraps only the page content area. Nextra
-renders the left nav and right TOC column outside of `main`, so no custom flex
-layout is needed.
-
-Consumer components can render in Nextra's right TOC column via `toc.extraContent`
-in `theme.config.jsx` — mndsite uses this slot for `MetaSidebar` (see
-[Metadata Display](/features/metadata)):
+The custom h1 (`PageTitle` in `theme.config.jsx`) wraps the page chrome:
 
 ```
 Nextra layout
 ├── Left nav (Nextra)
-├── main  →  page title + Info/Contents actions + PageMeta + optional PageInfo/TocMenu panels + page content
+├── main
+│   ├── Breadcrumbs + Contents toggle     (display.crumbs, display.contents)
+│   ├── h1 + PageMeta                     (display.header)
+│   ├── ContentsPanel (inline, < xl)      (display.contents)
+│   └── page MDX body
 └── Right TOC column (Nextra, ≥ xl)
-    ├── "On This Page" heading list
-    └── toc.extraContent  →  MetaSidebar (Related, Edit this page)
+    ├── Description (TocTitle) + Nextra heading list (when sections listed)
+    └── PageContents tail                   (Related, Edit — display.toc)
 ```
 
-The `.meta-sidebar-*` and `.panel-label` classes in `global.css` style components
-placed in this column and in the inline Info/Contents panels. Nextra pins this whole
-column sticky near the top of the viewport by default, with its own capped-height
-scrollbar independent of the page's own scroll — that default is left in place so the
-"On This Page" heading list and Related links stay fixed while the body scrolls.
+When `sections` is omitted from `display.toc`, `PageContents` renders the entire sidebar.
+When it is listed, Nextra owns the heading list and scroll-spy; `PageContents` fills the
+description slot and the tail below Nextra's headings.
+
+The `.page-contents-*`, `.contents-*`, `.page-crumbs`, and `.panel-label` classes in
+`global.css` style these regions. Nextra pins the right column sticky with its own
+scrollbar — that default is preserved.
 
 ## Chips
 
-Frontmatter tags, categories, and filter/action chips render as rectangular
-chips via the shared `Chip` component. Variants:
+Facet values render as rectangular chips via `TagList` and the shared `Chip` component.
+Each declared facet gets a generated `.chip-{facetName}` color pair in `theme.config.jsx`
+(from the facet's configured hue). Undeclared facet groups use `.chip-custom`. The neutral
+`.chip-tag` and destructive `.chip-danger` variants remain for generic Chip use.
 
-| Class | Color | Used for |
-|-------|-------|---------|
-| `.chip.chip-categories` / `.chip-topics` / `.chip-concepts` / `.chip-entities` | One fixed color per standard group | `TagList` chips (every group except `keywords`) |
-| `.chip.chip-custom` | Fixed fallback color | Unknown tag groups outside the standard vocabulary |
-| `.chip.chip-tag` | Gray | Default Chip variant / keyword-style chips |
-| `.chip.chip-danger` | Red | Destructive-action chips (filters, per-entry actions) |
-
-`TagList` maps each tag group name straight to its chip variant (`categories` →
-`chip-categories`, etc., `chip-custom` for anything else) — plain class selectors, no
-inline color computation, so the same rule works in both light and dark mode via the
-`:is(html[class~="dark"])` overrides already established for `.chip-tag`/`.chip-danger`.
-
-To change chip appearance, edit the `.chip`, `.chip-categories`/`.chip-topics`/
-`.chip-concepts`/`.chip-entities`/`.chip-custom`, `.chip-tag`, and `.chip-danger` rules
-in `styles/global.css`.
+To change chip appearance, edit the generated facet rules in `theme.config.jsx` (via
+`chip_rules`) or override `.chip`, `.chip-custom`, `.chip-tag`, and `.chip-danger` in
+`styles/global.css`.

@@ -41,7 +41,11 @@ The CLI reads the YAML at build time and generates the internal `site.config.js`
 | `facets` | object | `categories`, `tags` | Content dimensions rendered as chips and filters — see [Facets](#facets) |
 | `collections` | object | `{ default: all }` | Named facet presets; `default` names the active one |
 | `sidebar.views` | list | `[tree]` | Left tree views: `tree` plus any facet name |
-| `display` | object | see below | Rendered elements per zone, in display order — see [Display](#display) |
+| `display.crumbs` | list | `[home, path]` | Breadcrumb trail above the page title |
+| `display.header` | list | `[date, reading_time, facets]` | Metadata under the title; also accepts facet names |
+| `display.toc` | list | `[description, sections, related, edit]` | Right sidebar at ≥ xl |
+| `display.contents` | list | *(copy of `toc`)* | Inline Contents panel below the title |
+| `display.navbar` | list | `[theme, feed, github]` | Navbar icons, left to right |
 | `edit` | object | see below | "Edit this page" targets — **only used when `repo_url` is set** |
 | `content` | path | `./docs` | Source markdown directory (resolved relative to this file) |
 | `output` | path | `./dist` | Output directory for the built site (resolved relative to this file) |
@@ -76,6 +80,8 @@ These keys are **rejected at load time** with migration guidance:
 | `limits` (chip and Related caps) | Removed — content renders as supplied |
 | `toc` (boolean) | `display.toc` — drop `sections` |
 | `reading_time` (boolean) | `display.header` — drop `reading_time` |
+| `display.title_row` | Removed — Contents toggle follows `display.contents` |
+| `display.info` | Renamed to `display.contents` |
 
 mndsite configuration is limited to rendering, content paths, navigation order, theme, and deployment.
 
@@ -112,7 +118,7 @@ theme:
 
 ## Facets
 
-Every content dimension mdsite renders is declared in `facets`. `field` is required; `label`,
+Every content dimension mndsite renders is declared in `facets`. `field` is required; `label`,
 `color`, `values`, `sort`, `default`, and `ui` are optional.
 
 ```yaml
@@ -136,28 +142,33 @@ consumes them is in progress.
 
 ## Display
 
-`display` lists which elements render, in which order. Omitting an element turns it off —
-there is no second switch anywhere in the config.
+`display` lists which elements render in each zone, in order. Omitting an element turns it off — there is no second switch anywhere in the config.
 
 ```yaml
 display:
-  title_row: [info, contents]            # actions beside the page title
-  header: [date, reading_time, facets]   # metadata under the title
-  info: [description]                    # Info panel contents
-  toc: [sections, related, edit]         # right sidebar, top to bottom
-  navbar: [theme, feed, github]          # navbar icons, left to right
+  crumbs: [home, path]
+  header: [date, reading_time, facets]
+  toc: [description, sections, related, edit]
+  navbar: [theme, feed, github]
 ```
 
-`theme` in `display.navbar` is the only switch for the light/dark toggle — there is no
-sidebar placement. Chips and Related entries render as supplied; nothing is truncated.
+| Zone | Elements | Component |
+|------|----------|-----------|
+| `crumbs` | `home`, `path` | `Breadcrumbs` — trail above the title |
+| `header` | `date`, `reading_time`, `facets`, or any facet name | `PageHeader` + `TagList` |
+| `toc` | `description`, `sections`, `related`, `edit` | `PageContents` in the right sidebar |
+| `contents` | same vocabulary as `toc` | `PageContents` in the inline Contents panel |
+| `navbar` | `theme`, `feed`, `github` | `ThemeToggle`, `FeedLink`, `GitHubLink` |
 
-`header` also accepts any facet name. Listing a facet there places its chips at that
-position whatever its `ui` — so `header: [date, version, tags]` shows the version value
-between the date and the tag chips. The generic `facets` element expands to every facet
-with `ui: chips`.
+`display.contents` defaults to a copy of `display.toc` when omitted. Set it separately only when the inline panel should differ from the sidebar.
 
-The metadata line and the chip row are separate zones: `display.header` orders items
-within each, and the chip row always follows the metrics line.
+When `display.toc` includes `sections`, Nextra owns the heading list and scroll-spy in the sidebar; `PageContents` renders the description above Nextra's label and Related/Edit below. When `sections` is omitted, `PageContents` renders the whole sidebar list.
+
+Below the `xl` breakpoint Nextra hides the right sidebar. A **Contents** button in the title row opens the same `PageContents` body inline, driven by `display.contents`.
+
+`theme` in `display.navbar` is the only theme toggle — Nextra's sidebar toggle is disabled. Chips and Related entries render as supplied; nothing is truncated.
+
+`header` also accepts any facet name. Listing a facet there places its chips at that position whatever its `ui` — so `header: [date, version, tags]` shows version chips between the date and tag chips. The generic `facets` element expands to every facet with `ui: chips`.
 
 ## Edit links
 
@@ -207,7 +218,7 @@ During ingest it derives `public/site-meta.json` from supplied frontmatter and p
 - `metrics.word_count` computed from body text
 - `metrics.reading_time` from frontmatter when present
 
-Optional page summary: set `desc` or `description` in frontmatter — PageInfo shows it when present.
+Optional page summary: set `desc` or `description` in frontmatter (mapped via `fields.description`) — shown in the sidebar or Contents panel when `description` is listed in `display.toc`.
 
 See the [Metadata Contract](/specifications/metadata) spec for the full schema.
 

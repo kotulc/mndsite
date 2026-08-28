@@ -116,4 +116,6 @@ mndmap may fill missing `reading_time` upstream (words ÷ 200, minimum 1 minute)
 
 ## Sections
 
-`sections` mirror the heading tree extracted from page body text. Section records carry `name`, `level`, and empty `tags` arrays. PageInfo uses them for the Sections mosaic and in-page anchor links.
+`sections` mirror the heading tree extracted from page body text. Section records carry
+`name`, `level`, and nested `sections`. `PageContents` uses them for the **On This Page**
+list and in-page anchor links.

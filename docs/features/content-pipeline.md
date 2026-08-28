@@ -97,16 +97,16 @@ node scripts/cli.js build --config mndsite.yaml
    - Remaining siblings sort alphabetically by slug
    - Directory labels come from the index page title, then a slug-to-title fallback
 
-9. **Writes `site-meta.json`** — flat page list derived from frontmatter and content (tags, related, links, word count, sections). No local tagging or embedding step.
+9. **Writes `site-meta.json`** — flat page list: `facets`, `related`, `links`, `source`, `identity`, word count, sections. No local tagging or embedding step.
 
 ## Source layout rules
 
 - The configured content root is the site route tree
-- `index.md`, `index.mdx`, or `home.md` at any level → that section's landing page
-- mndsite does not create redirect indexes or synthesize landing pages — mndmap emits index documents for generated folders/groups
+- `index.md`, `index.mdx`, or `home.md` at any level → that section's landing page when supplied
+- A directory with **no** index document gets a generated redirect `index.mdx` to its first sorted page (hidden from the sidebar)
 - `_assets/` at the content root → copied to `public/_assets/`
 - `images/` next to markdown → copied and path-rewritten for legacy layouts
-- Internal links should already resolve in the supplied content (rewritten by mndmap when used)
+- Internal links and MDX imports should already resolve in publication-ready content (rewritten by mndmap when used); ingest warns on remaining `.md` links and `_assets/` imports
 
 ## Cross-project contract
 

@@ -9,7 +9,8 @@ date: 2026-03-08
 - YAML config + CLI wrapper
 - Docker image, GHCR publishing
 - GitHub Pages deployment
-- Metadata display from supplied frontmatter
+- Configurable `display`, `fields`, and `facets`
+- Breadcrumbs, sidebar Contents panel, and edit links
 - mndmap destination fixture contract
 - Nav ordering via `nav_order`
 - Removed local semantic enrichment (tags, embeddings, flatten)

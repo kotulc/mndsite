@@ -43,7 +43,9 @@ or browse [Features](docs/features/overview.md) for the full capability overview
 - **Related links** — outbound links and frontmatter `related` entries in the ToC sidebar
 - **Nav ordering** — sibling order via `nav_order` from mndmap or YAML
 - **Custom components** — optional consumer React components synced each build
-- **Theme toggle** — light / dark / system toggle in the navbar
+- **Breadcrumbs** — trail above the title (`display.crumbs`)
+- **Contents panel** — inline sidebar below xl (`display.contents`)
+- **Theme toggle** — light / dark / system toggle in the navbar (`display.navbar`)
 - **GitHub header icon** — circular GitHub repo link, auto-shown from `repo_url`
 - **YAML config** — single file drives the entire build
 - **Docker** — packaged as a container for use in any CI/CD pipeline
@@ -104,7 +106,7 @@ title: My Site
 # Optional — site identity
 description: ""              # SEO meta description added to every page
 repo_url: ""                 # shows a GitHub icon in the navbar when set
-feed_url: ""                 # slug of the section used as the per-page feed
+feed_url: ""                 # section slug linked from the navbar feed icon
 footer: ""                   # custom footer credits; empty keeps the default
 
 # Optional — theme presets (see docs/configuration.md for all values)
@@ -117,7 +119,7 @@ theme:
 # Optional — navigation
 nav_order: {}                # map of section slug → ordered list of page slugs
 
-# Optional — frontmatter keys mdsite reads (frontmatter is inert unless named here)
+# Optional — frontmatter keys mndsite reads (frontmatter is inert unless named here)
 fields:
   title: title
   description: [description, desc]
@@ -141,10 +143,10 @@ sidebar:
 
 # Optional — rendered elements, in display order; omit one to turn it off
 display:
-  title_row: [info, contents]            # actions beside the page title
+  crumbs: [home, path]                   # breadcrumb trail above the title
   header: [date, reading_time, facets]   # metadata under the title; accepts facet names
-  info: [description]                    # Info panel contents
-  toc: [sections, related, edit]         # right sidebar, top to bottom
+  toc: [description, sections, related, edit]   # right sidebar (≥ xl)
+  # contents: [...]                      # inline Contents panel; defaults to toc
   navbar: [theme, feed, github]          # navbar icons, left to right
 
 # Optional — "Edit this page" targets; used ONLY when repo_url is set
@@ -164,7 +166,7 @@ output: ./dist               # output directory for built site
 
 ### Fields and facets
 
-mdsite reads no frontmatter key by accident. `fields` names the keys behind the built-in
+mndsite reads no frontmatter key by accident. `fields` names the keys behind the built-in
 renderer metadata, and `facets` declares every content dimension — tags, categories,
 version, status, applicability, anything else upstream stamps into frontmatter.
 
@@ -195,16 +197,25 @@ consumes them is still in progress.
 ### Display and disabling features
 
 Every rendered element is listed in `display`, and omitting it is how you turn it off —
-no feature has a second switch. `display.header` also accepts facet names, so any
-frontmatter field declared as a facet can be placed exactly where you want it:
+there is no second switch. Zones and their elements:
+
+| Zone | Elements | Renders |
+|------|----------|---------|
+| `crumbs` | `home`, `path` | Breadcrumb trail above the title |
+| `header` | `date`, `reading_time`, `facets`, or any facet name | Date, reading time, facet chips |
+| `toc` | `description`, `sections`, `related`, `edit` | Right sidebar at ≥ xl |
+| `contents` | same as `toc` | Inline Contents panel below the title (defaults to `toc`) |
+| `navbar` | `theme`, `feed`, `github` | Navbar icons |
+
+`display.header` also accepts facet names directly:
 
 ```yaml
 display:
-  header: [date, version, tags]   # version value between the date and the tag chips
+  header: [date, version, tags]   # version chips between the date and tag chips
 ```
 
-Frontmatter itself never renders. It stays on the emitted page as metadata for Nextra and
-theme components; it reaches the reader only through `fields` and `facets` mappings.
+Frontmatter stays on the emitted page for Nextra; the reader sees values only through
+`fields` and `facets` mappings into `site-meta.json` and the display zones above.
 
 ### Edit links
 
@@ -217,7 +228,21 @@ explicitly when the config file is not at the repo root.
 
 ### Removed configuration keys
 
-`meta` and `flatten` are no longer supported. Move tagging, related-link scoring, and directory organization upstream to **mndmap** or into frontmatter. Config files that still contain these keys fail at load time with migration guidance.
+These top-level keys are **rejected at load time**:
+
+| Key | Use instead |
+|-----|-------------|
+| `meta`, `flatten` | **mndmap** or frontmatter |
+| `toc`, `reading_time` (boolean) | `display.toc`, `display.header` |
+| `theme_toggle` | `display.navbar` — include or omit `theme` |
+| `limits` | Removed — content renders as supplied |
+
+These display lists are also rejected — use `display.contents` and `display.toc`:
+
+| List | Replacement |
+|------|-------------|
+| `display.title_row` | Contents toggle follows `display.contents` |
+| `display.info` | Renamed to `display.contents` |
 
 ### BASE_PATH environment variable
 

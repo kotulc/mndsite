@@ -70,7 +70,8 @@ or browse the [Features](/features) section for the full capability overview.
 - **`_assets/` handoff** — static assets copied to `public/_assets/` with path rewriting
 - **Images** — legacy `images/` subtrees copied and path-rewritten; corrupt EXIF stripped
 - **Reading time** — displayed when supplied in frontmatter
-- **Tags and categories** — rendered from frontmatter as pill chips below each title
+- **Facets** — any declared frontmatter dimension rendered as colored chips and (future) sidebar filters
+- **Breadcrumbs and Contents panel** — configurable via `display.crumbs` and `display.contents`
 - **Related links** — outbound links and frontmatter `related` entries in the ToC sidebar
 - **Nav ordering** — sibling order via `nav_order` from mndmap or YAML
 - **Custom components** — optional consumer React components synced each build
@@ -87,7 +88,7 @@ or browse the [Features](/features) section for the full capability overview.
 - YAML config + CLI wrapper
 - Docker image, GHCR publishing
 - GitHub Pages deployment
-- Metadata display from supplied frontmatter
+- Configurable `display`, `fields`, and `facets` in `mndsite.yaml`
 - mndmap destination fixture contract
 - Nav ordering via `nav_order`
 
