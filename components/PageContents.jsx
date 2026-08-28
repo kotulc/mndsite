@@ -194,7 +194,7 @@ export function TocTitle() {
           <span className="page-contents-desc">{desc}</span>
         </>
       )}
-      <span className="page-contents-heading">On This Page</span>
+      <span className="panel-label page-contents-heading">On This Page</span>
     </>
   )
 }

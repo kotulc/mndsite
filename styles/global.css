@@ -9,6 +9,7 @@
   --site-primary-700: hsl(var(--site-hs) 39%);
   --site-gray-100: #f3f4f6;
   --site-gray-200: #e5e7eb;
+  --crumb-height: 1.5rem;   /* breadcrumb row, and the Contents toggle laid over it */
   --site-gray-400: #9ca3af;
   --site-gray-500: #6b7280;
   --site-gray-600: #4b5563;
@@ -305,7 +306,9 @@ img {
   flex-shrink: 0;
   align-items: flex-start;
   gap: 0.5rem;
-  margin-top: 0.85rem;
+  /* Sit on the breadcrumb row directly above: both it and the toggle are pinned to
+     --crumb-height, so lifting by exactly that height overlays the two boxes. */
+  margin-top: calc(var(--crumb-height) * -1);
 }
 
 /* Line the toggle's right edge up with the navbar's last icon. Nextra pads the content
@@ -321,7 +324,8 @@ img {
   align-items: center;
   gap: 0.25rem;
   flex-shrink: 0;
-  padding: 0.2rem 0.5rem;
+  height: var(--crumb-height);
+  padding: 0 0.5rem;
   border: 1px solid var(--site-gray-200);
   border-radius: 0.25rem;
   background: transparent;
@@ -382,10 +386,11 @@ img {
   color: inherit;
 }
 
-.contents-panel .page-contents-summary { grid-column: 1 / -1; }
-
-.contents-panel .page-contents-list li,
-.contents-panel .related-link { padding: 0.2rem 0; }
+.contents-panel .page-contents-summary {
+  grid-column: 1 / -1;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--site-gray-200);
+}
 
 .contents-panel .page-contents-list a,
 .contents-panel .related-link a {
@@ -590,12 +595,15 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 
 .filter-panel .panel-label { margin-bottom: 0.5rem; }
 
-/* Hide breadcrumb on root-level pages — no parent path, so no chevron separator svg */
-.nextra-breadcrumb:not(:has(svg)) { display: none; }
+/* The breadcrumb row is pinned to a known height so the Contents toggle can be laid
+   over it. On root-level pages there is no parent path, so no chevron separator svg —
+   blank the trail but keep its row, or the toggle would ride up into the navbar. */
+.nextra-breadcrumb { height: var(--crumb-height); }
+
+.nextra-breadcrumb:not(:has(svg)) { visibility: hidden; }
 
 /* Page contents — the right sidebar body (toc.title + toc.extraContent) and the same
-   body inline in the Contents panel. In the sidebar the divider above Related comes
-   from Nextra's sticky extraContent wrapper (nx-mt-8 nx-border-t nx-pt-8). */
+   body inline in the Contents panel. */
 .page-contents {
   font-size: 0.8125rem;
   color: var(--site-gray-600);
@@ -622,12 +630,28 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
   line-height: 1.6;
 }
 
-/* Only the sidebar title slot puts these two adjacent, with no block wrapper between */
-.page-contents-heading { display: block; }
+/* Only the sidebar title slot puts these two adjacent, with no block wrapper between,
+   so the description's divider hangs off the heading that follows it. */
+.page-contents-desc + .page-contents-heading {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--site-gray-200);
+}
 
-.page-contents-desc + .page-contents-heading { margin-top: 1rem; }
+/* One rhythm down the sidebar: 1.25rem between blocks, whoever renders them. Nextra's
+   own divider above Related is 2rem/2rem out of the box — bring it into line. */
+.nextra-toc .page-contents-block + .page-contents-block {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--site-gray-200);
+}
 
-.nextra-toc .page-contents-block + .page-contents-block { margin-top: 1rem; }
+.nextra-toc div.nx-sticky.nx-bottom-0 {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+}
+
+.nextra-toc p:has(.page-contents-heading) { margin-bottom: 0.375rem; }
 
 .page-contents-list {
   list-style: none;
@@ -635,7 +659,10 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
   padding: 0;
 }
 
-.page-contents-list li { margin: 0; padding: 0.2rem 0; }
+.page-contents-list li { margin: 0; }
+
+.page-contents-list li,
+.related-link { padding: 0.25rem 0; }
 
 .page-contents-list a {
   color: var(--site-primary-600);
@@ -651,8 +678,6 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 .page-contents-sub a { font-weight: 400; color: var(--site-gray-600); }
 
 .page-contents-sub a:hover { color: var(--site-primary-600); }
-
-.related-link { padding: 0.125rem 0; }
 
 .related-link a {
   color: var(--site-primary-600);
