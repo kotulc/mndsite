@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
+import Breadcrumbs from './components/Breadcrumbs'
 import PageHeader from './components/PageHeader'
 import TagList from './components/TagList'
 import PageContents, { TocTitle, TocExtra, TocHeading } from './components/PageContents'
@@ -101,18 +102,18 @@ const THEME_CSS = [
 
 
 function PageTitle({ children }) {
-  /** Custom h1 override: heading + the Contents action, page metadata, and the panel it
-   *  opens — the same sidebar body, inline, at widths where Nextra hides the sidebar. */
+  /** Custom h1 override: the breadcrumb row and the Contents action that shares it, the
+   *  heading, page metadata, then the panel that action opens — the same sidebar body,
+   *  inline, at widths where Nextra hides the sidebar. */
   const [open, set_open] = useState(false)
 
   return (
     <>
-      <div className="page-title-row">
-        <h1 className="nx-mt-2 nx-text-4xl nx-font-bold nx-tracking-tight nx-text-slate-900 dark:nx-text-slate-100">{children}</h1>
-        <div className="page-title-actions">
-          <ContentsToggle open={open} on_toggle={() => set_open(v => !v)} />
-        </div>
+      <div className="page-crumb-row">
+        <Breadcrumbs />
+        <ContentsToggle open={open} on_toggle={() => set_open(v => !v)} />
       </div>
+      <h1 className="nx-mt-2 nx-text-4xl nx-font-bold nx-tracking-tight nx-text-slate-900 dark:nx-text-slate-100">{children}</h1>
       <PageMeta />
       <ContentsPanel open={open} on_close={() => set_open(false)} />
     </>

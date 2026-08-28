@@ -4,9 +4,15 @@ const withNextra = require('nextra')({
 })
 
 const basePath = process.env.NODE_ENV === 'production' ? (process.env.BASE_PATH || '') : ''
-const distDir = process.env.MNDSITE_OUTPUT
-  ? require('path').relative(__dirname, process.env.MNDSITE_OUTPUT)
-  : 'dist'
+
+// `next dev` keeps its own build dir. Sharing the export dir lets the two wipe each
+// other: a build clears the running dev server's working files, and dev's incremental
+// artifacts overwrite the exported HTML.
+const distDir = process.env.NODE_ENV === 'development'
+  ? '.next'
+  : process.env.MNDSITE_OUTPUT
+    ? require('path').relative(__dirname, process.env.MNDSITE_OUTPUT)
+    : 'dist'
 
 module.exports = withNextra({
   output: 'export',

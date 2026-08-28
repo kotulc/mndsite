@@ -24,6 +24,7 @@ const REMOVED_KEYS = {
 // Elements each display list accepts. `header` also accepts any declared facet name.
 // `toc` is the right sidebar; `contents` is the inline panel behind the Contents button.
 const DISPLAY_ELEMENTS = {
+  crumbs:   ['home', 'path'],
   header:   ['date', 'reading_time', 'facets'],
   toc:      ['description', 'sections', 'related', 'edit'],
   contents: ['description', 'sections', 'related', 'edit'],
@@ -57,6 +58,7 @@ const DEFAULTS = {
   footer:         '',
   theme:          { color: 'default', typeset: 'sans', navbar: '', footer: '' },
   display: {
+    crumbs: ['home', 'path'],
     header: ['date', 'reading_time', 'facets'],
     toc:    ['description', 'sections', 'related', 'edit'],
     navbar: ['theme', 'feed', 'github'],

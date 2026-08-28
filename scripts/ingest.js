@@ -382,10 +382,13 @@ module.exports = {
 
 if (require.main === module) {
   const yaml_path = path.join(ROOT, 'mndsite.yaml')
-  const cfg = fs.existsSync(yaml_path)
+  const has_yaml = fs.existsSync(yaml_path)
+  const cfg = has_yaml
     ? require('./config').load_config(yaml_path)
     : { ...require('../site.config'), content: path.join(ROOT, 'docs') }
   if (process.argv[2]) cfg.content = path.resolve(process.argv[2])
+  // Regenerate site.config.js too, or `display` edits stay invisible until a full build
+  if (has_yaml) require('./config').write_site_config(cfg)
 
   run(cfg).catch(err => { console.error(err.message); process.exit(1) })
 }

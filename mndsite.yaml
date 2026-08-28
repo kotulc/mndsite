@@ -59,6 +59,7 @@ sidebar:
 # Rendered elements, in display order. Omit an element to turn it off; `header` also
 # accepts any facet name, which places that facet's chips there whatever its ui.
 display:
+  crumbs: [home, path]
   header: [date, reading_time, facets]
   toc: [description, sections, related, edit]
   navbar: [theme, feed, github]

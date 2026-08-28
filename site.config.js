@@ -11,6 +11,6 @@ module.exports = {
   facets: {"categories":{"field":"categories","label":"Category","color":"blue","ui":"chips","sort":"alpha","hue":210},"tags":{"field":"tags","label":"Tag","color":"violet","ui":"chips","sort":"alpha","hue":265}},
   collections: {"default":"all"},
   sidebar: {"views":["tree"]},
-  display: {"header":["date","reading_time","facets"],"toc":["description","sections","related","edit"],"navbar":["theme","feed","github"],"contents":["description","sections","related","edit"]},
+  display: {"crumbs":["home","path"],"header":["date","reading_time","facets"],"toc":["description","sections","related","edit"],"navbar":["theme","feed","github"],"contents":["description","sections","related","edit"]},
   edit: {"branch":"main","path":"docs","url":"{repo_url}/edit/{branch}/{file}"},
 }
