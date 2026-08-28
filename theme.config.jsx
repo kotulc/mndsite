@@ -2,9 +2,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import PageHeader from './components/PageHeader'
 import TagList from './components/TagList'
-import MetaSidebar from './components/MetaSidebar'
-import { PageInfoToggle, PageInfoPanel } from './components/PageInfo'
-import { TocMenuToggle, TocMenuPanel } from './components/TocMenu'
+import PageContents, { TocTitle, TocExtra } from './components/PageContents'
+import { ContentsToggle, ContentsPanel } from './components/ContentsMenu'
 import SiteFooter from './components/SiteFooter'
 import GitHubLink from './components/GitHubLink'
 import FeedLink from './components/FeedLink'
@@ -91,7 +90,6 @@ function chip_rules(facets) {
 
 
 const TOC_HAS_SECTIONS = siteConfig.display.toc.includes('sections')
-const TOC_HAS_META = siteConfig.display.toc.some(item => item === 'related' || item === 'edit')
 
 
 const THEME_CSS = [
@@ -103,35 +101,20 @@ const THEME_CSS = [
 
 
 function PageTitle({ children }) {
-  /** Custom h1 override: heading + the display.title_row actions, page metadata, and the
-   *  panels those actions open. Info and Contents are mutually exclusive. */
-  const [info_open, set_info_open] = useState(false)
-  const [toc_open, set_toc_open] = useState(false)
-  const title_row = siteConfig.display.title_row
-  const show_info = title_row.includes('info')
-  const show_contents = title_row.includes('contents')
-
-  function toggle_info() {
-    set_info_open(v => !v)
-    set_toc_open(false)
-  }
-  function toggle_toc() {
-    set_toc_open(v => !v)
-    set_info_open(false)
-  }
+  /** Custom h1 override: heading + the Contents action, page metadata, and the panel it
+   *  opens — the same sidebar body, inline, at widths where Nextra hides the sidebar. */
+  const [open, set_open] = useState(false)
 
   return (
     <>
       <div className="page-title-row">
         <h1 className="nx-mt-2 nx-text-4xl nx-font-bold nx-tracking-tight nx-text-slate-900 dark:nx-text-slate-100">{children}</h1>
         <div className="page-title-actions">
-          {show_info && <PageInfoToggle open={info_open} on_toggle={toggle_info} />}
-          {show_contents && <TocMenuToggle open={toc_open} on_toggle={toggle_toc} />}
+          <ContentsToggle open={open} on_toggle={() => set_open(v => !v)} />
         </div>
       </div>
       <PageMeta />
-      {show_info && <PageInfoPanel open={info_open} on_close={() => set_info_open(false)} />}
-      {show_contents && <TocMenuPanel open={toc_open} on_close={() => set_toc_open(false)} />}
+      <ContentsPanel open={open} on_close={() => set_open(false)} />
     </>
   )
 }
@@ -171,11 +154,13 @@ export default {
   ),
   feedback: { content: null },
   // Nextra renders editLink before toc.extraContent, so its own copy is disabled here —
-  // MetaSidebar renders "Edit this page" itself, last, after Related.
+  // PageContents renders "Edit this page" itself, last, after Related.
   editLink: { component: () => null },
+  // With `sections` listed, Nextra owns the heading list (and its scroll-spy) and the
+  // description rides in its title slot; otherwise PageContents renders the sidebar whole.
   toc: TOC_HAS_SECTIONS
-    ? { extraContent: TOC_HAS_META ? <MetaSidebar /> : null }
-    : { component: TOC_HAS_META ? () => <MetaSidebar /> : () => null },
+    ? { title: <TocTitle />, extraContent: <TocExtra /> }
+    : { component: () => <PageContents order={siteConfig.display.toc} /> },
   components: { h1: PageTitle },
   main: ({ children }) => <>{children}</>,
 }

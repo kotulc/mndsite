@@ -59,10 +59,8 @@ sidebar:
 # Rendered elements, in display order. Omit an element to turn it off; `header` also
 # accepts any facet name, which places that facet's chips there whatever its ui.
 display:
-  title_row: [info, contents]
   header: [date, reading_time, facets]
-  info: [description]
-  toc: [sections, related, edit]
+  toc: [description, sections, related, edit]
   navbar: [theme, feed, github]
 
 # "Edit this page" targets. Used only when repo_url is set; path defaults to the content

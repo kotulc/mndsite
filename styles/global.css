@@ -291,7 +291,7 @@ img {
   border-radius: 4px;
 }
 
-/* Page title row: h1 + "Info" intelligence toggle sitting beside it */
+/* Page title row: h1 + the "Contents" toggle sitting beside it */
 .page-title-row {
   display: flex;
   align-items: flex-start;
@@ -308,44 +308,8 @@ img {
   margin-top: 0.85rem;
 }
 
-.page-info-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  flex-shrink: 0;
-  margin-top: 0;   /* spacing comes from .page-title-actions */
-  padding: 0.2rem 0.5rem;
-  border: 1px solid var(--site-gray-200);
-  border-radius: 9999px;
-  background: transparent;
-  color: var(--site-gray-500);
-  font-family: inherit;
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.page-info-toggle:hover {
-  background: var(--site-primary-100);
-  color: var(--site-primary-700);
-  border-color: var(--site-primary-100);
-}
-
-.page-info-toggle[aria-expanded="true"] {
-  background: var(--site-primary-100);
-  color: var(--site-primary-700);
-  border-color: var(--site-primary-100);
-}
-
-.page-info-toggle:focus-visible {
-  outline: 2px solid var(--site-primary-600);
-  outline-offset: 2px;
-}
-
-/* Contents button — same pill as Info, only below xl where Nextra hides .nextra-toc */
-.toc-menu-toggle {
+/* Contents button — shown only below xl, where Nextra hides .nextra-toc */
+.contents-toggle {
   display: none;
   align-items: center;
   gap: 0.25rem;
@@ -364,155 +328,65 @@ img {
 }
 
 @media (max-width: 1279px) {
-  .toc-menu-toggle { display: inline-flex; }
+  .contents-toggle { display: inline-flex; }
 }
 
-.toc-menu-toggle:hover,
-.toc-menu-toggle[aria-expanded="true"] {
+.contents-toggle:hover,
+.contents-toggle[aria-expanded="true"] {
   background: var(--site-primary-100);
   color: var(--site-primary-700);
   border-color: var(--site-primary-100);
 }
 
-.toc-menu-toggle:focus-visible {
+.contents-toggle:focus-visible {
   outline: 2px solid var(--site-primary-600);
   outline-offset: 2px;
 }
 
-.toc-menu-count {
+.contents-count {
   margin-left: 0.125rem;
   opacity: 0.65;
   font-variant-numeric: tabular-nums;
 }
 
-/* Inline expand panels (Info + Contents) — dividers above/below, no card chrome */
-.page-info-panel,
-.toc-menu-panel {
+/* Inline Contents panel — dividers above/below, no card chrome */
+.contents-panel {
   margin: 1.25rem 0 1.5rem;
   padding: 1.25rem 0;
   border-top: 1px solid #e5e7eb;
   border-bottom: 1px solid #e5e7eb;
-  background: transparent;
   font-size: 0.875rem;
 }
 
-:is(html[class~="dark"]) .page-info-panel,
-:is(html[class~="dark"]) .toc-menu-panel {
+:is(html[class~="dark"]) .contents-panel {
   border-top-color: #262626;
   border-bottom-color: #262626;
 }
 
-.page-info-title,
-.toc-menu-title {
-  margin: 0 0 1.25rem;
-  color: var(--site-gray-400);
-  font-size: 0.6875rem;
-  font-weight: 400;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  text-align: left;
-}
+/* Panel layout: full-width description, then each block as a horizontal grid */
+.contents-panel .page-contents { font-size: inherit; color: inherit; }
 
-.toc-menu-block {
-  margin: 0;
-}
+.contents-panel .page-contents-desc { margin-bottom: 1.25rem; }
 
-.toc-menu-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.contents-panel .page-contents-block + .page-contents-block { margin-top: 1.25rem; }
+
+.contents-panel .page-contents-list,
+.contents-panel .page-contents-related {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
   column-gap: 1.25rem;
   row-gap: 0.15rem;
 }
 
-.toc-menu-list li {
-  margin: 0;
-  padding: 0.2rem 0;
-}
+.contents-panel .page-contents-related .panel-label { grid-column: 1 / -1; }
 
-.toc-menu-list a {
-  color: var(--site-primary-600);
-  text-decoration: none;
+.contents-panel .related-link { padding: 0.2rem 0; }
+
+.contents-panel .page-contents-list a,
+.contents-panel .related-link a {
   font-size: 0.875rem;
   font-weight: 500;
   line-height: 1.35;
-}
-
-.toc-menu-list a:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.toc-menu-sub {
-  padding-left: 0.85rem;
-}
-
-.toc-menu-sub a {
-  font-weight: 400;
-  color: var(--site-gray-600);
-}
-
-.toc-menu-sub a:hover {
-  color: var(--site-primary-600);
-}
-
-/* Related / Edit inside Contents panel — no divider; Related uses the same horizontal grid as Sections */
-.toc-menu-meta .meta-sidebar-content {
-  font-size: inherit;
-  color: inherit;
-}
-
-.toc-menu-meta .meta-sidebar-section {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: none;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
-  column-gap: 1.25rem;
-  row-gap: 0.15rem;
-}
-
-.toc-menu-block + .toc-menu-meta .meta-sidebar-section {
-  margin-top: 1.25rem;
-}
-
-.toc-menu-meta .meta-sidebar-section .panel-label {
-  grid-column: 1 / -1;
-}
-
-.toc-menu-meta .related-link {
-  margin: 0;
-  padding: 0.2rem 0;
-}
-
-.toc-menu-meta .related-link a {
-  font-size: 0.875rem;
-  font-weight: 500;
-  line-height: 1.35;
-}
-
-.toc-menu-meta .meta-sidebar-edit {
-  margin-top: 1rem;
-  padding-top: 0;
-  border-top: none;
-}
-
-/* Shared subsection labels (Summary / Sections / Related) across Info + Contents panels */
-.panel-label {
-  margin: 0 0 0.375rem;
-  color: var(--site-gray-900);
-  font-size: 0.6875rem;
-  font-weight: 650;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.page-info-desc {
-  margin: 0;
-  line-height: 1.6;
-  color: var(--site-gray-600);
 }
 
 /* Page header: date + reading time */
@@ -714,13 +588,59 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 /* Hide breadcrumb on root-level pages — no parent path, so no chevron separator svg */
 .nextra-breadcrumb:not(:has(svg)) { display: none; }
 
-/* Metadata sidebar — rendered via toc.extraContent, below the page TOC headings.
-   Spacing/divider above Related comes from Nextra's sticky extraContent wrapper
-   (nx-mt-8 nx-border-t nx-pt-8), not a custom rule on Related itself. */
-.meta-sidebar-content {
+/* Page contents — the right sidebar body (toc.title + toc.extraContent) and the same
+   body inline in the Contents panel. In the sidebar the divider above Related comes
+   from Nextra's sticky extraContent wrapper (nx-mt-8 nx-border-t nx-pt-8). */
+.page-contents {
   font-size: 0.8125rem;
   color: var(--site-gray-600);
 }
+
+/* Subsection labels (On This Page / Related), shared with the filter panel */
+.panel-label {
+  margin: 0 0 0.375rem;
+  color: var(--site-gray-900);
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Description: a <p> in the panel, a <span> inside Nextra's ToC title <p> in the sidebar */
+.page-contents-desc {
+  display: block;
+  margin: 0 0 0.75rem;
+  color: var(--site-gray-600);
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.page-contents-heading { display: block; }
+
+.page-contents-block + .page-contents-block { margin-top: 1rem; }
+
+.page-contents-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.page-contents-list li { margin: 0; padding: 0.2rem 0; }
+
+.page-contents-list a {
+  color: var(--site-primary-600);
+  text-decoration: none;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.page-contents-list a:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+.page-contents-sub { padding-left: 0.85rem; }
+
+.page-contents-sub a { font-weight: 400; color: var(--site-gray-600); }
+
+.page-contents-sub a:hover { color: var(--site-primary-600); }
 
 .related-link { padding: 0.125rem 0; }
 
@@ -732,7 +652,7 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 
 .related-link a:hover { text-decoration: underline; }
 
-.meta-sidebar-edit {
+.page-contents-edit {
   display: block;
   margin-top: 1.25rem;
   color: var(--site-primary-600);
@@ -740,7 +660,7 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
   font-weight: 500;
 }
 
-.meta-sidebar-edit:hover { text-decoration: underline; }
+.page-contents-edit:hover { text-decoration: underline; }
 
 /* Site footer: copyright · updated timestamp · credits */
 .site-footer {

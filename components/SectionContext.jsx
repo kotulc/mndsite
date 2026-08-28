@@ -1,6 +1,6 @@
 /**
- * Shares the current page's metadata and flattened section list with PageInfo,
- * MetaSidebar, and TocMenu. Provided once in _app.jsx. Data comes from the flat
+ * Shares the current page's metadata and flattened section list with PageContents and
+ * ContentsMenu. Provided once in _app.jsx. Data comes from the flat
  * public/site-meta.json pages list.
  */
 import { createContext, useContext, useMemo } from 'react'

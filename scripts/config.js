@@ -22,12 +22,18 @@ const REMOVED_KEYS = {
 }
 
 // Elements each display list accepts. `header` also accepts any declared facet name.
+// `toc` is the right sidebar; `contents` is the inline panel behind the Contents button.
 const DISPLAY_ELEMENTS = {
-  title_row: ['info', 'contents'],
-  header:    ['date', 'reading_time', 'facets'],
-  info:      ['description'],
-  toc:       ['sections', 'related', 'edit'],
-  navbar:    ['theme', 'feed', 'github'],
+  header:   ['date', 'reading_time', 'facets'],
+  toc:      ['description', 'sections', 'related', 'edit'],
+  contents: ['description', 'sections', 'related', 'edit'],
+  navbar:   ['theme', 'feed', 'github'],
+}
+
+// Display lists that no longer exist, with the edit that replaces them.
+const REMOVED_DISPLAY = {
+  title_row: 'The Contents button follows display.contents — empty that list to hide it.',
+  info:      'Renamed to display.contents, which mirrors display.toc unless you set it.',
 }
 
 // Per-host "Edit this page" URL templates. Hosts without an entry fall back to repo_url.
@@ -51,11 +57,9 @@ const DEFAULTS = {
   footer:         '',
   theme:          { color: 'default', typeset: 'sans', navbar: '', footer: '' },
   display: {
-    title_row: ['info', 'contents'],
-    header:    ['date', 'reading_time', 'facets'],
-    info:      ['description'],
-    toc:       ['sections', 'related', 'edit'],
-    navbar:    ['theme', 'feed', 'github'],
+    header: ['date', 'reading_time', 'facets'],
+    toc:    ['description', 'sections', 'related', 'edit'],
+    navbar: ['theme', 'feed', 'github'],
   },
   edit:           { branch: 'main', path: null, url: '' },
   nav_order:      {},
@@ -173,8 +177,17 @@ function resolve_sidebar(raw, facets) {
 
 
 function resolve_display(raw, facets) {
-  /** Element lists: order is display order, and omission disables the element. */
+  /** Element lists: order is display order, and omission disables the element. The
+   *  inline Contents panel mirrors the sidebar unless `contents` is given its own list. */
+  for (const list of Object.keys(raw || {})) {
+    if (DISPLAY_ELEMENTS[list]) continue
+    const hint = REMOVED_DISPLAY[list] || `use ${Object.keys(DISPLAY_ELEMENTS).join(', ')}`
+    throw new Error(`mndsite.yaml: unknown display list '${list}' — ${hint}`)
+  }
+
   const cfg = { ...DEFAULTS.display, ...(raw || {}) }
+  if (!Array.isArray(cfg.toc)) throw new Error(`mndsite.yaml: display.toc must be a list`)
+  if (!cfg.contents) cfg.contents = [...cfg.toc]
 
   for (const [list, allowed] of Object.entries(DISPLAY_ELEMENTS)) {
     const items = cfg[list]
