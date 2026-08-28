@@ -1,6 +1,6 @@
 /**
- * Page header showing publication date and estimated reading time.
- * Rendered below the page title for any page with a `date` frontmatter field.
+ * Metadata line below the page title: publication date and reading time, in the order
+ * given by `display.header`. Each item renders only when the page supplies its value.
  */
 function fmt_date(date_str) {
   // Slice to YYYY-MM-DD — gray-matter may serialize date fields as ISO datetime strings
@@ -8,13 +8,21 @@ function fmt_date(date_str) {
   return new Date(year, month - 1, day).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-export default function PageHeader({ date, reading_time }) {
-  if (!date && !reading_time) return null
+export default function PageHeader({ date, reading_time, order = ['date', 'reading_time'] }) {
+  const items = order.map(key => {
+    if (key === 'date' && date) return <span key="date" className="page-date">{fmt_date(date)}</span>
+    if (key === 'reading_time' && reading_time) {
+      return <span key="reading_time" className="page-reading-time">{reading_time} min read</span>
+    }
+    return null
+  }).filter(Boolean)
+
+  if (!items.length) return null
   return (
     <div className="page-header">
-      {date && <span className="page-date">{fmt_date(date)}</span>}
-      {date && reading_time && <span className="page-header-sep">·</span>}
-      {reading_time && <span className="page-reading-time">{reading_time} min read</span>}
+      {items.map((item, i) => (
+        i === 0 ? item : [<span key={`sep-${i}`} className="page-header-sep">·</span>, item]
+      ))}
     </div>
   )
 }

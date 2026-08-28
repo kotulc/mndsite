@@ -142,5 +142,5 @@ related:
 | `desc` / `description` | optional | Summary in the PageInfo panel |
 | `categories` | optional | Rendered as category-group chips |
 | `tags` | optional | Rendered as user-group chips |
-| `reading_time` | optional | Minutes; shown when present and `reading_time: true` in config |
+| `reading_time` | optional | Minutes; shown when present and `reading_time` is listed in `display.header` |
 | `related` | optional | `{ title, url }` entries merged into the Related sidebar |

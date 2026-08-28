@@ -5,8 +5,6 @@ feed_url: updates
 footer: ""
 
 theme_toggle: navbar
-toc: true
-reading_time: true
 
 theme:
   color: default
@@ -59,6 +57,19 @@ collections:
 # Left tree views: "tree" is the directory hierarchy, any other entry names a facet.
 sidebar:
   views: [tree]
+
+# Rendered elements, in display order. Omit an element to turn it off; `header` also
+# accepts any facet name, which places that facet's chips there whatever its ui.
+display:
+  title_row: [info, contents]
+  header: [date, reading_time, facets]
+  info: [description]
+  toc: [sections, related, edit]
+  navbar: [theme, feed, github]
+
+limits:
+  header_chips: 8
+  related: 6
 
 content: ./docs
 output: ./dist

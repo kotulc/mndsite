@@ -31,15 +31,39 @@ function use_page_meta() {
 }
 
 
+function header_facet_names(header) {
+  /** Facets to chip, walking display.header: "facets" expands to every ui:chips facet,
+   *  and a facet named directly is chipped wherever it appears, whatever its ui. */
+  const declared = siteConfig.facets || {}
+  const names = []
+  for (const item of header) {
+    if (item === 'facets') {
+      for (const [name, facet] of Object.entries(declared)) {
+        if (facet.ui === 'chips' && !names.includes(name)) names.push(name)
+      }
+    } else if (declared[item] && !names.includes(item)) {
+      names.push(item)
+    }
+  }
+  return names
+}
+
+
 function PageMeta() {
-  /** Renders published date, supplied reading time, and chip-rendered facet values. */
+  /** Metadata under the page title, driven by display.header: date and reading time in
+   *  the metrics line, then facet chips, both in listed order. */
   const meta = use_page_meta()
-  const metrics = meta.metrics || {}
-  const mins = siteConfig.reading_time === false ? null : metrics.reading_time
-  const chips = facet_chips(meta.facets).slice(0, 8)
+  const header = siteConfig.display.header
+  const chips = facet_chips(meta.facets, header_facet_names(header))
+    .slice(0, siteConfig.limits.header_chips)
+
   return (
     <>
-      <PageHeader date={meta.published} reading_time={mins} />
+      <PageHeader
+        date={header.includes('date') ? meta.published : ''}
+        reading_time={header.includes('reading_time') ? (meta.metrics || {}).reading_time : null}
+        order={header}
+      />
       <TagList tags={chips} />
     </>
   )
@@ -67,6 +91,10 @@ function chip_rules(facets) {
 }
 
 
+const TOC_HAS_SECTIONS = siteConfig.display.toc.includes('sections')
+const TOC_HAS_META = siteConfig.display.toc.some(item => item === 'related' || item === 'edit')
+
+
 const THEME_CSS = [
   siteConfig.theme.font_stack && `body{font-family:${siteConfig.theme.font_stack}}`,
   bg_rules('.nextra-nav-container-blur', siteConfig.theme.navbar),
@@ -76,10 +104,13 @@ const THEME_CSS = [
 
 
 function PageTitle({ children }) {
-  /** Custom h1 override: heading + Info/Contents actions, page metadata, optional panels.
-   *  Info and Contents are mutually exclusive — opening one closes the other. */
+  /** Custom h1 override: heading + the display.title_row actions, page metadata, and the
+   *  panels those actions open. Info and Contents are mutually exclusive. */
   const [info_open, set_info_open] = useState(false)
   const [toc_open, set_toc_open] = useState(false)
+  const title_row = siteConfig.display.title_row
+  const show_info = title_row.includes('info')
+  const show_contents = title_row.includes('contents')
 
   function toggle_info() {
     set_info_open(v => !v)
@@ -95,13 +126,13 @@ function PageTitle({ children }) {
       <div className="page-title-row">
         <h1 className="nx-mt-2 nx-text-4xl nx-font-bold nx-tracking-tight nx-text-slate-900 dark:nx-text-slate-100">{children}</h1>
         <div className="page-title-actions">
-          <PageInfoToggle open={info_open} on_toggle={toggle_info} />
-          <TocMenuToggle open={toc_open} on_toggle={toggle_toc} />
+          {show_info && <PageInfoToggle open={info_open} on_toggle={toggle_info} />}
+          {show_contents && <TocMenuToggle open={toc_open} on_toggle={toggle_toc} />}
         </div>
       </div>
       <PageMeta />
-      <PageInfoPanel open={info_open} on_close={() => set_info_open(false)} />
-      <TocMenuPanel open={toc_open} on_close={() => set_toc_open(false)} />
+      {show_info && <PageInfoPanel open={info_open} on_close={() => set_info_open(false)} />}
+      {show_contents && <TocMenuPanel open={toc_open} on_close={() => set_toc_open(false)} />}
     </>
   )
 }
@@ -115,9 +146,12 @@ export default {
   navbar: {
     extraContent: (
       <div className="navbar-icons">
-        {siteConfig.theme_toggle === 'navbar' && <ThemeToggle />}
-        <FeedLink />
-        <GitHubLink />
+        {siteConfig.display.navbar.map(item => {
+          if (item === 'theme') return siteConfig.theme_toggle === 'navbar' ? <ThemeToggle key={item} /> : null
+          if (item === 'feed') return <FeedLink key={item} />
+          if (item === 'github') return <GitHubLink key={item} />
+          return null
+        })}
       </div>
     ),
   },
@@ -140,7 +174,9 @@ export default {
   // Nextra renders editLink before toc.extraContent, so its own copy is disabled here —
   // MetaSidebar renders "Edit this page" itself, last, after Related.
   editLink: { component: () => null },
-  toc: siteConfig.toc === false ? { component: () => null } : { extraContent: <MetaSidebar /> },
+  toc: TOC_HAS_SECTIONS
+    ? { extraContent: TOC_HAS_META ? <MetaSidebar /> : null }
+    : { component: TOC_HAS_META ? () => <MetaSidebar /> : () => null },
   components: { h1: PageTitle },
   main: ({ children }) => <>{children}</>,
 }

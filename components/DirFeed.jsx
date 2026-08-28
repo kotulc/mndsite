@@ -9,6 +9,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import PageHeader from './PageHeader'
 import TagList from './TagList'
+import { facet_chips } from './facets'
 import siteConfig from '../site.config'
 
 
@@ -19,6 +20,7 @@ const md_components = (basePath) => ({
 
 export default function DirFeed({ dir }) {
   const { basePath } = useRouter()
+  const header = siteConfig.display.header
   const [entries, set_entries] = useState(null)
 
   useEffect(() => {
@@ -40,9 +42,10 @@ export default function DirFeed({ dir }) {
           <h2 className="feed-section-title">
             <Link href={e.url}>{e.title}</Link>
           </h2>
-          <PageHeader date={e.date}
-                      reading_time={siteConfig.reading_time === false ? null : e.reading_time} />
-          <TagList tags={{ categories: e.categories }} />
+          <PageHeader date={header.includes('date') ? e.date : ''}
+                      reading_time={header.includes('reading_time') ? e.reading_time : null}
+                      order={header} />
+          <TagList tags={facet_chips(e.facets)} />
           <div className="feed-section-content">
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={md_components(basePath)}>{e.content}</ReactMarkdown>
           </div>

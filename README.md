@@ -109,8 +109,6 @@ footer: ""                   # custom footer credits; empty keeps the default
 
 # Optional — layout
 theme_toggle: navbar         # "navbar" or "sidebar"
-toc: true                    # show table of contents
-reading_time: true           # show reading time when present in frontmatter
 
 # Optional — theme presets (see docs/configuration.md for all values)
 theme:
@@ -143,6 +141,17 @@ collections:
 # Optional — left tree views: "tree" is the directory hierarchy, others name a facet
 sidebar:
   views: [tree]
+
+# Optional — rendered elements, in display order; omit one to turn it off
+display:
+  title_row: [info, contents]            # actions beside the page title
+  header: [date, reading_time, facets]   # metadata under the title; accepts facet names
+  info: [description]                    # Info panel contents
+  toc: [sections, related, edit]         # right sidebar, top to bottom
+  navbar: [theme, feed, github]          # navbar icons, left to right
+limits:
+  header_chips: 8              # chips shown under the title
+  related: 6                   # entries in the Related list
 
 # Optional — consumer extensions
 components: ""               # React components mirrored into components/custom/
@@ -182,6 +191,20 @@ Rules worth knowing:
 
 `collections` and `sidebar.views` are read and validated today; the filtering UI that
 consumes them is still in progress.
+
+### Display and disabling features
+
+Every rendered element is listed in `display`, and omitting it is how you turn it off —
+no feature has a second switch. `display.header` also accepts facet names, so any
+frontmatter field declared as a facet can be placed exactly where you want it:
+
+```yaml
+display:
+  header: [date, version, tags]   # version value between the date and the tag chips
+```
+
+Frontmatter itself never renders. It stays on the emitted page as metadata for Nextra and
+theme components; it reaches the reader only through `fields` and `facets` mappings.
 
 ### Removed configuration keys
 

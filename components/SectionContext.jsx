@@ -17,6 +17,16 @@ const PAGE_INDEX = Object.fromEntries(
 )
 
 
+export function section_anchor(name) {
+  /** Fragment id matching Nextra's heading anchors (GitHub-style slug of the section name). */
+  return String(name || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+}
+
+
 export function find_page(url) {
   /** Page node for a given url, or undefined. Ignores #fragment and trailing slash. */
   const base = url.split('#')[0]

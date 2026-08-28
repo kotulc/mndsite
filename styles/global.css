@@ -509,71 +509,10 @@ img {
   text-transform: uppercase;
 }
 
-.page-info-summary {
-  margin: 0;
-}
-
 .page-info-desc {
   margin: 0;
   line-height: 1.6;
   color: var(--site-gray-600);
-}
-
-.page-info-section-map {
-  margin-top: 1rem;
-}
-
-.page-info-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
-  width: 100%;
-  background: transparent;
-}
-
-.page-info-row {
-  display: flex;
-  align-items: stretch;
-  gap: 0.75rem;
-  min-width: 0;
-}
-
-/* Mosaic tiles — transparent so they sit on the page background */
-.page-info-section {
-  box-sizing: border-box;
-  display: flex;
-  flex: 1 1 0;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.3rem;
-  min-width: 0;
-  padding: 0.15rem 0.15rem 0.25rem 0;
-  background: transparent;
-}
-
-.page-info-section-name {
-  display: block;
-  font-size: 0.8125rem;
-  font-weight: 400;
-  line-height: 1.25;
-  color: var(--site-primary-600);
-  text-decoration: none;
-}
-
-a.page-info-section-name:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.page-info-section .tag-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  margin: 0;
-}
-
-:is(html[class~="dark"]) .page-info-section {
-  background: transparent;
 }
 
 /* Page header: date + reading time */

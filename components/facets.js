@@ -25,12 +25,14 @@ export function facet_values(value) {
 }
 
 
-export function facet_chips(facets, ui = ['chips']) {
-  /** Flatten a page's facets into [{ term, group }], in config declaration order. */
+export function facet_chips(facets, names) {
+  /** Flatten a page's facets into [{ term, group }]. Without `names`, every facet whose
+   *  ui is "chips", in declaration order; with `names`, exactly those facets in that order. */
+  const wanted = names || Object.keys(siteConfig.facets || {})
+    .filter(name => (facet_config(name) || {}).ui === 'chips')
+
   const chips = []
-  for (const name of Object.keys(siteConfig.facets || {})) {
-    const facet = facet_config(name)
-    if (!facet || !ui.includes(facet.ui)) continue
+  for (const name of wanted) {
     for (const term of facet_values((facets || {})[name])) chips.push({ term, group: name })
   }
   return chips

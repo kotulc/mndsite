@@ -4,7 +4,11 @@ import { useSection, find_page } from '../../components/SectionContext'
 import site_config from '../../site.config'
 
 jest.mock('../../components/SectionContext', () => ({ useSection: jest.fn(), find_page: jest.fn() }))
-jest.mock('../../site.config', () => ({ repo_url: 'https://github.com/x/y' }))
+jest.mock('../../site.config', () => ({
+  repo_url: 'https://github.com/x/y',
+  display: { toc: ['sections', 'related', 'edit'] },
+  limits: { related: 6 },
+}))
 jest.mock('next/link', () => ({ __esModule: true, default: ({ href, children }) => <a href={href}>{children}</a> }))
 
 beforeEach(() => { find_page.mockReturnValue(undefined) })

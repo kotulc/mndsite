@@ -1,66 +1,19 @@
 /**
  * "Info" affordance for the page header. PageInfoToggle renders a small intelligence
  * icon beside the page title; clicking it expands PageInfoPanel below the header, which
- * shows an optional page description (frontmatter desc) and a per-section tag breakdown.
- * Each section shows at most `section_tags` chips. Sections pack into a content-sized mosaic.
- * Data comes from SectionContext. Open state is owned by theme.config.jsx's PageTitle.
+ * shows the supplied page description. Data comes from SectionContext, and open state is
+ * owned by theme.config.jsx's PageTitle. Both render nothing when no description exists.
  */
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useSection } from './SectionContext'
-import TagList from './TagList'
 
-function section_has_tags(node) {
-  return Array.isArray(node.tags) && node.tags.length > 0
+
+function use_page_desc() {
+  const { page } = useSection()
+  return (page && page.desc) || ''
 }
 
-function section_has_content(node) {
-  return section_has_tags(node) || !!(node.name && node.name.trim())
-}
-
-export function limit_tags(tags, n) {
-  /** Keep the first n supplied tags. */
-  if (!Array.isArray(tags) || n <= 0) return []
-  return tags.slice(0, n)
-}
-
-function tag_count(tags) {
-  return Array.isArray(tags) ? tags.length : 0
-}
-
-export function layout_section_rows(sections) {
-  /** Pack sections into mosaic rows (~sqrt(n) tiles per row). Within a row, flex-grow is
-   *  proportional to tag weight; row height is content-driven so chips never clip. */
-  if (!sections.length) return []
-  const cols = Math.max(2, Math.ceil(Math.sqrt(sections.length)))
-  const nodes = sections.map(section => ({
-    section,
-    weight: Math.max(tag_count(section.tags), 1),
-  }))
-  const rows = []
-  for (let i = 0; i < nodes.length; i += cols) rows.push(nodes.slice(i, i + cols))
-  return rows
-}
-
-export function section_anchor(name) {
-  /** Fragment id matching Nextra's heading anchors (GitHub-style slug of the section name). */
-  return String(name || '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
-}
-
-function use_page_info() {
-  const { page, sections } = useSection()
-  const desc = (page && page.desc) || ''
-  const max_tags = 8
-  const tagged_sections = (sections || [])
-    .filter(section_has_content)
-    .map(section => ({ ...section, tags: limit_tags(section.tags, max_tags) }))
-    .filter(section => section_has_content(section))
-  return { desc, tagged_sections, has_info: !!(desc || tagged_sections.length) }
-}
 
 function IntelligenceIcon({ size = 14 }) {
   // Sparkle glyph — reads as "AI/intelligence" rather than a plain info "i"
@@ -72,9 +25,9 @@ function IntelligenceIcon({ size = 14 }) {
   )
 }
 
+
 export function PageInfoToggle({ open, on_toggle }) {
-  const { has_info } = use_page_info()
-  if (!has_info) return null
+  if (!use_page_desc()) return null
   return (
     <button
       type="button"
@@ -90,8 +43,9 @@ export function PageInfoToggle({ open, on_toggle }) {
   )
 }
 
+
 export function PageInfoPanel({ open, on_close }) {
-  const { desc, tagged_sections, has_info } = use_page_info()
+  const desc = use_page_desc()
   const { events } = useRouter()
 
   useEffect(() => {
@@ -108,41 +62,12 @@ export function PageInfoPanel({ open, on_close }) {
     return () => events.off('routeChangeStart', close)
   }, [open, on_close, events])
 
-  if (!open || !has_info) return null
+  if (!open || !desc) return null
 
-  const rows = layout_section_rows(tagged_sections)
   return (
     <section id="page-info-panel" className="page-info-panel" aria-labelledby="page-info-title">
-      <h2 id="page-info-title" className="page-info-title">Page intelligence</h2>
-      {desc && (
-        <div className="page-info-summary">
-          <h3 className="panel-label">Summary</h3>
-          <p className="page-info-desc">{desc}</p>
-        </div>
-      )}
-      {!!rows.length && (
-        <div className="page-info-section-map">
-          <h3 className="panel-label">Sections</h3>
-          <div className="page-info-sections">
-            {rows.map((row, ri) => (
-              <div key={ri} className="page-info-row">
-                {row.map(({ section, weight }, i) => (
-                  <div
-                    key={`${section.name}-${ri}-${i}`}
-                    className="page-info-section"
-                    style={{ flexGrow: weight }}
-                  >
-                    <a href={`#${section_anchor(section.name)}`} className="page-info-section-name">
-                      {section.name}
-                    </a>
-                    <TagList tags={section.tags} />
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <h2 id="page-info-title" className="page-info-title">Summary</h2>
+      <p className="page-info-desc">{desc}</p>
     </section>
   )
 }

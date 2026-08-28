@@ -12,13 +12,17 @@ jest.mock('react-markdown', () => ({
   },
 }))
 jest.mock('remark-gfm', () => ({ __esModule: true, default: () => {} }))
+jest.mock('../../site.config', () => ({
+  display: { header: ['date', 'reading_time', 'facets'] },
+  facets: { categories: { field: 'categories', label: 'Category', ui: 'chips' } },
+  limits: { header_chips: 8 },
+}))
 
 const ENTRIES = [{
   url:          '/updates/welcome',
   title:        'Welcome',
   date:         '2024-01-01',
-  categories:   ['announcement'],
-  tags:         ['markdown'],
+  facets:       { categories: ['announcement'] },
   reading_time: 1,
   content:      '## Hello\n\nSome **bold** text.\n\n- item one\n- item two',
 }]

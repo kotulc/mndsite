@@ -2,13 +2,13 @@
  * Mobile/tablet access to the right-hand ToC. Nextra hides `.nextra-toc` below the xl
  * breakpoint (1280px); TocMenuToggle appears in the page-title row at those widths and
  * expands TocMenuPanel inline under the page header (same content area as PageInfo) —
- * a labeled Sections list plus MetaSidebar (Related / Edit). Disabled when siteConfig.toc
- * is false. Open state is owned by the caller (theme.config.jsx's PageTitle).
+ * a labeled Sections list plus MetaSidebar (Related / Edit), each following display.toc.
+ * The toggle itself follows display.title_row; open state is owned by the caller
+ * (theme.config.jsx's PageTitle).
  */
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { useSection } from './SectionContext'
-import { section_anchor } from './PageInfo'
+import { useSection, section_anchor } from './SectionContext'
 import MetaSidebar from './MetaSidebar'
 import siteConfig from '../site.config'
 
@@ -27,7 +27,7 @@ function ListIcon({ size = 14 }) {
 
 export function TocMenuToggle({ open, on_toggle }) {
   const { page, sections } = useSection()
-  if (siteConfig.toc === false || !page) return null
+  if (!page) return null
   // Still show when there are no ## sections — MetaSidebar may still have Related/Edit
   return (
     <button
@@ -69,7 +69,7 @@ export function TocMenuPanel({ open, on_close }) {
     <section id="toc-menu-panel" className="toc-menu-panel" aria-label="Page contents">
       <h2 className="toc-menu-title">Page Contents</h2>
 
-      {!!sections.length && (
+      {siteConfig.display.toc.includes('sections') && !!sections.length && (
         <div className="toc-menu-block">
           <h3 className="panel-label">Sections</h3>
           <ul className="toc-menu-list">

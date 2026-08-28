@@ -15,6 +15,17 @@ const { resolve_theme } = require('./theme')
 const REMOVED_KEYS = {
   meta: 'Move tagging and related-link configuration upstream to mndmap or frontmatter.',
   flatten: 'Move directory organization upstream to mndmap.',
+  toc: "Use display.toc — remove 'sections' to hide the section list.",
+  reading_time: "Use display.header — remove 'reading_time' to hide it.",
+}
+
+// Elements each display list accepts. `header` also accepts any declared facet name.
+const DISPLAY_ELEMENTS = {
+  title_row: ['info', 'contents'],
+  header:    ['date', 'reading_time', 'facets'],
+  info:      ['description'],
+  toc:       ['sections', 'related', 'edit'],
+  navbar:    ['theme', 'feed', 'github'],
 }
 
 // Chip hues, reused for facets that do not name a color (assigned in declaration order).
@@ -30,9 +41,15 @@ const DEFAULTS = {
   description:    '',
   footer:         '',
   theme_toggle:   'navbar',
-  toc:            true,
-  reading_time:   true,
   theme:          { color: 'default', typeset: 'sans', navbar: '', footer: '' },
+  display: {
+    title_row: ['info', 'contents'],
+    header:    ['date', 'reading_time', 'facets'],
+    info:      ['description'],
+    toc:       ['sections', 'related', 'edit'],
+    navbar:    ['theme', 'feed', 'github'],
+  },
+  limits:         { header_chips: 8, related: 6 },
   nav_order:      {},
   fields: {
     title:        'title',
@@ -147,6 +164,37 @@ function resolve_sidebar(raw, facets) {
 }
 
 
+function resolve_display(raw, facets) {
+  /** Element lists: order is display order, and omission disables the element. */
+  const cfg = { ...DEFAULTS.display, ...(raw || {}) }
+
+  for (const [list, allowed] of Object.entries(DISPLAY_ELEMENTS)) {
+    const items = cfg[list]
+    if (!Array.isArray(items)) throw new Error(`mndsite.yaml: display.${list} must be a list`)
+
+    // Naming a facet in `header` places its values there regardless of the facet's ui.
+    const valid = list === 'header' ? [...allowed, ...Object.keys(facets)] : allowed
+    for (const item of items) {
+      if (!valid.includes(item)) {
+        throw new Error(`mndsite.yaml: unknown display.${list} element '${item}' — use ${valid.join(', ')}`)
+      }
+    }
+  }
+  return cfg
+}
+
+
+function resolve_limits(raw) {
+  const cfg = { ...DEFAULTS.limits, ...(raw || {}) }
+  for (const [key, value] of Object.entries(cfg)) {
+    if (!Number.isInteger(value) || value < 0) {
+      throw new Error(`mndsite.yaml: limits.${key} must be a non-negative integer`)
+    }
+  }
+  return cfg
+}
+
+
 function load_config(yaml_path) {
   const abs  = path.resolve(yaml_path)
   const dir  = path.dirname(abs)
@@ -161,6 +209,8 @@ function load_config(yaml_path) {
   cfg.facets      = resolve_facets(raw.facets)
   cfg.collections = resolve_collections(raw.collections, cfg.facets)
   cfg.sidebar     = resolve_sidebar(raw.sidebar, cfg.facets)
+  cfg.display     = resolve_display(raw.display, cfg.facets)
+  cfg.limits      = resolve_limits(raw.limits)
 
   cfg.content = path.resolve(dir, cfg.content)
   cfg.output  = path.resolve(dir, cfg.output)
@@ -174,9 +224,9 @@ function load_config(yaml_path) {
 function write_site_config(config, dest_dir) {
   const dir  = dest_dir || path.join(__dirname, '..')
   const keys = [
-    'title', 'repo_url', 'feed_url', 'description', 'footer',
-    'theme_toggle', 'toc', 'reading_time',
+    'title', 'repo_url', 'feed_url', 'description', 'footer', 'theme_toggle',
     'theme', 'nav_order', 'fields', 'facets', 'collections', 'sidebar',
+    'display', 'limits',
   ]
   const values = Object.fromEntries(keys.map(k => [k, config[k]]))
   const body = Object.entries(values)

@@ -74,22 +74,29 @@ export default function MetaSidebar() {
   const { page } = useSection()
   if (!page) return null
 
-  const items = related_items(page)
-  const has_edit = !!siteConfig.repo_url
+  const order = siteConfig.display.toc.filter(item => item === 'related' || item === 'edit')
+  const items = order.includes('related')
+    ? related_items(page).slice(0, siteConfig.limits.related)
+    : []
+  const has_edit = order.includes('edit') && !!siteConfig.repo_url
   if (!items.length && !has_edit) return null
 
   return (
     <div className="meta-sidebar-content">
-      {!!items.length && (
-        <div className="meta-sidebar-section">
-          <Label>Related</Label>
-          {items.map(item => (
-            <RelatedLink key={item.href} href={item.href} name={item.name} external={item.external} />
-          ))}
-        </div>
-      )}
-
-      <EditLink />
+      {order.map(item => {
+        if (item === 'related' && items.length) {
+          return (
+            <div key="related" className="meta-sidebar-section">
+              <Label>Related</Label>
+              {items.map(link => (
+                <RelatedLink key={link.href} href={link.href} name={link.name} external={link.external} />
+              ))}
+            </div>
+          )
+        }
+        if (item === 'edit') return <EditLink key="edit" />
+        return null
+      })}
     </div>
   )
 }

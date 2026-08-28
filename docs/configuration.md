@@ -33,8 +33,6 @@ The CLI reads the YAML at build time and generates the internal `site.config.js`
 | `feed_url` | string | `""` | Section slug linked from the navbar feed icon |
 | `footer` | string | `""` | Custom footer credits text; empty keeps "Powered by mndsite and Nextra" |
 | `theme_toggle` | string | `"navbar"` | Where the light/dark toggle appears: `"navbar"` or `"sidebar"` |
-| `toc` | boolean | `true` | Right sidebar: "On This Page" section navigation |
-| `reading_time` | boolean | `true` | Show reading time when present in frontmatter |
 | `theme.color` | string | `"default"` | Named accent palette — see [Theme](#theme) below |
 | `theme.typeset` | string | `"sans"` | Named body font stack — see [Theme](#theme) below |
 | `theme.navbar` | string | `""` | Navbar background: `"primary"` (theme tint) or any CSS color |
@@ -44,6 +42,8 @@ The CLI reads the YAML at build time and generates the internal `site.config.js`
 | `facets` | object | `categories`, `tags` | Content dimensions rendered as chips and filters — see [Facets](#facets) |
 | `collections` | object | `{ default: all }` | Named facet presets; `default` names the active one |
 | `sidebar.views` | list | `[tree]` | Left tree views: `tree` plus any facet name |
+| `display` | object | see below | Rendered elements per zone, in display order — see [Display](#display) |
+| `limits` | object | `header_chips: 8`, `related: 6` | Caps on chips and Related entries |
 | `content` | path | `./docs` | Source markdown directory (resolved relative to this file) |
 | `output` | path | `./dist` | Output directory for the built site (resolved relative to this file) |
 | `components` | path | `""` | Optional directory of consumer React components, mirrored into `components/custom/` each build |
@@ -73,6 +73,8 @@ These keys are **rejected at load time** with migration guidance:
 |-----|---------|
 | `meta` (tagging, related-link limits) | **mndmap** or frontmatter |
 | `flatten` (inline directory feeds) | **mndmap** organization |
+| `toc` (boolean) | `display.toc` — drop `sections` |
+| `reading_time` (boolean) | `display.header` — drop `reading_time` |
 
 mndsite configuration is limited to rendering, content paths, navigation order, theme, and deployment.
 
@@ -130,6 +132,31 @@ facet's field simply has no value for it, and keeps its route either way.
 `collections` groups facet values into named presets (`default` names the active one), and
 `sidebar.views` lists the left-tree tabs. Both are validated today; the filtering UI that
 consumes them is in progress.
+
+## Display
+
+`display` lists which elements render, in which order. Omitting an element turns it off —
+there is no second switch anywhere in the config.
+
+```yaml
+display:
+  title_row: [info, contents]            # actions beside the page title
+  header: [date, reading_time, facets]   # metadata under the title
+  info: [description]                    # Info panel contents
+  toc: [sections, related, edit]         # right sidebar, top to bottom
+  navbar: [theme, feed, github]          # navbar icons, left to right
+limits:
+  header_chips: 8
+  related: 6
+```
+
+`header` also accepts any facet name. Listing a facet there places its chips at that
+position whatever its `ui` — so `header: [date, version, tags]` shows the version value
+between the date and the tag chips. The generic `facets` element expands to every facet
+with `ui: chips`.
+
+The metadata line and the chip row are separate zones: `display.header` orders items
+within each, and the chip row always follows the metrics line.
 
 ## Metadata and tagging
 

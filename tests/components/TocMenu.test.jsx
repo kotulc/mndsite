@@ -2,24 +2,30 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { TocMenuToggle, TocMenuPanel } from '../../components/TocMenu'
 import { useSection } from '../../components/SectionContext'
 
-jest.mock('../../components/SectionContext', () => ({ useSection: jest.fn() }))
+jest.mock('../../components/SectionContext', () => ({
+  useSection: jest.fn(),
+  section_anchor: (name) => name.toLowerCase().replace(/\s+/g, '-'),
+}))
 jest.mock('../../components/MetaSidebar', () => () => <div data-testid="meta-sidebar" />)
-jest.mock('../../components/PageInfo', () => ({ section_anchor: (name) => name.toLowerCase().replace(/\s+/g, '-') }))
-jest.mock('../../site.config', () => ({ toc: true }))
+jest.mock('../../site.config', () => ({
+  display: { toc: ['sections', 'related', 'edit'] },
+  limits: { related: 6 },
+}))
 jest.mock('next/router', () => ({
   useRouter: () => ({ events: { on: jest.fn(), off: jest.fn() } }),
 }))
 
 
-test('test_toc_menu_toggle_hidden_when_toc_disabled', () => {
-  /** Contents button respects siteConfig.toc === false. */
+test('test_toc_menu_panel_omits_sections_when_display_excludes_them', () => {
+  /** The Sections block follows display.toc; Related/Edit still render. */
   const siteConfig = require('../../site.config')
-  const original = siteConfig.toc
-  siteConfig.toc = false
+  const original = siteConfig.display.toc
+  siteConfig.display.toc = ['related', 'edit']
   useSection.mockReturnValue({ page: { name: 'Config' }, sections: [{ name: 'A', level: 2 }] })
-  const { container } = render(<TocMenuToggle open={false} on_toggle={() => {}} />)
-  expect(container).toBeEmptyDOMElement()
-  siteConfig.toc = original
+  render(<TocMenuPanel open={true} on_close={() => {}} />)
+  expect(screen.queryByRole('heading', { name: 'Sections' })).not.toBeInTheDocument()
+  expect(screen.getByTestId('meta-sidebar')).toBeInTheDocument()
+  siteConfig.display.toc = original
 })
 
 test('test_toc_menu_toggle_hidden_without_page', () => {
