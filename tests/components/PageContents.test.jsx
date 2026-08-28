@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import PageContents, { contents_items, edit_href } from '../../components/PageContents'
+import PageContents, { cap_name, contents_items, edit_href } from '../../components/PageContents'
 import { useSection, find_page } from '../../components/SectionContext'
 import site_config from '../../site.config'
 
@@ -41,12 +41,13 @@ test('test_page_contents_returns_null_when_nothing_to_list', () => {
   site_config.repo_url = original
 })
 
-test('test_page_contents_renders_description_first', () => {
-  /** The description leads the list when supplied. */
+test('test_page_contents_renders_labeled_description_first', () => {
+  /** The description leads the list, under its own label, when supplied. */
   mock_page({ desc: 'A page about things.' }, [{ name: 'Fields', level: 2 }])
   const { container } = render(<PageContents order={ORDER} />)
-  expect(container.querySelector('.page-contents').firstElementChild)
-    .toHaveTextContent('A page about things.')
+  const first = container.querySelector('.page-contents').firstElementChild
+  expect(first.querySelector('.panel-label')).toHaveTextContent('Description')
+  expect(first).toHaveTextContent('A page about things.')
 })
 
 test('test_page_contents_lists_sections_with_anchors', () => {
@@ -57,13 +58,23 @@ test('test_page_contents_lists_sections_with_anchors', () => {
   expect(container.querySelector('.page-contents-sub')).toHaveTextContent('Nested')
 })
 
+test('test_page_contents_elides_long_names_but_keeps_them_on_hover', () => {
+  /** A long section name renders capped; the full text stays in the title attribute. */
+  const long = 'A section heading long enough to need eliding in a column'
+  mock_page({}, [{ name: long, level: 2 }])
+  const link = render(<PageContents order={ORDER} />).container.querySelector('.page-contents-list a')
+  expect(link).toHaveAttribute('title', long)
+  expect(link.textContent.trim()).toBe(cap_name(long))
+  expect(link.textContent).not.toContain('column')
+})
+
 test('test_page_contents_edit_link_renders_last', () => {
   /** With a Related block present, the edit link is still the final child. */
   find_page.mockReturnValue({ name: 'Other', url: '/other' })
   mock_page({ links: ['/other'] })
   const { container } = render(<PageContents order={ORDER} />)
   expect(container.querySelector('.page-contents').lastElementChild)
-    .toBe(screen.getByText('Edit this page'))
+    .toContainElement(screen.getByText('Edit this page'))
 })
 
 test('test_page_contents_link_resolves_to_page_name_not_path', () => {
@@ -106,6 +117,27 @@ test('test_page_contents_follows_the_supplied_order', () => {
   render(<PageContents order={['sections']} />)
   expect(screen.queryByText('Summary.')).not.toBeInTheDocument()
   expect(screen.getByText('On This Page')).toBeInTheDocument()
+})
+
+
+describe('cap_name', () => {
+  const long = 'A section heading long enough to need eliding in a column'
+
+  test('test_cap_name_leaves_short_names_untouched', () => {
+    expect(cap_name('Fields')).toBe('Fields')
+  })
+
+  test('test_cap_name_elides_on_a_word_boundary', () => {
+    const capped = cap_name(long)
+    expect(capped.endsWith('…')).toBe(true)
+    expect(long.startsWith(capped.slice(0, -1))).toBe(true)
+    expect(capped).not.toMatch(/\s…$/)
+  })
+
+  test('test_cap_name_elides_a_single_long_word', () => {
+    const word = 'x'.repeat(60)
+    expect(cap_name(word)).toBe(`${'x'.repeat(26)}…`)
+  })
 })
 
 

@@ -12,6 +12,18 @@ import Link from 'next/link'
 import { useSection, find_page, section_anchor } from './SectionContext'
 import siteConfig from '../site.config'
 
+// Longest entry name rendered in full; past this, Sections and Related elide. Sized to
+// one line of a panel column (12rem) so a capped name never wraps.
+const NAME_CAP = 26
+
+
+export function cap_name(name) {
+  /** Elide a long entry name, breaking on the last whole word that fits. */
+  const text = String(name || '')
+  if (text.length <= NAME_CAP) return text
+  return `${text.slice(0, NAME_CAP).replace(/\s+\S*$/, '')}…`
+}
+
 
 export function edit_href(page) {
   /** Edit target for a page: the repo copy of the file it was built from. Requires
@@ -89,18 +101,25 @@ function Label({ children }) {
 
 
 function Description({ page }) {
-  return <p className="page-contents-desc">{page.desc}</p>
+  return (
+    <div className="page-contents-block page-contents-summary">
+      <Label>Description</Label>
+      <p className="page-contents-desc">{page.desc}</p>
+    </div>
+  )
 }
 
 
 function Sections({ sections, on_navigate }) {
   return (
-    <div className="page-contents-block page-contents-sections">
+    <div className="page-contents-block">
       <Label>On This Page</Label>
       <ul className="page-contents-list">
         {sections.map((section, i) => (
           <li key={`${section.name}-${i}`} className={section.level >= 3 ? 'page-contents-sub' : undefined}>
-            <a href={`#${section_anchor(section.name)}`} onClick={on_navigate}>{section.name}</a>
+            <a href={`#${section_anchor(section.name)}`} title={section.name} onClick={on_navigate}>
+              {cap_name(section.name)}
+            </a>
           </li>
         ))}
       </ul>
@@ -111,15 +130,17 @@ function Sections({ sections, on_navigate }) {
 
 function Related({ page }) {
   return (
-    <div className="page-contents-block page-contents-related">
+    <div className="page-contents-block">
       <Label>Related</Label>
-      {related_items(page).map(({ href, name, external }) => (
-        <div key={href} className="related-link">
-          {external
-            ? <a href={href} target="_blank" rel="noopener noreferrer">{name}</a>
-            : <Link href={href}>{name}</Link>}
-        </div>
-      ))}
+      <div className="page-contents-links">
+        {related_items(page).map(({ href, name, external }) => (
+          <div key={href} className="related-link">
+            {external
+              ? <a href={href} title={name} target="_blank" rel="noopener noreferrer">{cap_name(name)}</a>
+              : <Link href={href} title={name}>{cap_name(name)}</Link>}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -127,9 +148,12 @@ function Related({ page }) {
 
 function EditLink({ page }) {
   return (
-    <a href={edit_href(page)} target="_blank" rel="noopener noreferrer" className="page-contents-edit">
-      Edit this page
-    </a>
+    <div className="page-contents-block">
+      <Label>Source</Label>
+      <a href={edit_href(page)} target="_blank" rel="noopener noreferrer" className="page-contents-edit">
+        Edit this page
+      </a>
+    </div>
   )
 }
 
@@ -161,12 +185,25 @@ export function TocTitle() {
   /** Sidebar heading slot: the page description above Nextra's "On This Page" label. */
   const { page } = useSection()
   const desc = TOC_ORDER.includes('description') && page && page.desc
+  // Spans, not the block markup above: Nextra wraps this slot in its own <p>
   return (
     <>
-      {desc && <span className="page-contents-desc">{desc}</span>}
+      {desc && (
+        <>
+          <span className="panel-label">Description</span>
+          <span className="page-contents-desc">{desc}</span>
+        </>
+      )}
       <span className="page-contents-heading">On This Page</span>
     </>
   )
+}
+
+
+export function TocHeading({ children }) {
+  /** Nextra's sidebar heading slot, capped the way our own lists are. */
+  if (typeof children !== 'string') return children
+  return <span title={children}>{cap_name(children)}</span>
 }
 
 

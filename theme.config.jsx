@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import PageHeader from './components/PageHeader'
 import TagList from './components/TagList'
-import PageContents, { TocTitle, TocExtra } from './components/PageContents'
+import PageContents, { TocTitle, TocExtra, TocHeading } from './components/PageContents'
 import { ContentsToggle, ContentsPanel } from './components/ContentsMenu'
 import SiteFooter from './components/SiteFooter'
 import GitHubLink from './components/GitHubLink'
@@ -159,7 +159,7 @@ export default {
   // With `sections` listed, Nextra owns the heading list (and its scroll-spy) and the
   // description rides in its title slot; otherwise PageContents renders the sidebar whole.
   toc: TOC_HAS_SECTIONS
-    ? { title: <TocTitle />, extraContent: <TocExtra /> }
+    ? { title: <TocTitle />, extraContent: <TocExtra />, headingComponent: TocHeading }
     : { component: () => <PageContents order={siteConfig.display.toc} /> },
   components: { h1: PageTitle },
   main: ({ children }) => <>{children}</>,

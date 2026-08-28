@@ -308,6 +308,13 @@ img {
   margin-top: 0.85rem;
 }
 
+/* Line the toggle's right edge up with the navbar's last icon. Nextra pads the content
+   column 3rem from md up but the navbar only 1.5rem, so pull out by the difference —
+   below md the two paddings already match, and above xl the toggle is hidden. */
+@media (min-width: 768px) and (max-width: 1279px) {
+  .page-title-actions { margin-right: -1.5rem; }
+}
+
 /* Contents button — shown only below xl, where Nextra hides .nextra-toc */
 .contents-toggle {
   display: none;
@@ -316,7 +323,7 @@ img {
   flex-shrink: 0;
   padding: 0.2rem 0.5rem;
   border: 1px solid var(--site-gray-200);
-  border-radius: 9999px;
+  border-radius: 0.25rem;
   background: transparent;
   color: var(--site-gray-500);
   font-family: inherit;
@@ -363,23 +370,21 @@ img {
   border-bottom-color: #262626;
 }
 
-/* Panel layout: full-width description, then each block as a horizontal grid */
-.contents-panel .page-contents { font-size: inherit; color: inherit; }
-
-.contents-panel .page-contents-desc { margin-bottom: 1.25rem; }
-
-.contents-panel .page-contents-block + .page-contents-block { margin-top: 1.25rem; }
-
-.contents-panel .page-contents-list,
-.contents-panel .page-contents-related {
+/* Panel layout: one column per block, side by side as the width allows, each holding a
+   single stacked list — the sidebar's blocks laid out across the page. The description
+   is prose, so it spans the row above them. */
+.contents-panel .page-contents {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
-  column-gap: 1.25rem;
-  row-gap: 0.15rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  align-items: start;
+  gap: 1.5rem 1.75rem;
+  font-size: inherit;
+  color: inherit;
 }
 
-.contents-panel .page-contents-related .panel-label { grid-column: 1 / -1; }
+.contents-panel .page-contents-summary { grid-column: 1 / -1; }
 
+.contents-panel .page-contents-list li,
 .contents-panel .related-link { padding: 0.2rem 0; }
 
 .contents-panel .page-contents-list a,
@@ -596,8 +601,10 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
   color: var(--site-gray-600);
 }
 
-/* Subsection labels (On This Page / Related), shared with the filter panel */
+/* Block labels (Description / On This Page / Related), shared with the filter panel.
+   Declared block so the sidebar's <span> copies stack like the <p> copies elsewhere. */
 .panel-label {
+  display: block;
   margin: 0 0 0.375rem;
   color: var(--site-gray-900);
   font-size: 0.6875rem;
@@ -609,15 +616,18 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 /* Description: a <p> in the panel, a <span> inside Nextra's ToC title <p> in the sidebar */
 .page-contents-desc {
   display: block;
-  margin: 0 0 0.75rem;
+  margin: 0;
   color: var(--site-gray-600);
   font-weight: 400;
   line-height: 1.6;
 }
 
+/* Only the sidebar title slot puts these two adjacent, with no block wrapper between */
 .page-contents-heading { display: block; }
 
-.page-contents-block + .page-contents-block { margin-top: 1rem; }
+.page-contents-desc + .page-contents-heading { margin-top: 1rem; }
+
+.nextra-toc .page-contents-block + .page-contents-block { margin-top: 1rem; }
 
 .page-contents-list {
   list-style: none;
@@ -654,7 +664,6 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 
 .page-contents-edit {
   display: block;
-  margin-top: 1.25rem;
   color: var(--site-primary-600);
   text-decoration: none;
   font-weight: 500;
