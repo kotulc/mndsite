@@ -39,7 +39,7 @@ or browse [Features](docs/features/overview.md) for the full capability overview
 - **`_assets/` handoff** — static assets copied to `public/_assets/` with path rewriting
 - **Images** — legacy `images/` subtrees copied and path-rewritten; corrupt EXIF stripped
 - **Reading time** — displayed when supplied in frontmatter
-- **Tags and categories** — rendered from frontmatter as pill chips below each title
+- **Facets** — tags, categories, or any declared frontmatter dimension, rendered as colored chips
 - **Related links** — outbound links and frontmatter `related` entries in the ToC sidebar
 - **Nav ordering** — sibling order via `nav_order` from mndmap or YAML
 - **Custom components** — optional consumer React components synced each build
@@ -122,6 +122,28 @@ theme:
 # Optional — navigation
 nav_order: {}                # map of section slug → ordered list of page slugs
 
+# Optional — frontmatter keys mdsite reads (frontmatter is inert unless named here)
+fields:
+  title: title
+  description: [description, desc]
+  date: date
+  reading_time: reading_time
+  related: related
+  identity: doc_id           # stable id grouping variants of one document (from mndmap)
+
+# Optional — content dimensions rendered as chips and filters
+facets:
+  categories: { field: categories, label: Category, color: blue, ui: chips, sort: alpha }
+  tags:       { field: tags,       label: Tag,      color: violet, ui: chips, sort: alpha }
+
+# Optional — named facet presets; "default" names the active one, or "all"
+collections:
+  default: all
+
+# Optional — left tree views: "tree" is the directory hierarchy, others name a facet
+sidebar:
+  views: [tree]
+
 # Optional — consumer extensions
 components: ""               # React components mirrored into components/custom/
 assets: ""                   # static files mirrored into public/assets/
@@ -130,6 +152,36 @@ assets: ""                   # static files mirrored into public/assets/
 content: ./docs              # source markdown directory
 output: ./dist               # output directory for built site
 ```
+
+### Fields and facets
+
+mdsite reads no frontmatter key by accident. `fields` names the keys behind the built-in
+renderer metadata, and `facets` declares every content dimension — tags, categories,
+version, status, applicability, anything else upstream stamps into frontmatter.
+
+| Facet key | Default | Purpose |
+|---|---|---|
+| `field` | *(required)* | Frontmatter key to read |
+| `label` | facet name, title-cased | Chip tooltip and view label |
+| `color` | next palette entry | `blue`, `violet`, `amber`, `rose`, `green`, `teal`, or a hue `0-359` |
+| `values` | any value allowed | Allowed values; anything else is dropped |
+| `sort` | `alpha` | `alpha`, `semver`, `date`, `listed` |
+| `default` | all values | Values active when no filter is applied; `latest` for ordered facets |
+| `ui` | `chips` | `chips`, `select`, `badge`, `none` |
+
+Chip colors are generated per facet from its hue, in both light and dark themes, so a
+user-defined facet gets a coherent chip without any CSS. A value whose facet is not
+declared falls back to the neutral `chip-custom` style.
+
+Rules worth knowing:
+
+- Facet values come from frontmatter only — never from paths, and never generated.
+- A page missing a facet's field simply has no value for it, and matches any filter on it.
+- Filtering scopes navigation and listings; every page keeps its route regardless.
+- Values not listed in a facet's `values` are dropped, so the config stays authoritative.
+
+`collections` and `sidebar.views` are read and validated today; the filtering UI that
+consumes them is still in progress.
 
 ### Removed configuration keys
 

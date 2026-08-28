@@ -207,7 +207,9 @@ function ingest_page(src_entry, dest_dir, rel, slug, base, img_url) {
   const body = prepare_body(raw, img_url)
   fs.writeFileSync(dest, fm_block(raw) + body)
 
-  const title = fm.title || first_h1(body) || slug_to_title(base)
+  const config = get_config()
+  const fields = config.fields || {}
+  const title = meta.field_value(fm, fields.title || 'title') || first_h1(body) || slug_to_title(base)
   const parts = [...(rel ? rel.split('/') : []), ...(slug === 'index' ? [] : [slug])]
   const url   = '/' + parts.join('/') || '/'
   check_refs(body, url)
@@ -216,11 +218,10 @@ function ingest_page(src_entry, dest_dir, rel, slug, base, img_url) {
     slug,
     title,
     url,
-    content:   body,
-    published: fm.date ? String(fm.date).slice(0, 10) : '',
-    created:   fs.statSync(src_entry).mtime.toISOString().slice(0, 10),
+    content: body,
+    created: fs.statSync(src_entry).mtime.toISOString().slice(0, 10),
     fm,
-  })
+  }, config)
 }
 
 
@@ -253,7 +254,7 @@ function ingest_dir(src_dir, dest_dir, rel) {
     pages.push(page)
     nav_nodes.push({
       slug, name: page.name, type: 'page', url: page.url,
-      published: page.published, tags: page.tags,
+      published: page.published, facets: page.facets,
     })
   }
 

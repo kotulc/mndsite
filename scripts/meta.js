@@ -1,56 +1,93 @@
 /**
  * Flat page metadata builder (no site graph, no content hashing).
- * Derives renderer metadata from supplied frontmatter only — no local tagging.
+ * Projects supplied frontmatter through the configured `fields` and `facets` maps —
+ * frontmatter is inert unless the config names it, and no value is ever generated.
  *
  * Output shape (public/site-meta.json):
- *   { pages: [ { url, name, slug, published, created, desc, metrics, links, related, tags, sections } ] }
+ *   { pages: [ { url, name, slug, identity, published, created, desc, metrics,
+ *                links, related, facets, sections } ] }
  *
- * Each tag: { term, group } where group is one of the fixed vocabulary
- *   category | topic | concept | entity | user
+ * Facet values keep their supplied shape: a list stays a list, a scalar stays a scalar.
  */
 const { word_count, extract_links, section_tree } = require('./text')
+const { DEFAULTS } = require('./config')
 
 
-/** Fixed group vocabulary. Frontmatter tags use `user`; categories use `category`. */
-const TAG_GROUPS = Object.freeze(['category', 'topic', 'concept', 'entity', 'user'])
-const USER_GROUP = 'user'
-const CATEGORY_GROUP = 'category'
-
-
-function parse_user_tags(fm) {
-  /** Frontmatter tags: `tags: [a, b]` or `tags: a` (string). */
-  const out = []
-  const raw = fm.tags
-  if (Array.isArray(raw)) out.push(...raw.map(String))
-  else if (typeof raw === 'string' && raw.trim()) out.push(raw.trim())
-  const seen = new Set()
-  return out.filter(t => {
-    const k = t.toLowerCase()
-    if (!t.trim() || seen.has(k)) return false
-    seen.add(k)
-    return true
-  }).map(term => ({ term, group: USER_GROUP }))
+function field_value(fm, key) {
+  /** First non-empty frontmatter value for a field mapping (one key or a list of keys). */
+  for (const k of (Array.isArray(key) ? key : [key])) {
+    const value = (fm || {})[k]
+    if (value != null && String(value).trim() !== '') return value
+  }
+  return null
 }
 
 
-function parse_categories(fm) {
-  /** Frontmatter categories as category-group tags. */
-  const out = []
-  if (Array.isArray(fm.categories)) out.push(...fm.categories.map(String))
-  else if (typeof fm.categories === 'string' && fm.categories.trim()) out.push(fm.categories.trim())
+function clean_list(raw) {
+  /** Trimmed, de-duplicated string list. */
   const seen = new Set()
-  return out.filter(t => {
-    const k = t.toLowerCase()
-    if (!t.trim() || seen.has(k)) return false
-    seen.add(k)
+  return raw.map(String).map(v => v.trim()).filter(v => {
+    const key = v.toLowerCase()
+    if (!v || seen.has(key)) return false
+    seen.add(key)
     return true
-  }).map(term => ({ term, group: CATEGORY_GROUP }))
+  })
 }
 
 
-function parse_related(fm) {
-  /** Optional frontmatter related links: [{ url, title }] or [url strings]. */
-  const raw = fm.related
+function facet_value(fm, spec) {
+  /** One facet's value, restricted to `values` when the config declares them. */
+  const raw = field_value(fm, spec.field)
+  if (raw == null) return null
+
+  const allowed = Array.isArray(spec.values) ? spec.values.map(String) : null
+  if (Array.isArray(raw)) {
+    const list = clean_list(raw).filter(v => !allowed || allowed.includes(v))
+    return list.length ? list : null
+  }
+
+  const value = String(raw).trim()
+  return !allowed || allowed.includes(value) ? value : null
+}
+
+
+function build_facets(fm, facets) {
+  /** Declared facets present on this page, in declaration order. */
+  const out = {}
+  for (const [name, spec] of Object.entries(facets || DEFAULTS.facets)) {
+    const value = facet_value(fm || {}, spec)
+    if (value != null) out[name] = value
+  }
+  return out
+}
+
+
+function parse_desc(fm, fields) {
+  /** Optional page summary from the configured description field. */
+  const value = field_value(fm, (fields || DEFAULTS.fields).description)
+  return value == null ? null : String(value).trim() || null
+}
+
+
+function parse_published(fm, fields) {
+  /** Publication date (YYYY-MM-DD) from the configured date field. */
+  const value = field_value(fm, (fields || DEFAULTS.fields).date)
+  return value == null ? '' : String(value).slice(0, 10)
+}
+
+
+function parse_reading_time(fm, fields) {
+  /** Reading time from frontmatter only — never computed locally. */
+  const raw = field_value(fm, (fields || DEFAULTS.fields).reading_time)
+  if (raw == null) return null
+  const mins = Number(raw)
+  return Number.isFinite(mins) && mins > 0 ? Math.round(mins) : null
+}
+
+
+function parse_related(fm, fields) {
+  /** Optional related links: [{ url, title }] or [url strings]. */
+  const raw = field_value(fm, (fields || DEFAULTS.fields).related)
   if (!Array.isArray(raw)) return []
   return raw.map(entry => {
     if (typeof entry === 'string') return { url: entry, name: entry }
@@ -62,41 +99,31 @@ function parse_related(fm) {
 }
 
 
-function parse_desc(fm) {
-  /** Optional page summary from frontmatter (`desc` or `description`). */
-  const d = fm.desc ?? fm.description
-  if (d == null) return null
-  const s = String(d).trim()
-  return s || null
-}
-
-
-function parse_reading_time(fm) {
-  /** Reading time from frontmatter only — never computed locally. */
-  const raw = fm.reading_time
-  if (raw == null || raw === '') return null
-  const n = Number(raw)
-  return Number.isFinite(n) && n > 0 ? Math.round(n) : null
+function parse_identity(fm, fields) {
+  /** Stable id grouping variants of the same document (supplied by mndmap). */
+  const value = field_value(fm, (fields || DEFAULTS.fields).identity)
+  return value == null ? '' : String(value).trim()
 }
 
 
 function build_sections(section_nodes) {
-  /** Recursively build section records from heading tree (no generated tags). */
+  /** Recursively build section records from the heading tree. */
   return (section_nodes || []).map(node => ({
     name: node.name,
     level: node.level,
-    tags: [],
     sections: build_sections(node.children || []),
   }))
 }
 
 
-function build_page({ slug, title, url, content, published, created, fm }) {
+function build_page({ slug, title, url, content, created, fm }, config) {
   /** Build one flat page record from supplied frontmatter and content. */
+  const fields = (config && config.fields) || DEFAULTS.fields
+  const facets = (config && config.facets) || DEFAULTS.facets
   const body = content.replace(/\r\n?/g, '\n').replace(/^\s*#\s+.+\n?/, '')
   const { sections: tree } = section_tree(body)
-  const tags = [...parse_user_tags(fm || {}), ...parse_categories(fm || {})]
-  const mins = parse_reading_time(fm || {})
+
+  const mins = parse_reading_time(fm, fields)
   const metrics = { word_count: word_count(body) }
   if (mins != null) metrics.reading_time = mins
 
@@ -104,28 +131,22 @@ function build_page({ slug, title, url, content, published, created, fm }) {
     name: title,
     url,
     slug,
-    published: published || '',
+    identity:  parse_identity(fm, fields),
+    published: parse_published(fm, fields),
     created:   created || '',
-    desc:      parse_desc(fm || {}),
+    desc:      parse_desc(fm, fields),
     metrics,
     links:     extract_links(content),
-    related:   parse_related(fm || {}),
-    tags,
+    related:   parse_related(fm, fields),
+    facets:    build_facets(fm, facets),
     sections:  build_sections(tree),
   }
 }
 
 
-function display_tags(tag_list, n) {
-  /** First n supplied tags. */
-  if (!Array.isArray(tag_list) || n <= 0) return []
-  return tag_list.slice(0, n)
-}
-
-
 module.exports = {
-  TAG_GROUPS, USER_GROUP, CATEGORY_GROUP,
   word_count, extract_links, section_tree,
-  parse_user_tags, parse_categories, parse_desc, parse_reading_time, parse_related,
-  build_page, build_sections, display_tags,
+  field_value, facet_value, build_facets,
+  parse_desc, parse_published, parse_reading_time, parse_related, parse_identity,
+  build_page, build_sections,
 }

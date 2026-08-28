@@ -25,15 +25,15 @@ mndsite does **not** generate semantic tags or embedding-based related links. En
       "related": [
         { "name": "Getting Started", "url": "/getting-started" }
       ],
-      "tags": [
-        { "term": "yaml", "group": "user" },
-        { "term": "guide", "group": "category" }
-      ],
+      "identity": "mndmap-0042",
+      "facets": {
+        "categories": ["guide"],
+        "tags": ["yaml", "markdown"]
+      },
       "sections": [
         {
           "name": "Fields",
           "level": 2,
-          "tags": [],
           "sections": []
         }
       ]
@@ -42,22 +42,24 @@ mndsite does **not** generate semantic tags or embedding-based related links. En
 }
 ```
 
-## Tags
+## Facets
 
-Fixed group vocabulary: **`category`**, **`topic`**, **`concept`**, **`entity`**, **`user`**.
+`facets` holds one entry per declared content dimension, keyed by facet name. There is no
+fixed vocabulary — `mndsite.yaml` `facets` decides which frontmatter fields are read and what
+each is called. Values keep their supplied shape: a list stays a list, a scalar stays a scalar.
 
-| Field | Meaning |
+| Rule | Behavior |
 |-------|---------|
-| `term` | Display string |
-| `group` | One of the fixed groups |
+| Undeclared frontmatter field | Ignored — never appears in `facets` |
+| Value outside the facet's `values` list | Dropped |
+| Field absent from a page | Facet omitted for that page |
+| Sections | Carry no facet values (no local section tagging) |
 
-Tag sources at ingest:
+`identity` is the frontmatter id (default key `doc_id`) that groups variants of the same
+document — the basis for version selection and rollup. It is `""` when upstream supplies none.
 
-- frontmatter `tags` → group `user`
-- frontmatter `categories` → group `category`
-- section `tags` → always `[]` (no local section tagging)
-
-Future upstream enrichment (Taggly) must arrive through frontmatter and be versioned before mndsite consumes additional groups or scores.
+Future upstream enrichment (Taggly) must arrive through frontmatter and be declared as a
+facet before mndsite renders it.
 
 Frontmatter:
 

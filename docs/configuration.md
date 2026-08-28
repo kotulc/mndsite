@@ -40,6 +40,10 @@ The CLI reads the YAML at build time and generates the internal `site.config.js`
 | `theme.navbar` | string | `""` | Navbar background: `"primary"` (theme tint) or any CSS color |
 | `theme.footer` | string | `""` | Footer background: `"primary"` (theme tint) or any CSS color |
 | `nav_order` | object | `{}` | Explicit nav ordering per directory — see below |
+| `fields` | object | see below | Frontmatter keys behind the built-in metadata; frontmatter is inert unless named |
+| `facets` | object | `categories`, `tags` | Content dimensions rendered as chips and filters — see [Facets](#facets) |
+| `collections` | object | `{ default: all }` | Named facet presets; `default` names the active one |
+| `sidebar.views` | list | `[tree]` | Left tree views: `tree` plus any facet name |
 | `content` | path | `./docs` | Source markdown directory (resolved relative to this file) |
 | `output` | path | `./dist` | Output directory for the built site (resolved relative to this file) |
 | `components` | path | `""` | Optional directory of consumer React components, mirrored into `components/custom/` each build |
@@ -103,12 +107,36 @@ theme:
   footer: "hsl(161 30% 96%)"
 ```
 
+## Facets
+
+Every content dimension mdsite renders is declared in `facets`. `field` is required; `label`,
+`color`, `values`, `sort`, `default`, and `ui` are optional.
+
+```yaml
+facets:
+  categories: { field: categories, label: Category, color: blue }
+  tags:       { field: tags,       label: Tag,      color: violet }
+  status:     { field: status,     values: [draft, stable, deprecated], default: [stable] }
+  version:    { field: version,    sort: semver, default: latest, ui: select }
+```
+
+Chip colors are generated from each facet's hue — `blue`, `violet`, `amber`, `rose`, `green`,
+`teal`, or a raw hue `0-359` — in both light and dark themes. Facets without a `color` take
+the next palette entry in declaration order.
+
+Values come from frontmatter only, never from paths and never generated. A page missing a
+facet's field simply has no value for it, and keeps its route either way.
+
+`collections` groups facet values into named presets (`default` names the active one), and
+`sidebar.views` lists the left-tree tabs. Both are validated today; the filtering UI that
+consumes them is in progress.
+
 ## Metadata and tagging
 
 mndsite does **not** run local keyword extraction, embedding models, or related-page scoring.
 During ingest it derives `public/site-meta.json` from supplied frontmatter and page content only:
 
-- `tags` and `categories` from frontmatter
+- `facets` from the declared frontmatter fields
 - `related` from frontmatter `related` entries
 - `links` from markdown link targets in the page body
 - `metrics.word_count` computed from body text

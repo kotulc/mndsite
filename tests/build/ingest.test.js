@@ -133,7 +133,7 @@ describe('site meta output', () => {
     expect(page.sections.map(s => s.name)).toContain('Fields')
     expect(Array.isArray(page.links)).toBe(true)
     expect(Array.isArray(page.related)).toBe(true)
-    expect(Array.isArray(page.tags)).toBe(true)
+    expect(page.facets).toMatchObject({ categories: expect.any(Array) })
   })
 
   test('test_pages_preserve_frontmatter', () => {

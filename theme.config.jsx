@@ -9,6 +9,7 @@ import SiteFooter from './components/SiteFooter'
 import GitHubLink from './components/GitHubLink'
 import FeedLink from './components/FeedLink'
 import ThemeToggle from './components/ThemeToggle'
+import { facet_chips } from './components/facets'
 import siteConfig from './site.config'
 import siteMeta from './public/site-meta.json'
 
@@ -31,11 +32,11 @@ function use_page_meta() {
 
 
 function PageMeta() {
-  /** Renders published date, supplied reading time, and frontmatter tags. */
+  /** Renders published date, supplied reading time, and chip-rendered facet values. */
   const meta = use_page_meta()
   const metrics = meta.metrics || {}
   const mins = siteConfig.reading_time === false ? null : metrics.reading_time
-  const chips = Array.isArray(meta.tags) ? meta.tags.slice(0, 8) : []
+  const chips = facet_chips(meta.facets).slice(0, 8)
   return (
     <>
       <PageHeader date={meta.published} reading_time={mins} />
@@ -56,10 +57,21 @@ function bg_rules(selector, value) {
 }
 
 
+function chip_rules(facets) {
+  /** One chip color pair per declared facet, from its resolved hue. */
+  return Object.entries(facets || {}).map(([name, facet]) =>
+    `.chip-${name}{background:hsl(${facet.hue} 70% 92%);color:hsl(${facet.hue} 55% 32%)}` +
+    `:is(html[class~="dark"]) .chip-${name}` +
+    `{background:hsl(${facet.hue} 35% 22%);color:hsl(${facet.hue} 70% 75%)}`
+  ).join('')
+}
+
+
 const THEME_CSS = [
   siteConfig.theme.font_stack && `body{font-family:${siteConfig.theme.font_stack}}`,
   bg_rules('.nextra-nav-container-blur', siteConfig.theme.navbar),
   bg_rules('footer.nx-bg-gray-100', siteConfig.theme.footer),
+  chip_rules(siteConfig.facets),
 ].filter(Boolean).join('')
 
 

@@ -10,4 +10,8 @@ module.exports = {
   reading_time: true,
   theme: {"color":"default","typeset":"sans","navbar":"","footer":"","hue":{"light":212,"dark":204},"saturation":100,"font_stack":""},
   nav_order: {"":["about","getting-started","configuration"],"features":["overview","components"],"specifications":["format"],"updates":["welcome"]},
+  fields: {"title":"title","description":["description","desc"],"date":"date","reading_time":"reading_time","related":"related","identity":"doc_id"},
+  facets: {"categories":{"field":"categories","label":"Category","color":"blue","ui":"chips","sort":"alpha","hue":210},"tags":{"field":"tags","label":"Tag","color":"violet","ui":"chips","sort":"alpha","hue":265}},
+  collections: {"default":"all"},
+  sidebar: {"views":["tree"]},
 }

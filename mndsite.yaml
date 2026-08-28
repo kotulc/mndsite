@@ -2,12 +2,63 @@ title: mndsite
 description: Static documentation sites from plain markdown
 repo_url: https://github.com/kotulc/nlp-mndsite
 feed_url: updates
+footer: ""
+
 theme_toggle: navbar
 toc: true
+reading_time: true
 
 theme:
   color: default
   typeset: sans
+  navbar: ""
+  footer: ""
+
+# Frontmatter keys mdsite reads. Frontmatter is inert unless named here or in facets.
+fields:
+  title: title
+  description: [description, desc]
+  date: date
+  reading_time: reading_time
+  related: related
+  identity: doc_id
+
+# Content dimensions rendered as chips and filters. `field` is required; the rest default
+# to: label from the facet name, color from the palette in declaration order, ui chips,
+# sort alpha, and all values allowed.
+facets:
+  categories:
+    field: categories
+    label: Category
+    color: blue          # blue, violet, amber, rose, green, teal, or a hue 0-359
+    ui: chips            # chips, select, badge, none
+    sort: alpha          # alpha, semver, date, listed
+  tags:
+    field: tags
+    label: Tag
+    color: violet
+    ui: chips
+    sort: alpha
+  # version:
+  #   field: version
+  #   sort: semver
+  #   default: latest
+  #   ui: select
+  # status:
+  #   field: status
+  #   values: [draft, stable, deprecated]
+  #   default: [stable, deprecated]
+  #   color: amber
+
+# Named facet presets. `default` names the active preset, or "all" for no preset.
+collections:
+  default: all
+  # latest: { version: latest, status: [stable] }
+  # archive: { version: all, status: [deprecated] }
+
+# Left tree views: "tree" is the directory hierarchy, any other entry names a facet.
+sidebar:
+  views: [tree]
 
 content: ./docs
 output: ./dist

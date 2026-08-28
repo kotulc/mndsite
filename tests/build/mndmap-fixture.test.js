@@ -57,6 +57,7 @@ describe('mndmap fixture contract', () => {
     const page = pages.find(p => p.url === '/docs/guide')
     expect(page.metrics.reading_time).toBe(3)
     expect(page.related).toEqual([{ url: '/docs/readme', name: 'Readme' }])
-    expect(page.sections.every(s => Array.isArray(s.tags) && s.tags.length === 0)).toBe(true)
+    expect(page.facets).toEqual({ tags: ['guide'] })
+    expect(page.sections.map(s => s.name)).toEqual(['Overview'])
   })
 })
