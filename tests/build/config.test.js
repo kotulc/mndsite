@@ -105,3 +105,32 @@ describe('write_site_config — generated keys', () => {
     expect(out).not.toHaveProperty('section_tags')
   })
 })
+
+
+describe('load_config — edit links', () => {
+  test('test_edit_path_defaults_to_content_dir', () => {
+    const cfg = load_config(write_yaml('title: t\ncontent: ./docs\n'))
+    expect(cfg.edit.path).toBe('docs')
+    expect(cfg.edit.branch).toBe('main')
+  })
+
+  test('test_edit_url_template_from_repo_host', () => {
+    const cfg = load_config(write_yaml('title: t\nrepo_url: https://github.com/x/y\n'))
+    expect(cfg.edit.url).toBe('{repo_url}/edit/{branch}/{file}')
+  })
+
+  test('test_edit_url_empty_for_unknown_host', () => {
+    const cfg = load_config(write_yaml('title: t\nrepo_url: https://git.example.com/x/y\n'))
+    expect(cfg.edit.url).toBe('')
+  })
+
+  test('test_edit_url_override_wins', () => {
+    const cfg = load_config(write_yaml('title: t\nrepo_url: https://github.com/x/y\nedit:\n  url: "{repo_url}/blob/{branch}/{file}"\n'))
+    expect(cfg.edit.url).toBe('{repo_url}/blob/{branch}/{file}')
+  })
+
+  test('test_edit_path_empty_when_content_outside_config_dir', () => {
+    const cfg = load_config(write_yaml('title: t\ncontent: ../elsewhere\n'))
+    expect(cfg.edit.path).toBe('')
+  })
+})

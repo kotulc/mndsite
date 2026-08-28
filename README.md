@@ -153,6 +153,12 @@ limits:
   header_chips: 8              # chips shown under the title
   related: 6                   # entries in the Related list
 
+# Optional — "Edit this page" targets; used ONLY when repo_url is set
+edit:
+  branch: main                 # branch the link targets
+  path: docs                   # repo-relative content root; default: content dir
+  url: ""                      # template override; empty derives one from the repo_url host
+
 # Optional — consumer extensions
 components: ""               # React components mirrored into components/custom/
 assets: ""                   # static files mirrored into public/assets/
@@ -205,6 +211,15 @@ display:
 
 Frontmatter itself never renders. It stays on the emitted page as metadata for Nextra and
 theme components; it reaches the reader only through `fields` and `facets` mappings.
+
+### Edit links
+
+`repo_url` is what enables them — with no `repo_url` there is no "Edit this page" link and
+the `edit` block is ignored entirely. When it is set, each page links to the repo copy of
+the file it was built from (`docs/features/overview.md`), using a template derived from the
+host: GitHub, GitLab, and Bitbucket are known, and any other host falls back to `repo_url`
+itself. `edit.path` defaults to the content directory relative to `mndsite.yaml`; set it
+explicitly when the config file is not at the repo root.
 
 ### Removed configuration keys
 

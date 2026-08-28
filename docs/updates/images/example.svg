@@ -20,5 +20,5 @@
   <rect x="30"  y="158" width="310" height="8" rx="3" fill="#adb5bd" opacity="0.5"/>
 
   <!-- Label -->
-  <text x="240" y="192" text-anchor="middle" font-size="11" fill="#6c757d">nlp-mndsite — rendered page preview</text>
+  <text x="240" y="192" text-anchor="middle" font-size="11" fill="#6c757d">mndsite — rendered page preview</text>
 </svg>

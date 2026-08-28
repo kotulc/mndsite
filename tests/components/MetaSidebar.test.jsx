@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import MetaSidebar from '../../components/MetaSidebar'
+import MetaSidebar, { edit_href } from '../../components/MetaSidebar'
 import { useSection, find_page } from '../../components/SectionContext'
 import site_config from '../../site.config'
 
@@ -8,6 +8,7 @@ jest.mock('../../site.config', () => ({
   repo_url: 'https://github.com/x/y',
   display: { toc: ['sections', 'related', 'edit'] },
   limits: { related: 6 },
+  edit: { branch: 'main', path: 'docs', url: '{repo_url}/edit/{branch}/{file}' },
 }))
 jest.mock('next/link', () => ({ __esModule: true, default: ({ href, children }) => <a href={href}>{children}</a> }))
 
@@ -100,4 +101,37 @@ test('test_meta_sidebar_hides_edit_link_without_repo_url', () => {
   const { container } = render(<MetaSidebar />)
   expect(container).toBeEmptyDOMElement()
   site_config.repo_url = original
+})
+
+
+describe('edit_href', () => {
+  test('test_edit_href_targets_the_page_source_in_the_repo', () => {
+    expect(edit_href({ source: 'features/overview.md' }))
+      .toBe('https://github.com/x/y/edit/main/docs/features/overview.md')
+  })
+
+  test('test_edit_href_falls_back_to_repo_root_without_source', () => {
+    expect(edit_href({ source: '' })).toBe('https://github.com/x/y')
+  })
+
+  test('test_edit_href_falls_back_to_repo_root_for_unknown_host', () => {
+    const original = site_config.edit.url
+    site_config.edit.url = ''
+    expect(edit_href({ source: 'a.md' })).toBe('https://github.com/x/y')
+    site_config.edit.url = original
+  })
+
+  test('test_edit_href_empty_without_repo_url', () => {
+    const original = site_config.repo_url
+    site_config.repo_url = ''
+    expect(edit_href({ source: 'a.md' })).toBe('')
+    site_config.repo_url = original
+  })
+
+  test('test_edit_href_omits_empty_path_segment', () => {
+    const original = site_config.edit.path
+    site_config.edit.path = ''
+    expect(edit_href({ source: 'a.md' })).toBe('https://github.com/x/y/edit/main/a.md')
+    site_config.edit.path = original
+  })
 })

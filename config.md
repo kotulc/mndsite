@@ -98,6 +98,13 @@ search:
   index: [title, description, headings, body]
   # one JSON for the whole site; revisit chunking when a site outgrows a single fetch
 
+# ---- Edit links (built) ---------------------------------------------------
+# Used only when repo_url is set; with no repo_url there is no link and this is ignored.
+edit:
+  branch: main                 # branch the link targets
+  path: docs                   # repo-relative content root; default: content dir
+  url: ""                      # template override; default derived from the repo_url host
+
 # ---- Navigation and paths (built) -----------------------------------------
 nav_order: {}                  # directory slug → ordered page slugs
 content: ./docs
@@ -120,7 +127,7 @@ One mechanism: omit the element from its `display` list. No feature has a second
 | Mobile Contents button | `contents` from `display.title_row` |
 | Right sidebar entirely | empty `display.toc` |
 | Related list | `related` from `display.toc` |
-| Edit-this-page link | `edit` from `display.toc`, or clear `repo_url` |
+| Edit-this-page link | `edit` from `display.toc`, or clear `repo_url` (which disables edit links entirely) |
 | Search | `search.enabled: false`, or `search` from `display.navbar` |
 | Facet tabs in the left tree | leave `sidebar.views` as `[tree]` |
 
@@ -139,6 +146,7 @@ Reordering is the same edit: change list order.
 | Chip colors | Generated per facet hue, light and dark; undeclared facets use `chip-custom` |
 | Versioning | A facet with `sort: semver` + `default: latest`, plus `fields.identity` for rollup |
 | Search index | Separate `public/search-index.json`, fetched on demand — never merged into `site-meta.json` |
+| Edit links | Point at the repo copy of the built-from file, relative to the content root; require `repo_url` |
 
 ## Cut
 
@@ -173,6 +181,7 @@ against the built HTML. It reaches a reader only through a mapping:
 | `fields.date` / `fields.reading_time` | Metadata line, per `display.header` |
 | `fields.related` | Related list in the right sidebar |
 | `fields.identity` | Nothing directly — version rollup and switching |
+| `page.source` (recorded by ingest) | Nothing directly — the "Edit this page" target |
 | any `facets` entry | Chips, and the left-tree filters |
 | anything else | Nothing — available to custom MDX components, invisible otherwise |
 

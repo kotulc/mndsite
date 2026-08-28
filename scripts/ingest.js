@@ -219,6 +219,7 @@ function ingest_page(src_entry, dest_dir, rel, slug, base, img_url) {
     title,
     url,
     content: body,
+    source:  [rel, path.basename(src_entry)].filter(Boolean).join('/'),
     created: fs.statSync(src_entry).mtime.toISOString().slice(0, 10),
     fm,
   }, config)

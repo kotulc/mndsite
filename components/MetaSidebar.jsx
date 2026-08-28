@@ -26,10 +26,31 @@ function RelatedLink({ href, name, external }) {
   return <div className="related-link"><Link href={href}>{name}</Link></div>
 }
 
-function EditLink() {
-  if (!siteConfig.repo_url) return null
+export function edit_href(page) {
+  /** Edit target for a page: the repo copy of the file it was built from. Requires
+   *  repo_url; falls back to the repo root for unknown hosts or generated pages. */
+  const { repo_url, edit } = siteConfig
+  if (!repo_url) return ''
+
+  const root = repo_url.replace(/\/+$/, '')
+  const source = (page && page.source) || ''
+  if (!edit || !edit.url || !source) return root
+
+  const file = [edit.path, source].filter(Boolean).join('/')
+  return edit.url
+    .replace('{repo_url}', root)
+    .replace('{branch}', edit.branch)
+    .replace('{path}', edit.path)
+    .replace('{source}', source)
+    .replace('{file}', file)
+}
+
+
+function EditLink({ page }) {
+  const href = edit_href(page)
+  if (!href) return null
   return (
-    <a href={siteConfig.repo_url} target="_blank" rel="noopener noreferrer" className="meta-sidebar-edit">
+    <a href={href} target="_blank" rel="noopener noreferrer" className="meta-sidebar-edit">
       Edit this page
     </a>
   )
@@ -94,7 +115,7 @@ export default function MetaSidebar() {
             </div>
           )
         }
-        if (item === 'edit') return <EditLink key="edit" />
+        if (item === 'edit') return <EditLink key="edit" page={page} />
         return null
       })}
     </div>

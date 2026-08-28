@@ -4,7 +4,7 @@
  * frontmatter is inert unless the config names it, and no value is ever generated.
  *
  * Output shape (public/site-meta.json):
- *   { pages: [ { url, name, slug, identity, published, created, desc, metrics,
+ *   { pages: [ { url, name, slug, identity, source, published, created, desc, metrics,
  *                links, related, facets, sections } ] }
  *
  * Facet values keep their supplied shape: a list stays a list, a scalar stays a scalar.
@@ -116,7 +116,7 @@ function build_sections(section_nodes) {
 }
 
 
-function build_page({ slug, title, url, content, created, fm }, config) {
+function build_page({ slug, title, url, content, source, created, fm }, config) {
   /** Build one flat page record from supplied frontmatter and content. */
   const fields = (config && config.fields) || DEFAULTS.fields
   const facets = (config && config.facets) || DEFAULTS.facets
@@ -132,6 +132,7 @@ function build_page({ slug, title, url, content, created, fm }, config) {
     url,
     slug,
     identity:  parse_identity(fm, fields),
+    source:    source || '',
     published: parse_published(fm, fields),
     created:   created || '',
     desc:      parse_desc(fm, fields),

@@ -26,6 +26,7 @@ mndsite does **not** generate semantic tags or embedding-based related links. En
         { "name": "Getting Started", "url": "/getting-started" }
       ],
       "identity": "mndmap-0042",
+      "source": "configuration.md",
       "facets": {
         "categories": ["guide"],
         "tags": ["yaml", "markdown"]
@@ -57,6 +58,10 @@ each is called. Values keep their supplied shape: a list stays a list, a scalar 
 
 `identity` is the frontmatter id (default key `doc_id`) that groups variants of the same
 document — the basis for version selection and rollup. It is `""` when upstream supplies none.
+
+`source` is the ingested file's path relative to the content root, keeping its original
+extension (`index.md`, not the emitted `index.mdx`). It exists so "Edit this page" can point
+at the repo copy of that file, and is unused when `repo_url` is not set.
 
 Future upstream enrichment (Taggly) must arrive through frontmatter and be declared as a
 facet before mndsite renders it.

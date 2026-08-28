@@ -44,6 +44,7 @@ The CLI reads the YAML at build time and generates the internal `site.config.js`
 | `sidebar.views` | list | `[tree]` | Left tree views: `tree` plus any facet name |
 | `display` | object | see below | Rendered elements per zone, in display order — see [Display](#display) |
 | `limits` | object | `header_chips: 8`, `related: 6` | Caps on chips and Related entries |
+| `edit` | object | see below | "Edit this page" targets — **only used when `repo_url` is set** |
 | `content` | path | `./docs` | Source markdown directory (resolved relative to this file) |
 | `output` | path | `./dist` | Output directory for the built site (resolved relative to this file) |
 | `components` | path | `""` | Optional directory of consumer React components, mirrored into `components/custom/` each build |
@@ -157,6 +158,43 @@ with `ui: chips`.
 
 The metadata line and the chip row are separate zones: `display.header` orders items
 within each, and the chip row always follows the metrics line.
+
+## Edit links
+
+**Nothing in this section applies unless `repo_url` is set.** With no `repo_url` there is
+no "Edit this page" link at all, and the `edit` block is ignored.
+
+When `repo_url` is set, the link points at the repo copy of the file the page was built
+from — `docs/features/overview.md`, not the site root.
+
+```yaml
+repo_url: https://github.com/user/repo
+edit:
+  branch: main     # branch the link targets
+  path: docs       # repo-relative location of the content root
+  url: ""          # template override; empty derives one from the repo_url host
+```
+
+`edit.path` defaults to the content directory resolved relative to `mndsite.yaml` — `docs`
+for a standard layout, `""` when the content root *is* the repo root. If your config file
+does not sit at the repo root, set it explicitly.
+
+`edit.url` is a template over `{repo_url}`, `{branch}`, `{path}`, `{source}`, and `{file}`
+(`path` and `source` joined). Defaults by host:
+
+| Host | Template |
+|------|----------|
+| github.com | `{repo_url}/edit/{branch}/{file}` |
+| gitlab.com | `{repo_url}/-/edit/{branch}/{file}` |
+| bitbucket.org | `{repo_url}/src/{branch}/{file}?mode=edit` |
+| anything else | none — the link falls back to `repo_url` itself |
+
+Pages with no source file (an mndmap-generated landing page, for example) also fall back to
+`repo_url`. To remove the link entirely, drop `edit` from `display.toc`.
+
+In a mndmap workflow, point `repo_url` at the repository that holds the editable docs. If
+it names a repo of generated output, edits made through the link are overwritten on the
+next build.
 
 ## Metadata and tagging
 

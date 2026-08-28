@@ -28,6 +28,13 @@ const DISPLAY_ELEMENTS = {
   navbar:    ['theme', 'feed', 'github'],
 }
 
+// Per-host "Edit this page" URL templates. Hosts without an entry fall back to repo_url.
+const EDIT_TEMPLATES = {
+  'github.com':    '{repo_url}/edit/{branch}/{file}',
+  'gitlab.com':    '{repo_url}/-/edit/{branch}/{file}',
+  'bitbucket.org': '{repo_url}/src/{branch}/{file}?mode=edit',
+}
+
 // Chip hues, reused for facets that do not name a color (assigned in declaration order).
 const FACET_COLORS = { blue: 210, violet: 265, amber: 35, rose: 340, green: 150, teal: 190 }
 const COLOR_ORDER = Object.keys(FACET_COLORS)
@@ -50,6 +57,7 @@ const DEFAULTS = {
     navbar:    ['theme', 'feed', 'github'],
   },
   limits:         { header_chips: 8, related: 6 },
+  edit:           { branch: 'main', path: null, url: '' },
   nav_order:      {},
   fields: {
     title:        'title',
@@ -195,6 +203,32 @@ function resolve_limits(raw) {
 }
 
 
+function content_in_repo(config_dir, content_dir) {
+  /** Repo-relative location of the content root, assuming mndsite.yaml sits at the repo
+   *  root. Anything outside that directory is unrepresentable — fall back to the root. */
+  const rel = path.relative(config_dir, content_dir).split(path.sep).join('/')
+  return !rel || rel.startsWith('..') || path.isAbsolute(rel) ? '' : rel
+}
+
+
+function resolve_edit(raw, repo_url, config_dir, content_dir) {
+  /** "Edit this page" targets, used only when repo_url is set. An empty url template
+   *  means the host is unknown, and the link falls back to repo_url itself. */
+  const cfg = { ...DEFAULTS.edit, ...(raw || {}) }
+
+  if (!cfg.branch) throw new Error(`mndsite.yaml: edit.branch must be a branch name`)
+  cfg.path = cfg.path == null
+    ? content_in_repo(config_dir, content_dir)
+    : String(cfg.path).replace(/^\/+|\/+$/g, '')
+
+  if (!cfg.url && repo_url) {
+    const host = (repo_url.match(/^https?:\/\/([^/]+)/) || [])[1] || ''
+    cfg.url = EDIT_TEMPLATES[host.replace(/^www\./, '')] || ''
+  }
+  return cfg
+}
+
+
 function load_config(yaml_path) {
   const abs  = path.resolve(yaml_path)
   const dir  = path.dirname(abs)
@@ -214,6 +248,7 @@ function load_config(yaml_path) {
 
   cfg.content = path.resolve(dir, cfg.content)
   cfg.output  = path.resolve(dir, cfg.output)
+  cfg.edit    = resolve_edit(raw.edit, cfg.repo_url, dir, cfg.content)
   if (cfg.components) cfg.components = path.resolve(dir, cfg.components)
   if (cfg.assets)     cfg.assets     = path.resolve(dir, cfg.assets)
 
@@ -226,7 +261,7 @@ function write_site_config(config, dest_dir) {
   const keys = [
     'title', 'repo_url', 'feed_url', 'description', 'footer', 'theme_toggle',
     'theme', 'nav_order', 'fields', 'facets', 'collections', 'sidebar',
-    'display', 'limits',
+    'display', 'limits', 'edit',
   ]
   const values = Object.fromEntries(keys.map(k => [k, config[k]]))
   const body = Object.entries(values)
