@@ -2,7 +2,13 @@ import { header_facet_names, facet_chips, listing_facet_names } from '../../comp
 
 
 jest.mock('../../site.config', () => ({
-  display: { header: ['date', 'reading_time', 'version', 'status', 'facets'] },
+  display: {
+    header: ['date', 'reading_time', 'version', 'status', 'facets'],
+    sidebar: [
+      { id: 'version', label: 'Versions', facets: ['version', 'status'] },
+      { id: 'tags', label: 'Tags', facets: ['tags'] },
+    ],
+  },
   facets: {
     version: { field: 'version', label: 'Versions', group_by: 'status', index: true },
     tags:    { field: 'tags',    label: 'Tags', index: true },
@@ -31,7 +37,7 @@ test('test_facet_chips_follows_header_order', () => {
 })
 
 
-test('test_listing_facet_names_drops_index_and_group_facets', () => {
-  expect(listing_facet_names('version')).toEqual(['tags'])
-  expect(listing_facet_names('tags')).toEqual(['tags'])
+test('test_listing_facet_names_drops_group_facets', () => {
+  expect(listing_facet_names('version', 'version')).toEqual(['tags'])
+  expect(listing_facet_names('tags', 'tags')).toEqual(['version', 'status'])
 })

@@ -750,6 +750,7 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
   display: flex;
   flex-wrap: wrap;
   gap: 0.375rem;
+  margin: 0 0 0.75rem;
 }
 
 .sidebar-toggle {
@@ -815,6 +816,10 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 .index-nested {
   margin: 0;
   padding: 0 0 0.5rem;
+}
+
+.index-facet-block + .index-facet-block {
+  margin-top: 0.5rem;
 }
 
 button.chip {

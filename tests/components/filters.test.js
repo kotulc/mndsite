@@ -4,6 +4,13 @@
  */
 jest.mock('../../site.config', () => ({
   release: '0.3.0',
+  display: {
+    header: ['date', 'reading_time', 'version', 'status', 'facets'],
+    sidebar: [
+      { id: 'version', label: 'Versions', facets: ['version', 'status'] },
+      { id: 'tags', label: 'Tags', facets: ['tags'] },
+    ],
+  },
   facets: {
     version: {
       field: 'version', label: 'Versions', sort: 'semver', hue: 190,
@@ -33,16 +40,26 @@ jest.mock('../../public/site-meta.json', () => ({
 }), { virtual: true })
 
 const {
-  active_view, facet_domain, index_entries, index_facets,
-  listed_pages, selected_value,
+  active_facet, active_view, facet_domain, index_entries, index_facets,
+  listed_pages, selected_value, sidebar_groups,
 } = require('../../components/filters')
 
 
 const urls = pages => pages.map(p => p.url)
 
 
+describe('sidebar_groups', () => {
+  test('test_sidebar_groups_from_display', () => {
+    expect(sidebar_groups()).toEqual([
+      { id: 'version', label: 'Versions', facets: ['version', 'status'] },
+      { id: 'tags', label: 'Tags', facets: ['tags'] },
+    ])
+  })
+})
+
+
 describe('index_facets', () => {
-  test('test_index_facets_declaration_order', () => {
+  test('test_index_facets_primary_facet_per_group', () => {
     expect(index_facets().map(f => f.name)).toEqual(['version', 'tags'])
   })
 })
@@ -78,6 +95,14 @@ describe('active_view and selected_value', () => {
 
   test('test_selected_from_query', () => {
     expect(selected_value({ on: '0.2.0' }, 'version')).toBe('0.2.0')
+  })
+
+  test('test_active_facet_defaults_to_group_primary', () => {
+    expect(active_facet({}, 'version')).toBe('version')
+  })
+
+  test('test_active_facet_from_query', () => {
+    expect(active_facet({ facet: 'status' }, 'version')).toBe('status')
   })
 })
 

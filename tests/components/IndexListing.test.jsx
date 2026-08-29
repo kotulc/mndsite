@@ -17,6 +17,8 @@ jest.mock('../../site.config', () => ({
 }))
 jest.mock('../../components/filters', () => ({
   active_view: () => 'version',
+  active_facet: () => 'version',
+  sidebar_group: () => ({ id: 'version', label: 'Versions', facets: ['version', 'status'] }),
   selected_value: () => '0.2.0',
   listed_pages: () => [{
     url: '/about',

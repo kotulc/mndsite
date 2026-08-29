@@ -32,18 +32,40 @@ function facet_of(page, name) {
 }
 
 
+export function sidebar_groups() {
+  /** Left-nav index groups from display.sidebar, in config order. */
+  return (siteConfig.display || {}).sidebar || []
+}
+
+
 export function index_facets() {
-  /** Facets declared as sidebar indexes, in declaration order. */
-  return Object.entries(siteConfig.facets || {})
-    .filter(([, spec]) => spec.index)
-    .map(([name, spec]) => ({ name, spec }))
+  /** Primary facet of each sidebar group — kept for callers that expect facet names. */
+  return sidebar_groups().map(group => {
+    const name = group.facets[0]
+    return { name, spec: facet_config(name) || {} }
+  })
+}
+
+
+export function sidebar_group(id) {
+  return sidebar_groups().find(group => group.id === id) || null
 }
 
 
 export function active_view(query) {
   const requested = (query || {}).view
   if (!requested || requested === 'pages') return 'pages'
-  return index_facets().some(f => f.name === requested) ? requested : 'pages'
+  return sidebar_group(requested) ? requested : 'pages'
+}
+
+
+export function active_facet(query, group_id) {
+  /** Which facet within a group is selected — ?facet=, else the group's first facet. */
+  const group = sidebar_group(group_id)
+  if (!group) return ''
+  const requested = (query || {}).facet
+  if (requested && group.facets.includes(requested)) return requested
+  return group.facets[0]
 }
 
 
@@ -74,10 +96,13 @@ function ordered_default(spec, domain) {
 
 
 export function selected_value(query, name) {
-  /** The value selected in an index: ?on, else the facet default, else latest/first. */
-  const spec = facet_config(name)
+  /** The value selected in an index: ?on, else the facet default, else latest/first.
+   *  When `name` is a group id, resolves against the active facet in that group. */
+  const group = sidebar_group(name)
+  const facet = group ? active_facet(query, name) : name
+  const spec = facet_config(facet)
   if (!spec) return ''
-  const domain = facet_domain(name)
+  const domain = facet_domain(facet)
   const requested = (query || {}).on
   const fallback = ordered_default(spec, domain)
   if (requested === 'latest' || requested === fallback) return requested || fallback

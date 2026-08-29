@@ -71,9 +71,17 @@ facets:
 
 # Rendered elements, in display order. Omit an element to turn it off; `header` also
 # accepts any facet name, which places that facet's chips there.
+# `sidebar` groups left-nav index chips; each group lists one or more facets whose
+# values appear when that chip is selected. Omit `sidebar` to derive one group per
+# facet with `index: true`.
 display:
   crumbs: [home, path]
   header: [date, reading_time, version, status, facets]
+  sidebar:
+    - label: Versions
+      facets: [version, status]
+    - label: Tags
+      facets: [tags, categories]
   toc: [description, sections, related, edit]
   contents: [description, sections, related]
   navbar: [theme, feed, github]

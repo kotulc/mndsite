@@ -44,12 +44,13 @@ export function header_facet_names(header) {
 }
 
 
-export function listing_facet_names(view) {
-  /** Facets to chip on an index card: header chips minus version/status and the
-   *  open index's group_by. Those are headings (or the listing title), not chips.
-   *  The selected tag is dropped later so sibling tags can still show. */
-  const spec = facet_config(view) || {}
-  const skip = new Set(['version', 'status', spec.group_by].filter(Boolean))
+export function listing_facet_names(view, facet) {
+  /** Facets to chip on an index card: header chips minus the open facet, its group_by,
+   *  and any sibling facets in the same sidebar group. */
+  const spec = facet_config(facet) || {}
+  const skip = new Set([facet, spec.group_by].filter(Boolean))
+  const group = (siteConfig.display || {}).sidebar?.find(g => g.id === view)
+  if (group) for (const name of group.facets) skip.add(name)
   return header_facet_names((siteConfig.display || {}).header).filter(name => !skip.has(name))
 }
 

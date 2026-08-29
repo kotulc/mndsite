@@ -169,20 +169,62 @@ function resolve_facets(raw) {
 }
 
 
+function resolve_sidebar_group(group, facets, index) {
+  /** One left-nav index group: a label and one or more facet names. The first facet
+   *  is the default selection target and the group id for ?view=. */
+  if (!group || typeof group !== 'object' || Array.isArray(group)) {
+    throw new Error(`mndsite.yaml: display.sidebar[${index}] must be an object with label and facets`)
+  }
+  const label = group.label
+  if (!label || typeof label !== 'string' || !label.trim()) {
+    throw new Error(`mndsite.yaml: display.sidebar[${index}] requires a label`)
+  }
+  const names = group.facets
+  if (!Array.isArray(names) || !names.length) {
+    throw new Error(`mndsite.yaml: display.sidebar[${index}].facets must be a non-empty list`)
+  }
+  for (const name of names) {
+    if (!facets[name]) {
+      throw new Error(`mndsite.yaml: display.sidebar[${index}].facets references unknown facet '${name}'`)
+    }
+  }
+  const id = unset(group.id) ? names[0] : String(group.id).trim()
+  if (!id) throw new Error(`mndsite.yaml: display.sidebar[${index}].id must be a non-empty string`)
+  return { id, label: label.trim(), facets: [...names] }
+}
+
+
+function sidebar_groups_from_facets(facets) {
+  /** Legacy fallback: one group per facet with index: true, in declaration order. */
+  return Object.entries(facets)
+    .filter(([, spec]) => spec.index)
+    .map(([name, spec]) => ({ id: name, label: spec.label || label_for(name), facets: [name] }))
+}
+
+
+function resolve_sidebar(raw, facets) {
+  if (raw == null) return sidebar_groups_from_facets(facets)
+  if (!Array.isArray(raw)) throw new Error(`mndsite.yaml: display.sidebar must be a list`)
+  return raw.map((group, i) => resolve_sidebar_group(group, facets, i))
+}
+
+
 function resolve_display(raw, facets) {
   /** Element lists: order is display order, and omission disables the element. The
    *  inline Contents panel mirrors the sidebar unless `contents` is given its own list. */
-  for (const list of Object.keys(raw || {})) {
-    if (!DISPLAY_ELEMENTS[list]) {
+  const raw_display = raw || {}
+  for (const list of Object.keys(raw_display)) {
+    if (!DISPLAY_ELEMENTS[list] && list !== 'sidebar') {
       throw new Error(
-        `mndsite.yaml: unknown display list '${list}' — use ${Object.keys(DISPLAY_ELEMENTS).join(', ')}`
+        `mndsite.yaml: unknown display list '${list}' — use ${[...Object.keys(DISPLAY_ELEMENTS), 'sidebar'].join(', ')}`
       )
     }
   }
 
-  const cfg = { ...DEFAULTS.display, ...(raw || {}) }
+  const cfg = { ...DEFAULTS.display, ...raw_display }
   if (!Array.isArray(cfg.toc)) throw new Error(`mndsite.yaml: display.toc must be a list`)
   if (!cfg.contents) cfg.contents = [...cfg.toc]
+  cfg.sidebar = resolve_sidebar(raw_display.sidebar, facets)
 
   for (const [list, allowed] of Object.entries(DISPLAY_ELEMENTS)) {
     const items = cfg[list]

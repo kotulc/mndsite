@@ -10,7 +10,7 @@ import siteConfig from '../site.config'
 import PageHeader from './PageHeader'
 import TagList from './TagList'
 import { facet_chips, facet_config, facet_values, listing_facet_names } from './facets'
-import { active_view, listed_pages, selected_value } from './filters'
+import { active_facet, active_view, listed_pages, selected_value, sidebar_group } from './filters'
 
 
 function group_pages(pages, group_by) {
@@ -33,10 +33,10 @@ function group_pages(pages, group_by) {
 }
 
 
-function ResultCard({ page, view, selected }) {
+function ResultCard({ page, view, facet, selected }) {
   const header = siteConfig.display.header
-  const chips = facet_chips(page.facets, listing_facet_names(view))
-    .filter(chip => !(chip.group === view && chip.term === selected))
+  const chips = facet_chips(page.facets, listing_facet_names(view, facet))
+    .filter(chip => !(chip.group === facet && chip.term === selected))
   return (
     <Link href={page.url} className="index-card">
       <h3 className="index-card-title">{page.name}</h3>
@@ -52,13 +52,13 @@ function ResultCard({ page, view, selected }) {
 }
 
 
-function ResultGroup({ group, pages, view, selected }) {
+function ResultGroup({ group, pages, view, facet, selected }) {
   return (
     <section className="index-listing-group">
       {group ? <h2 className="index-listing-group-label">{group}</h2> : null}
       <div className="index-listing-results">
         {pages.map(page => (
-          <ResultCard key={page.url} page={page} view={view} selected={selected} />
+          <ResultCard key={page.url} page={page} view={view} facet={facet} selected={selected} />
         ))}
       </div>
     </section>
@@ -71,23 +71,33 @@ export default function IndexListing({ children }) {
   const view = active_view(query)
   if (view === 'pages') return children
 
-  const spec = facet_config(view) || {}
+  const group = sidebar_group(view)
+  const facet = active_facet(query, view)
+  const spec = facet_config(facet) || {}
   const value = selected_value(query, view)
-  const pages = listed_pages(view, value)
+  const pages = listed_pages(facet, value)
   const groups = group_pages(pages, spec.group_by)
   const label = value === 'latest' ? 'Latest' : value
   const count = pages.length === 1 ? '1 page' : `${pages.length} pages`
+  const kicker = group ? group.label : (spec.label || facet)
 
   return (
     <div className="index-listing">
       <header className="index-listing-head">
-        <p className="index-listing-kicker">{spec.label || view}</p>
+        <p className="index-listing-kicker">{kicker}</p>
         <h1 className="index-listing-title">{label}</h1>
         <p className="index-listing-count">{count}</p>
       </header>
       {!pages.length && <p className="index-listing-empty">No pages for this value.</p>}
-      {groups.map(({ group, pages: hits }) => (
-        <ResultGroup key={group || 'all'} group={group} pages={hits} view={view} selected={value} />
+      {groups.map(({ group: heading, pages: hits }) => (
+        <ResultGroup
+          key={heading || 'all'}
+          group={heading}
+          pages={hits}
+          view={view}
+          facet={facet}
+          selected={value}
+        />
       ))}
     </div>
   )

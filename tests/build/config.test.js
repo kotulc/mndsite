@@ -222,6 +222,39 @@ describe('load_config — display lists', () => {
     const p = write_yaml('title: t\ndisplay:\n  toc: description\n')
     expect(() => load_config(p)).toThrow(/display.toc must be a list/)
   })
+
+  test('test_sidebar_defaults_from_index_facets', () => {
+    const p = write_yaml('title: t\nfacets:\n  tags: { field: tags, index: true }\n  version: { field: version, index: true }\n')
+    expect(load_config(p).display.sidebar).toEqual([
+      { id: 'tags', label: 'Tags', facets: ['tags'] },
+      { id: 'version', label: 'Version', facets: ['version'] },
+    ])
+  })
+
+  test('test_sidebar_explicit_groups', () => {
+    const p = write_yaml(`title: t
+facets:
+  version: { field: version }
+  status: { field: status }
+  tags: { field: tags }
+  categories: { field: categories }
+display:
+  sidebar:
+    - label: Versions
+      facets: [version, status]
+    - label: Tags
+      facets: [tags, categories]
+`)
+    expect(load_config(p).display.sidebar).toEqual([
+      { id: 'version', label: 'Versions', facets: ['version', 'status'] },
+      { id: 'tags', label: 'Tags', facets: ['tags', 'categories'] },
+    ])
+  })
+
+  test('test_sidebar_unknown_facet_throws', () => {
+    const p = write_yaml('title: t\nfacets:\n  tags: { field: tags }\ndisplay:\n  sidebar:\n    - label: Tags\n      facets: [nope]\n')
+    expect(() => load_config(p)).toThrow(/references unknown facet 'nope'/)
+  })
 })
 
 
