@@ -135,18 +135,10 @@ fields:
   related: related
   identity: doc_id           # stable id grouping variants of one document (from mndmap)
 
-# Optional — content dimensions rendered as chips and filters
+# Optional — content dimensions. `index: true` adds a left-nav chip after Pages.
 facets:
-  categories: { field: categories, label: Category, color: blue, ui: chips, sort: alpha }
-  tags:       { field: tags,       label: Tag,      color: violet, ui: chips, sort: alpha }
-
-# Optional — named facet presets; "default" names the active one, or "all"
-collections:
-  default: all
-
-# Optional — left tree views: "tree" is the directory hierarchy, others name a facet
-sidebar:
-  views: [tree]
+  categories: { field: categories, label: Category, color: blue }   # blue, violet, amber, rose, green, teal, or 0-359
+  tags:       { field: tags,       label: Tag,      color: violet }
 
 # Optional — rendered elements, in display order; omit one to turn it off
 display:
@@ -180,12 +172,15 @@ version, status, applicability, anything else upstream stamps into frontmatter.
 | Facet key | Default | Purpose |
 |---|---|---|
 | `field` | *(required)* | Frontmatter key to read |
-| `label` | facet name, title-cased | Chip tooltip and view label |
+| `label` | facet name, title-cased | Chip tooltip and index label |
 | `color` | next palette entry | `blue`, `violet`, `amber`, `rose`, `green`, `teal`, or a hue `0-359` |
 | `values` | any value allowed | Allowed values; anything else is dropped |
 | `sort` | `alpha` | `alpha`, `semver`, `date`, `listed` |
-| `default` | all values | Values active when no filter is applied; `latest` for ordered facets |
-| `ui` | `chips` | `chips`, `select`, `badge`, `none` |
+| `index` | `false` | Left-nav chip after Pages; body lists matching pages |
+| `inherit` | `false` | Fill a missing stamp from the site release |
+| `history` | `false` | Ingest `vMAJOR.MINOR.PATCH` git tags as frozen trees |
+| `default` | first value (`latest` when sort is semver or date) | Selected index value |
+| `group_by` | *(none)* | Another facet, used as headings in this index |
 
 Chip colors are generated per facet from its hue, in both light and dark themes, so a
 user-defined facet gets a coherent chip without any CSS. A value whose facet is not
@@ -193,16 +188,13 @@ declared falls back to the neutral `chip-custom` style.
 
 Rules worth knowing:
 
-- Facet values come from frontmatter only — never from paths, and never generated.
-- A page missing a facet's field simply has no value for it, and matches any filter on it.
-- Filtering scopes navigation and listings; every page keeps its route regardless.
-- Values not listed in a facet's `values` are dropped, so the config stays authoritative.
+- Facet values come from frontmatter only — never from paths. `inherit` may fill a missing stamp from `package.json` / the nearest git tag.
+- Semver is major.minor.patch. `0.2` and `v0.2.0` both become `0.2.0`.
+- Pages is the directory tree. `index: true` adds a chip; with no indexes, no chips render.
+- Selecting an index replaces the tree with that facet's values and lists matching pages in the body. This does not hide routes.
+- `history: true` keeps older trees from git tags even after every current file has moved on.
 
-`collections` names facet presets and `sidebar.views` lists the left-tree tabs — `tree`
-filters the directory tree in place, and a facet view replaces it with pages bucketed under
-that facet's values. Selection lives in the URL (`?c=`, `?view=`, `?<facet>=`), so a
-filtered tree is shareable. Constraints resolve query param > collection preset > the
-facet's own `default`.
+The repo's own [mndsite.yaml](mndsite.yaml) opts into version and tags indexes. The example above is the default — categories and tags as page chips, no indexes.
 
 ### Display and disabling features
 
@@ -238,8 +230,8 @@ explicitly when the config file is not at the repo root.
 
 ### Config contract version
 
-The release version's `MAJOR.MINOR` **is** the config contract version — `0.2.x` releases
-all read the **0.2** contract. There is no `contract:` key in the file and no load-time
+The release version's `MAJOR.MINOR` **is** the config contract version — `0.3.x` releases
+all read the **0.3** contract. There is no `contract:` key in the file and no load-time
 rejection of retired keys; pre-1.0, an unknown top-level key is simply ignored.
 
 [CHANGELOG.md](CHANGELOG.md) is the migration record — it lists what each contract version

@@ -1,11 +1,37 @@
 # Changelog
 
 Releases and the `mndsite.yaml` config contract move together: the release version's
-`MAJOR.MINOR` **is** the contract version. `0.2.x` releases all read the 0.2 contract.
+`MAJOR.MINOR` **is** the contract version. `0.3.x` releases all read the 0.3 contract.
 
 Pre-1.0, breaking config changes land in a minor bump and are listed here. There is no
 in-file `contract:` key and no load-time rejection of retired keys — an unknown top-level
 key is ignored, and this file is the migration record.
+
+
+## 0.3.0 — 2026-08-29
+
+Indexes replace collections. The left nav is the directory tree (Pages) or a facet's
+values; the body lists matching pages. Version stamps inherit the site release and
+optional git-tag snapshots keep older trees.
+
+### Added
+
+- `facets.*.index` — boolean. Puts a chip after Pages; chips hide when no facet is an index.
+- `facets.*.inherit` — boolean. Missing stamps take the site release (`package.json`, then git tag).
+- `facets.*.history` — boolean. Ingest exact `vMAJOR.MINOR.PATCH` git tags as frozen trees.
+- `facets.*.group_by` — another facet, used as headings in that index.
+- `facets.*.default` — selected index value (`latest`, or a specific value).
+- Semver values normalize to major.minor.patch (`0.2` → `0.2.0`; `v0.4.1` → `0.4.1`).
+
+### Changed
+
+- `sort: semver` compares major.minor.patch. Two-part stamps pad with `.0`.
+
+### Removed
+
+- `collections` — named filter presets. Indexes select a value; they do not hide the tree.
+- `sidebar.views` — replaced by `index: true` plus built-in Pages.
+- `facets.*.ui` — page chips follow `display.header`. Index chips are the view switcher.
 
 
 ## 0.2.0 — 2026-08-28

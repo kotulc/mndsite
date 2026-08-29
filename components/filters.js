@@ -1,38 +1,22 @@
 /**
- * Facet filter resolution for the left tree.
- * Turns the active collection and query params into a per-facet value constraint, and
- * decides whether a page or folder survives it. Filtering scopes navigation only —
- * every page keeps its route, and a page missing a facet's field matches any filter on it.
+ * Facet indexes for the left nav and listing body.
+ * Pages is the directory tree. Any facet with index: true is a chip that replaces
+ * the tree with that facet's values. The selected value lists matching pages in
+ * the body. This is a view switcher, not a filter — the tree is never hidden.
  *
- * Query params: ?c=<collection> ?view=<tree|facet> ?<facet>=<value,value>
+ * Query params: ?view=<pages|facet> ?on=<value>
  */
 import siteConfig from '../site.config'
 import siteMeta from '../public/site-meta.json'
 import { facet_config, facet_values } from './facets'
+import { compare_semver, normalize_semver } from '../scripts/semver'
 
 
 const PAGES = siteMeta.pages || []
-
-function strip(route) {
-  return route && route.length > 1 ? route.replace(/\/+$/, '') : route || '/'
-}
-
-const PAGE_INDEX = Object.fromEntries(PAGES.map(p => [strip(p.url), p]))
-
-
-function compare_semver(a, b) {
-  /** Numeric dotted-segment compare, tolerating a leading "v" and uneven lengths. */
-  const parts = s => String(s).replace(/^v/i, '').split('.').map(n => parseInt(n, 10) || 0)
-  const [pa, pb] = [parts(a), parts(b)]
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0)
-  }
-  return 0
-}
+const RELEASE = siteConfig.release || ''
 
 
 function comparator(spec) {
-  /** Ascending order for one facet's values, per its declared `sort`. */
   if (spec.sort === 'semver') return compare_semver
   if (spec.sort === 'date') return (a, b) => String(a).localeCompare(String(b))
   if (spec.sort === 'listed') {
@@ -43,114 +27,116 @@ function comparator(spec) {
 }
 
 
-export function facet_domain(name) {
-  /** Every value present on some page, in the facet's sort order. */
+function facet_of(page, name) {
+  return facet_values((page.facets || {})[name])
+}
+
+
+export function index_facets() {
+  /** Facets declared as sidebar indexes, in declaration order. */
+  return Object.entries(siteConfig.facets || {})
+    .filter(([, spec]) => spec.index)
+    .map(([name, spec]) => ({ name, spec }))
+}
+
+
+export function active_view(query) {
+  const requested = (query || {}).view
+  if (!requested || requested === 'pages') return 'pages'
+  return index_facets().some(f => f.name === requested) ? requested : 'pages'
+}
+
+
+export function facet_domain(name, { head } = {}) {
+  /** Values present on pages, in the facet's sort order. `head` skips snapshot pages. */
   const spec = facet_config(name)
   if (!spec) return []
 
   const seen = new Set()
   for (const page of PAGES) {
-    for (const value of facet_values((page.facets || {})[name])) seen.add(value)
+    if (head && page.snapshot) continue
+    for (const value of facet_of(page, name)) seen.add(value)
+  }
+  if (spec.history) {
+    for (const page of PAGES) {
+      if (page.snapshot) seen.add(page.snapshot)
+    }
   }
   return [...seen].sort(comparator(spec))
 }
 
 
-function constraint(name, value) {
-  /** One facet's allowed values: null means unconstrained. */
-  if (value == null || value === 'all') return null
-  if (value === 'latest') {
-    const domain = facet_domain(name)
-    return domain.length ? [domain[domain.length - 1]] : null
-  }
-  const list = typeof value === 'string' ? value.split(',') : value
-  const values = facet_values(list).map(v => String(v).trim()).filter(Boolean)
-  return values.length ? values : null
+function ordered_default(spec, domain) {
+  if (spec.default) return spec.default
+  if (spec.sort === 'semver' || spec.sort === 'date') return 'latest'
+  return domain[0] || ''
 }
 
 
-export function collection_names() {
-  /** Declared presets, without the reserved `default` key. */
-  return Object.keys(siteConfig.collections || {}).filter(name => name !== 'default')
+export function selected_value(query, name) {
+  /** The value selected in an index: ?on, else the facet default, else latest/first. */
+  const spec = facet_config(name)
+  if (!spec) return ''
+  const domain = facet_domain(name)
+  const requested = (query || {}).on
+  const fallback = ordered_default(spec, domain)
+  if (requested === 'latest' || requested === fallback) return requested || fallback
+  if (requested && (domain.includes(requested) || requested === 'latest')) return requested
+  return fallback
 }
 
 
-export function active_collection(query) {
-  /** The preset named by ?c, else the configured default. */
-  const requested = (query || {}).c
-  const collections = siteConfig.collections || {}
-  if (requested && (requested === 'all' || collections[requested])) return requested
-  return collections.default || 'all'
-}
-
-
-export function active_view(query) {
-  /** The view named by ?view, else the first declared view. */
-  const views = (siteConfig.sidebar || {}).views || ['tree']
-  const requested = (query || {}).view
-  return views.includes(requested) ? requested : views[0]
-}
-
-
-export function resolve_filter(query) {
-  /** Per-facet constraints, in precedence order: a ?<facet> param, then the active
-   *  collection's preset, then the facet's own `default`. Unset anywhere means all. */
-  const name = active_collection(query)
-  const preset = name === 'all' ? {} : (siteConfig.collections || {})[name] || {}
-  const facets = siteConfig.facets || {}
-
-  const filter = {}
-  for (const facet of Object.keys(facets)) {
-    const raw = (query || {})[facet] !== undefined ? query[facet]
-      : preset[facet] !== undefined ? preset[facet]
-      : facets[facet].default
-    filter[facet] = constraint(facet, raw)
-  }
-  return filter
-}
-
-
-export function page_matches(page, filter) {
-  /** A page survives when every constrained facet it declares has an allowed value. */
-  for (const [name, allowed] of Object.entries(filter || {})) {
-    if (!allowed) continue
-    const values = facet_values((page.facets || {})[name])
-    if (!values.length) continue   // no value for this facet — matches any filter on it
-    if (!values.some(value => allowed.includes(value))) return false
-  }
-  return true
-}
-
-
-export function route_visible(route, filter) {
-  /** A directory route follows its descendants — it is worth showing only while something
-   *  under it is. A leaf follows its own facets, and a route with no page record at all
-   *  (a separator, a generated landing page) stays. Nextra types a directory with an index
-   *  page as a plain doc, so folder-ness is decided here from the page list, not the item. */
-  const key = strip(route)
-  const prefix = key === '/' ? '/' : `${key}/`
-
-  const children = PAGES.filter(p => strip(p.url).startsWith(prefix))
-  if (children.length) return children.some(p => page_matches(p, filter))
-
-  const page = PAGE_INDEX[key]
-  return !page || page_matches(page, filter)
-}
-
-
-export function grouped_pages(facet, filter) {
-  /** Pages that survive the filter, bucketed by one facet's values for a facet view.
-   *  Newest first for ordered facets; declaration order otherwise. */
-  const spec = facet_config(facet)
+export function index_entries(name) {
+  /** Rows for an index list: domain values, optionally grouped. Latest is the
+   *  facet default (the Versions toggle), not a row in the list. */
+  const spec = facet_config(name)
   if (!spec) return []
 
-  const domain = facet_domain(facet)
+  const domain = facet_domain(name)
   const ordered = spec.sort === 'semver' || spec.sort === 'date' ? [...domain].reverse() : domain
+  const rows = []
 
-  return ordered.map(value => ({
-    value,
-    pages: PAGES.filter(page =>
-      facet_values((page.facets || {})[facet]).includes(value) && page_matches(page, filter)
-    ),
-  })).filter(group => group.pages.length)
+  const group_by = spec.group_by
+  for (const value of ordered) {
+    if (group_by) {
+      const groups = new Set()
+      for (const page of listed_pages(name, value)) {
+        for (const g of facet_of(page, group_by)) groups.add(g)
+      }
+      const group_spec = facet_config(group_by)
+      const headings = groups.size
+        ? [...groups].sort(comparator(group_spec || { sort: 'alpha' }))
+        : [null]
+      for (const group of headings) rows.push({ value, label: value, group })
+    } else {
+      rows.push({ value, label: value, group: null })
+    }
+  }
+  return rows
+}
+
+
+export function listed_pages(name, value) {
+  /** Pages shown for one index selection. Latest with history is the current
+   *  tree; without history it is HEAD pages at the highest stamp. A git snapshot
+   *  wins when present; otherwise HEAD pages stamped with that value. */
+  const spec = facet_config(name)
+  if (value === 'latest') {
+    if (spec && spec.history) return PAGES.filter(page => !page.snapshot)
+    const domain = facet_domain(name, { head: true })
+    const max = domain[domain.length - 1]
+    if (!max) return PAGES.filter(page => !page.snapshot)
+    return PAGES.filter(page => !page.snapshot && facet_of(page, name).includes(max))
+  }
+
+  const snaps = PAGES.filter(page => page.snapshot === value)
+  if (snaps.length) return snaps
+
+  return PAGES.filter(page => !page.snapshot && facet_of(page, name).includes(value))
+}
+
+
+export function resolve_semver(value) {
+  if (value === 'latest') return RELEASE || (facet_domain('version').slice(-1)[0] || '')
+  return normalize_semver(value) || value
 }

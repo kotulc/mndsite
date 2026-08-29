@@ -8,9 +8,8 @@ module.exports = {
   theme: {"color":"default","typeset":"sans","navbar":"primary","footer":"primary","hue":{"light":212,"dark":204},"saturation":100,"font_stack":""},
   nav_order: {"":["about","getting-started","configuration"],"features":["overview","components"],"specifications":["format"],"updates":["welcome"]},
   fields: {"title":"title","description":["description","desc"],"date":"date","reading_time":"reading_time","related":"related","identity":"doc_id"},
-  facets: {"categories":{"field":"categories","label":"Category","color":"blue","ui":"chips","sort":"alpha","hue":210},"tags":{"field":"tags","label":"Tag","color":"violet","ui":"chips","sort":"alpha","hue":265},"version":{"field":"version","label":"Contract","color":"teal","ui":"select","sort":"semver","hue":190},"status":{"field":"status","label":"Status","color":"amber","ui":"badge","sort":"listed","values":["draft","stable","deprecated"],"hue":35}},
-  collections: {"default":"current","current":{"status":["stable"]},"preview":{"status":["stable","draft"]},"latest":{"version":"latest"},"archive":{"status":["deprecated"]}},
-  sidebar: {"views":["tree","version","status"]},
+  facets: {"version":{"field":"version","label":"Versions","color":"teal","sort":"semver","default":"latest","inherit":true,"history":true,"group_by":"status","index":true,"hue":190},"tags":{"field":"tags","label":"Tags","color":"violet","index":true,"sort":"alpha","hue":265,"inherit":false,"history":false,"default":"","group_by":""},"categories":{"field":"categories","label":"Category","color":"blue","sort":"alpha","hue":210,"index":false,"inherit":false,"history":false,"default":"","group_by":""},"status":{"field":"status","label":"Status","color":"amber","sort":"listed","values":["draft","stable","deprecated"],"hue":35,"index":false,"inherit":false,"history":false,"default":"","group_by":""}},
+  release: "0.3.0",
   display: {"crumbs":["home","path"],"header":["date","reading_time","version","status","facets"],"toc":["description","sections","related","edit"],"navbar":["theme","feed","github"],"contents":["description","sections","related"]},
   edit: {"branch":"main","path":"docs","url":"{repo_url}/edit/{branch}/{file}"},
 }

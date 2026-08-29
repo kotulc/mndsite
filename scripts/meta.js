@@ -4,13 +4,14 @@
  * frontmatter is inert unless the config names it, and no value is ever generated.
  *
  * Output shape (public/site-meta.json):
- *   { pages: [ { url, name, slug, identity, source, published, created, desc, metrics,
- *                links, related, facets, sections } ] }
+ *   { pages: [ { url, name, slug, identity, source, published, created, desc, excerpt,
+ *                metrics, links, related, facets, sections } ] }
  *
  * Facet values keep their supplied shape: a list stays a list, a scalar stays a scalar.
  */
-const { word_count, extract_links, section_tree } = require('./text')
+const { word_count, extract_links, section_tree, first_paragraph } = require('./text')
 const { DEFAULTS } = require('./config')
+const { normalize_semver } = require('./semver')
 
 
 function field_value(fm, key) {
@@ -35,27 +36,33 @@ function clean_list(raw) {
 }
 
 
-function facet_value(fm, spec) {
-  /** One facet's value, restricted to `values` when the config declares them. */
-  const raw = field_value(fm, spec.field)
+function facet_value(fm, spec, release) {
+  /** One facet's value, restricted to `values` when the config declares them.
+   *  Semver stamps are normalized to major.minor.patch. inherit fills a missing
+   *  stamp from the site release. */
+  let raw = field_value(fm, spec.field)
+  if (raw == null && spec.inherit && release) raw = release
   if (raw == null) return null
 
   const allowed = Array.isArray(spec.values) ? spec.values.map(String) : null
   if (Array.isArray(raw)) {
-    const list = clean_list(raw).filter(v => !allowed || allowed.includes(v))
+    const list = clean_list(raw)
+      .map(v => spec.sort === 'semver' ? (normalize_semver(v) || v) : v)
+      .filter(v => !allowed || allowed.includes(v))
     return list.length ? list : null
   }
 
-  const value = String(raw).trim()
+  let value = String(raw).trim()
+  if (spec.sort === 'semver') value = normalize_semver(value) || value
   return !allowed || allowed.includes(value) ? value : null
 }
 
 
-function build_facets(fm, facets) {
+function build_facets(fm, facets, release) {
   /** Declared facets present on this page, in declaration order. */
   const out = {}
   for (const [name, spec] of Object.entries(facets || DEFAULTS.facets)) {
-    const value = facet_value(fm || {}, spec)
+    const value = facet_value(fm || {}, spec, release)
     if (value != null) out[name] = value
   }
   return out
@@ -116,12 +123,15 @@ function build_sections(section_nodes) {
 }
 
 
-function build_page({ slug, title, url, content, source, created, fm }, config) {
+function build_page({ slug, title, url, content, source, created, fm, snapshot }, config) {
   /** Build one flat page record from supplied frontmatter and content. */
   const fields = (config && config.fields) || DEFAULTS.fields
   const facets = (config && config.facets) || DEFAULTS.facets
   const body = content.replace(/\r\n?/g, '\n').replace(/^\s*#\s+.+\n?/, '')
-  const { sections: tree } = section_tree(body)
+  const { intro, sections: tree } = section_tree(body)
+  const excerpt = first_paragraph(intro)
+    || first_paragraph((tree[0] || {}).content)
+    || parse_desc(fm, fields)
 
   const mins = parse_reading_time(fm, fields)
   const metrics = { word_count: word_count(body) }
@@ -136,11 +146,13 @@ function build_page({ slug, title, url, content, source, created, fm }, config) 
     published: parse_published(fm, fields),
     created:   created || '',
     desc:      parse_desc(fm, fields),
+    excerpt:   excerpt || '',
     metrics,
     links:     extract_links(content),
     related:   parse_related(fm, fields),
-    facets:    build_facets(fm, facets),
+    facets:    build_facets(fm, facets, config && config.release),
     sections:  build_sections(tree),
+    snapshot:  snapshot || '',
   }
 }
 

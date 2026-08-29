@@ -25,11 +25,39 @@ export function facet_values(value) {
 }
 
 
+export function header_facet_names(header) {
+  /** Facets to chip, walking display.header: "facets" expands to every declared
+   *  facet not already named, and a facet named directly is chipped wherever it
+   *  appears. */
+  const declared = siteConfig.facets || {}
+  const names = []
+  for (const item of header || []) {
+    if (item === 'facets') {
+      for (const name of Object.keys(declared)) {
+        if (!names.includes(name)) names.push(name)
+      }
+    } else if (declared[item] && !names.includes(item)) {
+      names.push(item)
+    }
+  }
+  return names
+}
+
+
+export function listing_facet_names(view) {
+  /** Facets to chip on an index card: header chips minus version/status and the
+   *  open index's group_by. Those are headings (or the listing title), not chips.
+   *  The selected tag is dropped later so sibling tags can still show. */
+  const spec = facet_config(view) || {}
+  const skip = new Set(['version', 'status', spec.group_by].filter(Boolean))
+  return header_facet_names((siteConfig.display || {}).header).filter(name => !skip.has(name))
+}
+
+
 export function facet_chips(facets, names) {
-  /** Flatten a page's facets into [{ term, group }]. Without `names`, every facet whose
-   *  ui is "chips", in declaration order; with `names`, exactly those facets in that order. */
+  /** Flatten a page's facets into [{ term, group }]. Without `names`, every declared
+   *  facet in declaration order; with `names`, exactly those facets in that order. */
   const wanted = names || Object.keys(siteConfig.facets || {})
-    .filter(name => (facet_config(name) || {}).ui === 'chips')
 
   const chips = []
   for (const name of wanted) {

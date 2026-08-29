@@ -2,7 +2,7 @@
 title: Site Configuration
 categories:
   - spec
-version: 0.2
+version: 0.3
 status: stable
 ---
 
@@ -22,7 +22,7 @@ At build time the CLI generates `site.config.js` from the YAML; both the ingest 
 | `feed_url` | string | `''` | Section slug linked from the navbar feed icon |
 | `footer` | string | `''` | Custom footer credits text |
 | `display` | object | see [Configuration](/configuration#display) | Which elements render, in which order |
-| `fields` / `facets` | object | see [Configuration](/configuration#facets) | Frontmatter keys read, and the dimensions rendered from them |
+| `fields` / `facets` | object | see [Configuration](/configuration#facets) | Frontmatter keys read, dimensions chipped, optional indexes |
 | `edit` | object | `branch: main` | "Edit this page" targets; used only when `repo_url` is set |
 | `theme` | object | see [Configuration](/configuration#theme) | Color palette, typeset, navbar/footer backgrounds |
 | `nav_order` | object | `{}` | Slug array to pin specific pages first; remaining pages sort alphabetically |

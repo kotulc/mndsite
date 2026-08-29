@@ -1,97 +1,140 @@
 /**
- * Left-tree view tabs and facet views.
- * Nextra owns the sidebar body and exposes no slot for extra content, so the strip is
- * portalled into `.nextra-sidebar-container` and a facet view replaces the tree with its
- * own grouped list — the container's `data-view` attribute is what hides Nextra's tree.
+ * Left-nav index switcher and value lists.
+ * Pages is the directory tree. Any other toggle replaces the tree with that facet's
+ * values. Nextra owns the tree; data-view hides it while an index is open.
  *
- * Driven by sidebar.views and collections; state lives in the ?view / ?c query params.
+ * The portal mounts inside `.nextra-scrollbar` so the switcher and facet lists share
+ * the tree's 1rem padding. Facet rows copy Nextra menu metrics (px-2 py-1.5, gap-1,
+ * nested ml-3 with a left rule) so Versions/Tags line up with the directory tree.
+ *
+ * State: ?view=<pages|facet> ?on=<value>
  */
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import Link from 'next/link'
 import { useRouter } from 'next/router'
-import siteConfig from '../site.config'
 import { facet_config } from './facets'
-import {
-  active_collection, active_view, collection_names, grouped_pages, resolve_filter,
-} from './filters'
+import { active_view, index_entries, index_facets, selected_value } from './filters'
 
 
-const VIEWS = (siteConfig.sidebar || {}).views || ['tree']
 const SIDEBAR = '.nextra-sidebar-container'
 
 
-function view_label(view) {
-  return view === 'tree' ? 'Tree' : (facet_config(view) || {}).label || view
-}
-
-
-function use_portal_host() {
-  /** A mount point prepended to Nextra's sidebar, cleaned up with the component. */
+function use_portal_host(enabled) {
   const [host, set_host] = useState(null)
 
   useEffect(() => {
+    if (!enabled) return
     const container = document.querySelector(SIDEBAR)
     if (!container) return
+    const parent = container.querySelector('.nextra-scrollbar') || container
 
     const node = document.createElement('div')
     node.className = 'sidebar-views'
-    container.prepend(node)
+    parent.prepend(node)
     set_host(node)
 
     return () => {
       node.remove()
       delete container.dataset.view
     }
-  }, [])
+  }, [enabled])
 
   return host
 }
 
 
-function FacetView({ facet, filter, route }) {
-  /** The tree replaced by pages bucketed under one facet's values. */
-  const groups = grouped_pages(facet, filter)
-  if (!groups.length) return <p className="sidebar-empty">No pages match this filter.</p>
+function group_entries(entries) {
+  const groups = []
+  for (const entry of entries) {
+    const key = entry.group || ''
+    const last = groups[groups.length - 1]
+    if (!last || last.group !== key) groups.push({ group: key, items: [entry] })
+    else last.items.push(entry)
+  }
+  return groups
+}
 
-  const here = route.replace(/\/+$/, '')
+
+function ValueButton({ entry, selected, on_select, facet }) {
+  const active = entry.value === selected
+  return (
+    <button
+      type="button"
+      className={`chip chip-${facet}${active ? ' is-active' : ''}`}
+      aria-pressed={active}
+      onClick={() => on_select(entry.value)}
+    >
+      {entry.label}
+    </button>
+  )
+}
+
+
+function ChipRow({ items, facet, selected, on_select }) {
+  return (
+    <div className="index-chips">
+      {items.map(entry => (
+        <ValueButton
+          key={entry.value}
+          entry={entry}
+          selected={selected}
+          on_select={on_select}
+          facet={facet}
+        />
+      ))}
+    </div>
+  )
+}
+
+
+function IndexList({ facet, selected, on_select }) {
+  const groups = group_entries(index_entries(facet))
+  if (!groups.length) return <p className="sidebar-empty">No values for this index.</p>
 
   return (
-    <ul className="facet-view">
-      {groups.map(group => (
-        <li key={group.value}>
-          <span className={`facet-group chip chip-${facet}`}>{group.value}</span>
-          <ul>
-            {group.pages.map(page => (
-              <li key={page.url}>
-                <Link
-                  href={page.url}
-                  className={page.url.replace(/\/+$/, '') === here ? 'active' : undefined}
-                >
-                  {page.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </li>
-      ))}
+    <ul className="index-tree">
+      {groups.map(({ group, items }) => {
+        const chips = (
+          <ChipRow items={items} facet={facet} selected={selected} on_select={on_select} />
+        )
+        if (!group) {
+          return <li key={items.map(e => e.value).join('-')}>{chips}</li>
+        }
+        return (
+          <li key={group}>
+            <div className="index-folder">{group}</div>
+            <div className="index-nested">{chips}</div>
+          </li>
+        )
+      })}
     </ul>
   )
 }
 
 
-function Tabs({ current, on_select }) {
+function Toggles({ current, on_select }) {
+  const indexes = index_facets()
   return (
-    <div className="sidebar-tabs" role="tablist">
-      {VIEWS.map(view => (
+    <div className="sidebar-index-toggles" role="tablist">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={current === 'pages'}
+        className={current === 'pages' ? 'sidebar-toggle is-active' : 'sidebar-toggle'}
+        onClick={() => on_select('pages')}
+      >
+        Pages
+      </button>
+      {indexes.map(({ name, spec }) => (
         <button
-          key={view}
+          key={name}
+          type="button"
           role="tab"
-          aria-selected={view === current}
-          className={view === current ? 'sidebar-tab active' : 'sidebar-tab'}
-          onClick={() => on_select(view)}
+          aria-selected={current === name}
+          className={current === name ? 'sidebar-toggle is-active' : 'sidebar-toggle'}
+          onClick={() => on_select(name)}
         >
-          {view_label(view)}
+          {spec.label || name}
         </button>
       ))}
     </div>
@@ -99,52 +142,51 @@ function Tabs({ current, on_select }) {
 }
 
 
-function Collections({ current, on_select }) {
-  const names = collection_names()
-  if (!names.length) return null
-
-  return (
-    <label className="sidebar-collection">
-      <span className="nx-sr-only">Collection</span>
-      <select value={current} onChange={event => on_select(event.target.value)}>
-        {names.map(name => <option key={name} value={name}>{name}</option>)}
-        <option value="all">all</option>
-      </select>
-    </label>
-  )
-}
-
-
 export default function SidebarViews() {
   const router = useRouter()
-  const host = use_portal_host()
+  const indexes = index_facets()
+  const host = use_portal_host(indexes.length > 0)
 
   const view = active_view(router.query)
-  const collection = active_collection(router.query)
-  const filter = resolve_filter(router.query)
+  const selected = view === 'pages' ? '' : selected_value(router.query, view)
 
-  // The tree is Nextra's; a facet view is ours. CSS swaps them on this attribute.
   useEffect(() => {
+    if (!indexes.length) return
     const container = document.querySelector(SIDEBAR)
     if (container) container.dataset.view = view
-  }, [view])
+    document.documentElement.dataset.view = view
+    return () => { delete document.documentElement.dataset.view }
+  }, [view, indexes.length])
 
-  function set_param(key, value, fallback) {
-    /** The default selection stays out of the URL, so a plain link is the default view. */
+  function set_view(next) {
     const query = { ...router.query }
-    if (value && value !== fallback) query[key] = value
-    else delete query[key]
+    delete query.view
+    delete query.on
+    if (next !== 'pages') {
+      query.view = next
+      const spec = facet_config(next) || {}
+      const value = selected_value({}, next)
+      if (value && value !== spec.default) query.on = value
+    }
     router.replace({ query }, undefined, { shallow: true, scroll: false })
   }
 
-  if (!host || (VIEWS.length < 2 && !collection_names().length)) return null
-  const default_collection = (siteConfig.collections || {}).default || 'all'
+  function set_on(value) {
+    const query = { ...router.query, view }
+    const spec = facet_config(view) || {}
+    if (value && value !== (spec.default || 'latest')) query.on = value
+    else delete query.on
+    router.replace({ query }, undefined, { shallow: true, scroll: false })
+  }
+
+  if (!host || !indexes.length) return null
 
   return createPortal(
     <>
-      {VIEWS.length > 1 && <Tabs current={view} on_select={v => set_param('view', v, VIEWS[0])} />}
-      <Collections current={collection} on_select={c => set_param('c', c, default_collection)} />
-      {view !== 'tree' && <FacetView facet={view} filter={filter} route={router.pathname} />}
+      <Toggles current={view} on_select={set_view} />
+      {view !== 'pages' && (
+        <IndexList facet={view} selected={selected} on_select={set_on} />
+      )}
     </>,
     host
   )

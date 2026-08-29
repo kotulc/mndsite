@@ -15,7 +15,7 @@ related:
     url: /features/content-pipeline
   - title: Deployment
     url: /features/deployment
-version: 0.2
+version: 0.3
 status: stable
 ---
 
@@ -44,9 +44,7 @@ Writing `""` reads the same as the default, so no value in the file ever needs t
 | `theme.footer` | string | `none` | Footer background: `"primary"` (theme tint) or any CSS color |
 | `nav_order` | object | `{}` | Explicit nav ordering per directory — see below |
 | `fields` | object | see below | Frontmatter keys behind the built-in metadata; frontmatter is inert unless named |
-| `facets` | object | `categories`, `tags` | Content dimensions rendered as chips and filters — see [Facets](#facets) |
-| `collections` | object | `{ default: all }` | Named facet presets; `default` names the active one |
-| `sidebar.views` | list | `[tree]` | Left tree views: `tree` plus any facet name |
+| `facets` | object | `categories`, `tags` | Content dimensions — page chips and optional left-nav indexes |
 | `display.crumbs` | list | `[home, path]` | Breadcrumb trail above the page title |
 | `display.header` | list | `[date, reading_time, facets]` | Metadata under the title; also accepts facet names |
 | `display.toc` | list | `[description, sections, related, edit]` | Right sidebar at ≥ xl |
@@ -78,15 +76,16 @@ nav_order:
 
 import Since from '../components/custom/Since'
 
-<Since v="0.2" />
+<Since v="0.3" />
 
-The release version's `MAJOR.MINOR` **is** the config contract version — `0.2.x` releases all
-read the **0.2** contract. There is no `contract:` key in the file, and pre-1.0 an unknown
+The release version's `MAJOR.MINOR` **is** the config contract version — `0.3.x` releases all
+read the **0.3** contract. There is no `contract:` key in the file, and pre-1.0 an unknown
 top-level key is ignored rather than rejected.
 
 `CHANGELOG.md` is the migration record: what each contract version added, changed, and
 removed, including the 0.1 keys (`meta`, `flatten`, `toc`, `reading_time`, `theme_toggle`,
-`limits`, `display.title_row`, `display.info`) and their replacements.
+`limits`, `display.title_row`, `display.info`) and the 0.2 keys (`collections`, `sidebar.views`,
+`facets.*.ui`).
 
 mndsite configuration is limited to rendering, content paths, navigation order, theme, and deployment.
 
@@ -148,14 +147,22 @@ navigation label.
 ## Facets
 
 Every content dimension mndsite renders is declared in `facets`. `field` is required; `label`,
-`color`, `values`, `sort`, `default`, and `ui` are optional.
+`color`, `values`, `sort`, `index`, `inherit`, `history`, `default`, and `group_by` are optional.
+On/off flags are booleans.
 
 ```yaml
 facets:
   categories: { field: categories, label: Category, color: blue }
-  tags:       { field: tags,       label: Tag,      color: violet }
-  status:     { field: status,     values: [draft, stable, deprecated], default: [stable] }
-  version:    { field: version,    sort: semver, default: latest, ui: select }
+  tags:       { field: tags,       label: Tag,      color: violet, index: true }
+  status:     { field: status,     values: [draft, stable, deprecated], sort: listed }
+  version:
+    field: version
+    sort: semver           # alpha, semver, date, listed
+    default: latest        # latest, or a specific version
+    inherit: true
+    history: true
+    group_by: status
+    index: true
 ```
 
 Chip colors are generated from each facet's hue — `blue`, `violet`, `amber`, `rose`, `green`,
@@ -165,42 +172,25 @@ the next palette entry in declaration order.
 Values come from frontmatter only, never from paths and never generated. A page missing a
 facet's field simply has no value for it, and keeps its route either way.
 
-### Collections and sidebar views
+### Indexes
 
-`collections` groups facet values into named presets; the reserved `default` key names the
-active one, or `all` for no preset. `sidebar.views` lists the left-tree tabs — `tree` is the
-directory hierarchy, and any other entry names a facet to group by.
+`index: true` adds a chip after **Pages** in the left nav. With no indexed facets, Pages is
+the only view and no chips render. Selecting an index replaces the directory tree with that
+facet's values; the body lists matching pages (title and excerpt). This is a view switcher,
+not a filter — every page keeps its route.
 
-```yaml
-collections:
-  default: current
-  current: { version: latest, status: [stable] }
-  archive: { version: all, status: [deprecated] }
+`default` is the preselected value in that index (`latest` for `sort: semver` or `date`).
+`group_by` names another facet used as headings over the value list. `inherit: true` fills
+a missing stamp from the site release (`package.json`, then the nearest git tag).
+`history: true` ingests exact `vMAJOR.MINOR.PATCH` git tags as frozen trees under
+`/_history/<version>/`, hidden from the Pages tree.
 
-sidebar:
-  views: [tree, version, status]
-```
-
-The tab strip sits above the left tree. `tree` filters Nextra's directory tree in place;
-any other view replaces it with pages bucketed under that facet's values, newest first for
-`semver` and `date` facets.
-
-Selection lives in the URL, so a filtered view is shareable:
+Selection lives in the URL:
 
 | Param | Effect |
 |---|---|
-| `?c=<name>` | Switch collection; `all` drops every preset |
-| `?view=<name>` | Switch view — `tree` or a facet name from `sidebar.views` |
-| `?<facet>=<value,value>` | Constrain one facet directly, overriding the collection |
-
-Constraints resolve in precedence order: a query param, then the active collection's preset,
-then the facet's own `default`. A facet unset at every level is unconstrained. `latest`
-resolves against the facet's sort order, so `{ version: latest }` follows the newest version
-without naming it.
-
-Filtering scopes navigation only — every page keeps its route, and a page missing a facet's
-field matches any filter on it. A directory disappears from the tree when nothing under it
-survives the filter.
+| `?view=<name>` | Switch index — `pages` (default) or a facet with `index: true` |
+| `?on=<value>` | Select a value in that index; `latest` is the default for semver |
 
 ## Display
 
@@ -230,7 +220,7 @@ Below the `xl` breakpoint Nextra hides the right sidebar. A **Contents** button 
 
 `theme` in `display.navbar` is the only theme toggle — Nextra's sidebar toggle is disabled. Chips and Related entries render as supplied; nothing is truncated.
 
-`header` also accepts any facet name. Listing a facet there places its chips at that position whatever its `ui` — so `header: [date, version, tags]` shows version chips between the date and tag chips. The generic `facets` element expands to every facet with `ui: chips`.
+`header` also accepts any facet name. Listing a facet there places its chips at that position — so `header: [date, version, tags]` shows version chips between the date and tag chips. The generic `facets` element expands to every declared facet not already named.
 
 ## Edit links
 

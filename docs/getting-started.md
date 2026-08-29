@@ -86,13 +86,14 @@ as an environment variable at build time — see [Configuration](/configuration)
 **3. Organize your content**
 
 Place markdown or MDX files in any directory. Subdirectories become URL segments.
-An `index.md` or `index.mdx` at any level becomes that section's landing page.
+An `index.md` or `index.mdx` at any level becomes that section's landing page when
+you supply one; otherwise ingest writes a hidden redirect to the first sorted page.
 mndsite does not flatten, regroup, or rename supplied paths.
 
 ```
 docs/
-├── index.md
 ├── about.md
+├── getting-started.md
 ├── images/
 ├── _assets/          # optional static assets (mndmap handoff)
 └── posts/

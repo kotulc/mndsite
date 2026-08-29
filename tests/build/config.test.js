@@ -108,7 +108,10 @@ describe('load_config — fields', () => {
 describe('load_config — facets', () => {
   test('test_facet_defaults_filled', () => {
     const cfg = load_config(write_yaml('title: t\nfacets:\n  version:\n    field: version\n'))
-    expect(cfg.facets.version).toMatchObject({ field: 'version', label: 'Version', ui: 'chips', sort: 'alpha' })
+    expect(cfg.facets.version).toMatchObject({
+      field: 'version', label: 'Version', sort: 'alpha',
+      index: false, inherit: false, history: false, default: '', group_by: '',
+    })
   })
 
   test('test_facet_label_from_name', () => {
@@ -138,7 +141,6 @@ describe('load_config — facets', () => {
 
   test.each([
     ['color: nope', /unknown facets.a.color/],
-    ['ui: sparkle',  /unknown facets.a.ui/],
     ['sort: vibes',  /unknown facets.a.sort/],
     ['values: x',    /facets.a.values must be a list/],
   ])('test_facet_invalid_%s_throws', (line, pattern) => {
@@ -148,55 +150,35 @@ describe('load_config — facets', () => {
 })
 
 
-describe('load_config — collections', () => {
-  const FACETS = 'facets:\n  version: { field: version }\n  status: { field: status }\n'
-
-  test('test_collections_default_all', () => {
-    expect(load_config(write_yaml('title: t')).collections).toEqual({ default: 'all' })
+describe('load_config — facet indexes', () => {
+  test('test_index_inherit_history_are_bools', () => {
+    const p = write_yaml('title: t\nfacets:\n  version: { field: version, index: true, inherit: true, history: true }\n')
+    expect(load_config(p).facets.version).toMatchObject({ index: true, inherit: true, history: true })
   })
 
-  test('test_collection_preset_kept', () => {
-    const p = write_yaml(`title: t\n${FACETS}collections:\n  default: latest\n  latest: { version: latest }\n`)
-    expect(load_config(p).collections.latest).toEqual({ version: 'latest' })
+  test('test_index_non_bool_throws', () => {
+    const p = write_yaml('title: t\nfacets:\n  version: { field: version, index: auto }\n')
+    expect(() => load_config(p)).toThrow(/facets.version.index must be true or false/)
   })
 
-  test('test_collection_unknown_facet_throws', () => {
-    const p = write_yaml(`title: t\n${FACETS}collections:\n  latest: { nope: x }\n`)
-    expect(() => load_config(p)).toThrow(/references unknown facet 'nope'/)
+  test('test_group_by_must_name_a_facet', () => {
+    const p = write_yaml('title: t\nfacets:\n  version: { field: version, group_by: status }\n')
+    expect(() => load_config(p)).toThrow(/group_by references unknown facet 'status'/)
   })
 
-  test('test_collection_default_undeclared_throws', () => {
-    const p = write_yaml(`title: t\n${FACETS}collections:\n  default: missing\n`)
-    expect(() => load_config(p)).toThrow(/collections.default 'missing' is not a declared collection/)
+  test('test_group_by_kept', () => {
+    const p = write_yaml('title: t\nfacets:\n  status: { field: status }\n  version: { field: version, group_by: status }\n')
+    expect(load_config(p).facets.version.group_by).toBe('status')
   })
 
-  test('test_collection_non_map_throws', () => {
-    const p = write_yaml(`title: t\n${FACETS}collections:\n  latest: [version]\n`)
-    expect(() => load_config(p)).toThrow(/collections.latest must be a map/)
-  })
-})
-
-
-describe('load_config — sidebar views', () => {
-  const FACETS = 'facets:\n  version: { field: version }\n'
-
-  test('test_sidebar_defaults_to_tree', () => {
-    expect(load_config(write_yaml('title: t')).sidebar.views).toEqual(['tree'])
+  test('test_release_from_package_json', () => {
+    fs.writeFileSync(path.join(tmp, 'package.json'), JSON.stringify({ version: '1.2.3' }))
+    expect(load_config(write_yaml('title: t')).release).toBe('1.2.3')
   })
 
-  test('test_sidebar_facet_view_kept', () => {
-    const p = write_yaml(`title: t\n${FACETS}sidebar:\n  views: [tree, version]\n`)
-    expect(load_config(p).sidebar.views).toEqual(['tree', 'version'])
-  })
-
-  test('test_sidebar_unknown_facet_throws', () => {
-    const p = write_yaml(`title: t\n${FACETS}sidebar:\n  views: [tree, nope]\n`)
-    expect(() => load_config(p)).toThrow(/sidebar.views references unknown facet 'nope'/)
-  })
-
-  test('test_sidebar_empty_views_throws', () => {
-    const p = write_yaml('title: t\nsidebar:\n  views: []\n')
-    expect(() => load_config(p)).toThrow(/sidebar.views must be a non-empty list/)
+  test('test_release_pads_two_part_version', () => {
+    fs.writeFileSync(path.join(tmp, 'package.json'), JSON.stringify({ version: '1.2' }))
+    expect(load_config(write_yaml('title: t')).release).toBe('1.2.0')
   })
 })
 
@@ -276,6 +258,8 @@ describe('write_site_config — generated keys', () => {
   test('test_write_site_config_omits_removed_keys', () => {
     write_site_config(load_config(write_yaml('title: t')), tmp)
     const out = require(path.join(tmp, 'site.config.js'))
+    expect(out).not.toHaveProperty('collections')
+    expect(out).not.toHaveProperty('sidebar')
     expect(out).not.toHaveProperty('content_style')
     expect(out).not.toHaveProperty('theme_mood')
     expect(out).not.toHaveProperty('logo_seed')

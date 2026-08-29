@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -30,7 +32,7 @@ jobs:
         with:
           path: ./dist
 
-  # TODO: support versioning by also tagging with git tags (e.g. v1.0.0) when pushed
+  # TODO: ingest vMAJOR.MINOR.PATCH git tags as version snapshots when facets.version.history is true
   publish:
     needs: build
     runs-on: ubuntu-latest

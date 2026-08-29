@@ -9,9 +9,9 @@ import SiteFooter from './components/SiteFooter'
 import GitHubLink from './components/GitHubLink'
 import FeedLink from './components/FeedLink'
 import ThemeToggle from './components/ThemeToggle'
-import { facet_chips } from './components/facets'
+import { facet_chips, header_facet_names } from './components/facets'
+import IndexListing from './components/IndexListing'
 import SidebarViews from './components/SidebarViews'
-import { resolve_filter, route_visible } from './components/filters'
 import siteConfig from './site.config'
 import siteMeta from './public/site-meta.json'
 
@@ -30,24 +30,6 @@ function use_page_meta() {
   /** Page record for the current route from public/site-meta.json. */
   const { route } = useRouter()
   return PAGE_INDEX[strip_trailing_slash(route)] || PAGE_INDEX[route] || {}
-}
-
-
-function header_facet_names(header) {
-  /** Facets to chip, walking display.header: "facets" expands to every ui:chips facet,
-   *  and a facet named directly is chipped wherever it appears, whatever its ui. */
-  const declared = siteConfig.facets || {}
-  const names = []
-  for (const item of header) {
-    if (item === 'facets') {
-      for (const [name, facet] of Object.entries(declared)) {
-        if (facet.ui === 'chips' && !names.includes(name)) names.push(name)
-      }
-    } else if (declared[item] && !names.includes(item)) {
-      names.push(item)
-    }
-  }
-  return names
 }
 
 
@@ -71,13 +53,9 @@ function PageMeta() {
 }
 
 
-function SidebarLabel({ title, route }) {
-  /** Nextra's only per-item hook. Filtered-out rows are marked here and hidden by CSS —
-   *  the marker sits inside the row's own link or button, so `li:has(> a > [...])` in
-   *  global.css hides that row alone and never its ancestors. */
-  const { query } = useRouter()
-  const hidden = !route_visible(route, resolve_filter(query))
-  return <span {...(hidden && { 'data-facet-hidden': '' })}>{title}</span>
+function SidebarLabel({ title }) {
+  /** Nextra's per-item label. Indexes replace the tree; they do not hide rows. */
+  return <span>{title}</span>
 }
 
 
@@ -177,5 +155,5 @@ export default {
   components: { h1: PageTitle },
   sidebar: { titleComponent: SidebarLabel },
   // SidebarViews has no place in the page — it only portals the view tabs into the sidebar.
-  main: ({ children }) => <><SidebarViews />{children}</>,
+  main: ({ children }) => <><SidebarViews /><IndexListing>{children}</IndexListing></>,
 }

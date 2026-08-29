@@ -3,10 +3,10 @@
 ## Status
 
 Planned shape of the complete `mndsite.yaml`. Sections marked **built** are in the code
-today; **planned** sections are the target for the filtering and search work. This document
+today; **planned** sections are the target for the search work. This document
 is the reference for what mdsite reads, what a user can turn off, and what gets cut.
 
-Contract version: **0.2** (= release `0.2.x`). `CHANGELOG.md` is the migration record.
+Contract version: **0.3** (= release `0.3.x`). `CHANGELOG.md` is the migration record.
 
 Companion documents: `docs/updates/simplification.md` (pipeline split), `README.md`
 (user-facing reference), `docs/specifications/metadata.md` (`site-meta.json` schema).
@@ -19,8 +19,9 @@ Companion documents: `docs/updates/simplification.md` (pipeline split), `README.
 | Every optional key names its default | `none`, `auto`, or `default` — no value in the file is ever blank |
 | Every rendered element can be turned off | Absence from a `display` list disables it |
 | Order is data, not code | `display` lists set order; there is no hidden precedence |
-| Filtering scopes the left tree only | Routes, page bodies, search results, and feeds are never filtered |
-| mdsite renders, mndmap organizes | Facet values come from frontmatter, never from paths |
+| On/off flags are booleans | Enums are used only when more than one value is valid |
+| Indexes switch the left nav and body | They do not hide routes; Pages is always the full tree |
+| mdsite renders, mndmap organizes | Facet values come from frontmatter; inherit/history may fill or snapshot |
 
 ## Full file
 
@@ -54,33 +55,24 @@ facets:
     field: categories          # required; frontmatter key
     label: Category            # default: facet name, title-cased
     color: blue                # blue, violet, amber, rose, green, teal, or hue 0-359
-    ui: chips                  # chips | select | badge | none
-    sort: alpha                # alpha | semver | date | listed
+    sort: alpha                # alpha, semver, date, listed
   tags:
     field: tags
     label: Tag
     color: violet
-  # version:                   # versioning is a facet, not a separate feature
+  # version:
   #   field: version
-  #   sort: semver
-  #   default: latest          # active value when no filter is applied
-  #   ui: select
-  #   rollup: true             # planned: collapse same-identity pages to one entry
+  #   sort: semver             # alpha, semver, date, listed
+  #   default: latest          # latest, or a specific version
+  #   inherit: true            # fill missing stamps from package.json / git tag
+  #   history: true            # ingest vMAJOR.MINOR.PATCH git tags as frozen trees
+  #   group_by: status
+  #   index: true              # chip after Pages; body lists matching pages
   # status:
   #   field: status
   #   values: [draft, stable, deprecated]
-  #   default: [stable, deprecated]
   #   color: amber
-
-# ---- Named facet presets (built) ------------------------------------------
-collections:
-  default: all                 # name of the active preset, or "all"
-  # latest:  { version: latest, status: [stable] }
-  # archive: { version: all, status: [deprecated] }
-
-# ---- Left tree (built) ----------------------------------------------------
-sidebar:
-  views: [tree]                # "tree" plus any facet name, in tab order
+  #   sort: listed
 
 # ---- Element display and order (built) ------------------------------------
 display:
@@ -121,8 +113,8 @@ One mechanism: omit the element from its `display` list. No feature has a second
 |---|---|
 | Publication date | `date` from `display.header` |
 | Reading time | `reading_time` from `display.header` |
-| Chips under the title | `facets` from `display.header`, or set a facet's `ui: none` |
-| One facet's chips only | that facet's `ui: none` (it can still filter the tree) |
+| Chips under the title | `facets` from `display.header` |
+| One facet's header chips | drop that name from `display.header` (and from the `facets` catch-all) |
 | Description in the sidebar | `description` from `display.toc` |
 | Inline Contents panel | empty `display.contents` |
 | Right sidebar entirely | empty `display.toc` |
@@ -130,7 +122,7 @@ One mechanism: omit the element from its `display` list. No feature has a second
 | Edit-this-page link | `edit` from `display.toc`, or clear `repo_url` (which disables edit links entirely) |
 | Search | `search.enabled: false`, or `search` from `display.navbar` |
 | Theme toggle | `theme` from `display.navbar` |
-| Facet tabs in the left tree | leave `sidebar.views` as `[tree]` |
+| Left-nav index chips | leave every facet's `index` false (the default) |
 
 Reordering is the same edit: change list order.
 
@@ -138,16 +130,14 @@ Reordering is the same edit: change list order.
 
 | Decision | Rule |
 |---|---|
-| Facet source | Frontmatter only — never path segments, never generated |
-| Missing facet value | Page matches any filter on that facet; it never disappears |
+| Facet source | Frontmatter; `inherit` may fill a missing stamp from the site release |
 | Value outside `values` | Dropped at ingest; config stays authoritative |
-| Filter scope | Left tree only; every page keeps its route and its place in search |
-| Filter state | Query params — `?status=stable&version=v2&view=tags`, `?c=latest` |
-| Constraint precedence | Query param > active collection's preset > the facet's own `default` > unconstrained |
-| Directory rows | A directory shows while any descendant survives the filter |
-| Default collection | Seeds client-side filter state; every page stays in the page map so a wider collection restores it |
+| Indexes | `index: true` adds a chip after Pages; no indexes means no chips |
+| Index state | `?view=<facet>&on=<value>` — listing body, full tree when view is pages |
+| Semver | major.minor.patch; `0.2` and `v0.2.0` normalize to `0.2.0` |
+| Latest | With `history`, the current tree. Without, HEAD pages at the highest stamp |
+| History | `history: true` ingests `vMAJOR.MINOR.PATCH` git tags as `/_history/<version>/` |
 | Chip colors | Generated per facet hue, light and dark; undeclared facets use `chip-custom` |
-| Versioning | A facet with `sort: semver` + `default: latest`, plus `fields.identity` for rollup |
 | Search index | Separate `public/search-index.json`, fetched on demand — never merged into `site-meta.json` |
 | Edit links | Point at the repo copy of the built-from file, relative to the content root; require `repo_url` |
 
@@ -165,7 +155,7 @@ Reordering is the same edit: change list order.
 | `limits` (chip and Related caps) | done | Counts are authored frontmatter — truncating hides what the author wrote |
 | `_assets/` module imports in MDX | done | `public/` is outside the module graph; ingest warns instead |
 | Load-time rejection of retired keys | done | Pre-release; `CHANGELOG.md` is the migration record |
-| `""` as an optional key's default | done | Every optional key names its default: `none`, `auto`, `default` |
+| `collections`, `sidebar.views`, `facets.*.ui` | done | Replaced by `index` / `inherit` / `history` in 0.3 |
 
 ## Kept
 
@@ -187,9 +177,9 @@ against the built HTML. It reaches a reader only through a mapping:
 | `fields.description` | Info panel summary, `<meta name="description">` |
 | `fields.date` / `fields.reading_time` | Metadata line, per `display.header` |
 | `fields.related` | Related list in the right sidebar |
-| `fields.identity` | Nothing directly — version rollup and switching |
+| `fields.identity` | Nothing directly — reserved for variant grouping |
 | `page.source` (recorded by ingest) | Nothing directly — the "Edit this page" target |
-| any `facets` entry | Chips, and the left-tree filters |
+| any `facets` entry | Header chips, and a left-nav index when `index: true` |
 | anything else | Nothing — available to custom MDX components, invisible otherwise |
 
 ## Open questions
@@ -205,8 +195,5 @@ against the built HTML. It reaches a reader only through a mapping:
 
 1. **Facets and metadata** — done: config schema, frontmatter projection, generated chip colors.
 2. **Display lists** — done: `display` replaces the booleans; `limits` and `theme_toggle` cut.
-3. **Left tree filtering** — done: `sidebar.views` tabs, collection selector, query params.
-   The default collection seeds client-side state rather than pre-filtering at build, so
-   switching collection can widen the tree back out.
-4. **Version rollup** — `fields.identity` + `rollup`, in-place version switching.
-5. **Search** — index emitted at ingest, `/search` route rendering results in the page body.
+3. **Indexes** — done: `index` chips, value lists, listing body, inherit, git-tag history.
+4. **Search** — index emitted at ingest, `/search` route rendering results in the page body.

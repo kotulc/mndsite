@@ -1,6 +1,7 @@
-# mndsite's own site config, and the worked example for the 0.2 contract: every key is
+# mndsite's own site config, and the worked example for the 0.3 contract: every key is
 # set to a real value rather than left blank. Optional keys name their default instead —
 # `none` (feature off), `auto` (derive it), `default` (built-in) — so nothing here is "".
+# On/off flags are booleans; comments list allowed values only when more than one exists.
 
 title: mndsite
 description: Static documentation sites from plain markdown
@@ -38,52 +39,38 @@ fields:
   related: related
   identity: doc_id
 
-# Content dimensions rendered as chips and filters. `field` is required; the rest default
-# to: label from the facet name, color from the palette in declaration order, ui chips,
-# sort alpha, and all values allowed.
+# Content dimensions. `field` is required. `index: true` puts a chip after Pages in the
+# left nav; the tree is replaced by that facet's values and the body lists matching pages.
+# Pages is built-in — chips render only when at least one facet is an index.
 facets:
+  version:
+    field: version
+    label: Versions
+    color: teal          # blue, violet, amber, rose, green, teal, or a hue 0-359
+    sort: semver         # alpha, semver, date, listed
+    default: latest      # latest, or a specific version
+    inherit: true
+    history: true
+    group_by: status
+    index: true
+  tags:
+    field: tags
+    label: Tags
+    color: violet
+    index: true
   categories:
     field: categories
     label: Category
-    color: blue          # blue, violet, amber, rose, green, teal, or a hue 0-359
-    ui: chips            # chips, select, badge, none
-    sort: alpha          # alpha, semver, date, listed
-  tags:
-    field: tags
-    label: Tag
-    color: violet
-    ui: chips
-    sort: alpha
-  version:
-    field: version
-    label: Contract
-    color: teal
-    ui: select
-    sort: semver
+    color: blue
   status:
     field: status
     label: Status
     color: amber
-    ui: badge
-    sort: listed
+    sort: listed         # alpha, semver, date, listed
     values: [draft, stable, deprecated]
 
-# Named facet presets: a map of facet name to allowed value(s). `default` names the active
-# preset, or "all" for no preset. A facet a preset leaves out is unconstrained, so `current`
-# spans every contract version and `latest` spans every status.
-collections:
-  default: current
-  current: { status: [stable] }              # what the shipped contract documents
-  preview: { status: [stable, draft] }       # plus what is planned
-  latest:  { version: latest }               # the newest contract, whatever its status
-  archive: { status: [deprecated] }          # superseded docs, kept for history
-
-# Left tree views: "tree" is the directory hierarchy, any other entry names a facet.
-sidebar:
-  views: [tree, version, status]
-
 # Rendered elements, in display order. Omit an element to turn it off; `header` also
-# accepts any facet name, which places that facet's chips there whatever its ui.
+# accepts any facet name, which places that facet's chips there.
 display:
   crumbs: [home, path]
   header: [date, reading_time, version, status, facets]

@@ -1,7 +1,7 @@
 /**
  * Unit tests for markdown text helpers and flat page meta construction.
  */
-const { section_tree, word_count, extract_links } = require('../../scripts/text')
+const { section_tree, word_count, extract_links, first_paragraph } = require('../../scripts/text')
 const { build_page, build_facets, parse_desc, parse_reading_time, parse_related } = require('../../scripts/meta')
 
 
@@ -53,6 +53,7 @@ describe('build_page', () => {
     expect(node.links).toEqual(expect.arrayContaining(['/other', 'https://example.com']))
     expect(node.sections.map(s => s.name)).toEqual(['Section One'])
     expect(node.facets).toEqual({ tags: ['yaml'] })
+    expect(node.excerpt).toMatch(/Intro line with a link/)
   })
 
   test('test_build_page_no_reading_time_when_absent', () => {
@@ -68,6 +69,15 @@ describe('build_page', () => {
     })
     expect(node.desc).toBe('Hello')
   })
+
+  test('test_build_page_excerpt_from_first_section_when_no_intro', () => {
+    const node = build_page({
+      slug: 'p', title: 'P', url: '/p',
+      content: '# P\n\n## Section\n\nFirst section paragraph here.\n',
+      fm: { desc: 'frontmatter desc' },
+    })
+    expect(node.excerpt).toMatch(/First section paragraph/)
+  })
 })
 
 
@@ -78,6 +88,12 @@ describe('parse helpers', () => {
 
   test('test_build_facets_ignores_undeclared_fields', () => {
     expect(build_facets({ status: ['stable'] })).toEqual({})
+  })
+
+  test('test_inherit_fills_and_normalizes_semver', () => {
+    const facets = { version: { field: 'version', sort: 'semver', inherit: true } }
+    expect(build_facets({}, facets, '0.4.1')).toEqual({ version: '0.4.1' })
+    expect(build_facets({ version: '0.2' }, facets, '0.4.1')).toEqual({ version: '0.2.0' })
   })
 
   test('test_parse_desc_null_when_absent', () => {
@@ -100,6 +116,11 @@ describe('parse helpers', () => {
 describe('word_count / links', () => {
   test('test_word_count_ignores_code_fences', () => {
     expect(word_count('one two\n```\ncode here\n```\nthree')).toBe(3)
+  })
+
+  test('test_first_paragraph_keeps_link_text_and_caps', () => {
+    expect(first_paragraph('See [Theme](/theme) next.\n\n## Later\n\nNope.')).toBe('See Theme next.')
+    expect(first_paragraph('# Title\n\n' + 'word '.repeat(80))).toMatch(/…$/)
   })
 
   test('test_extract_links_skips_images', () => {

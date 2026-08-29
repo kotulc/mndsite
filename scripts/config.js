@@ -4,15 +4,19 @@
  * Next.js and Nextra can consume the config at build time.
  *
  * `fields` names the frontmatter keys mndsite reads; `facets` declares the content
- * dimensions rendered as chips and filters. Frontmatter is inert unless named here.
+ * dimensions rendered as page chips and as optional sidebar indexes. Frontmatter is
+ * inert unless named here.
  *
  * Every optional key has a named default — `none`, `auto`, or `default` — so no value in
  * the file is ever blank. The loader resolves those tokens to the built-in behavior.
+ * On/off facet flags are booleans; enums are used only when several values are valid.
  */
 const fs   = require('fs')
 const path = require('path')
+const { execFileSync } = require('child_process')
 const yaml = require('js-yaml')
 const { resolve_theme } = require('./theme')
+const { normalize_semver } = require('./semver')
 
 
 // Elements each display list accepts. `header` also accepts any declared facet name.
@@ -35,7 +39,6 @@ const EDIT_TEMPLATES = {
 // Chip hues, reused for facets that do not name a color (assigned in declaration order).
 const FACET_COLORS = { blue: 210, violet: 265, amber: 35, rose: 340, green: 150, teal: 190 }
 const COLOR_ORDER = Object.keys(FACET_COLORS)
-const FACET_UI = ['chips', 'select', 'badge', 'none']
 const FACET_SORTS = ['alpha', 'semver', 'date', 'listed']
 
 // Tokens naming a key's built-in behavior rather than a value. A blank reads the same.
@@ -68,8 +71,6 @@ const DEFAULTS = {
     categories: { field: 'categories', label: 'Category', color: 'blue' },
     tags:       { field: 'tags',       label: 'Tag',      color: 'violet' },
   },
-  collections:    { default: 'all' },
-  sidebar:        { views: ['tree'] },
   content:        './docs',
   output:         './dist',
   components:     'none',
@@ -106,19 +107,46 @@ function resolve_hue(name, color, index) {
 }
 
 
+function as_bool(name, value, fallback = false) {
+  /** On/off flags. Absent is the fallback; anything other than a YAML boolean throws. */
+  if (value == null || value === '') return fallback
+  if (typeof value === 'boolean') return value
+  throw new Error(`mndsite.yaml: ${name} must be true or false`)
+}
+
+
+function resolve_release(config_dir) {
+  /** Site release: package.json version, then the nearest git tag. Empty if neither. */
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(config_dir, 'package.json'), 'utf8'))
+    const v = normalize_semver(pkg.version)
+    if (v) return v
+  } catch { /* no package.json beside the YAML */ }
+  try {
+    const tag = execFileSync('git', ['describe', '--tags', '--abbrev=0'], {
+      cwd: config_dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
+    return normalize_semver(tag) || ''
+  } catch {
+    return ''
+  }
+}
+
+
 function resolve_facet(name, spec, index) {
   /** Fill one facet declaration: field is required, everything else has a default. */
   const cfg = { ...spec }
   if (!cfg.field) throw new Error(`mndsite.yaml: facets.${name} requires a 'field'`)
 
   cfg.label = cfg.label || label_for(name)
-  cfg.ui    = cfg.ui || 'chips'
   cfg.sort  = cfg.sort || 'alpha'
   cfg.hue   = resolve_hue(name, cfg.color, index)
+  cfg.index   = as_bool(`facets.${name}.index`, cfg.index)
+  cfg.inherit = as_bool(`facets.${name}.inherit`, cfg.inherit)
+  cfg.history = as_bool(`facets.${name}.history`, cfg.history)
+  cfg.default = unset(cfg.default) ? '' : String(cfg.default).trim()
+  cfg.group_by = unset(cfg.group_by) ? '' : String(cfg.group_by).trim()
 
-  if (!FACET_UI.includes(cfg.ui)) {
-    throw new Error(`mndsite.yaml: unknown facets.${name}.ui '${cfg.ui}' — use ${FACET_UI.join(', ')}`)
-  }
   if (!FACET_SORTS.includes(cfg.sort)) {
     throw new Error(`mndsite.yaml: unknown facets.${name}.sort '${cfg.sort}' — use ${FACET_SORTS.join(', ')}`)
   }
@@ -131,44 +159,13 @@ function resolve_facet(name, spec, index) {
 
 function resolve_facets(raw) {
   const entries = Object.entries(raw || DEFAULTS.facets)
-  return Object.fromEntries(entries.map(([name, spec], i) => [name, resolve_facet(name, spec || {}, i)]))
-}
-
-
-function resolve_collections(raw, facets) {
-  /** Named facet presets. The reserved `default` key names the active preset. */
-  const cfg = { ...DEFAULTS.collections, ...(raw || {}) }
-
-  for (const [name, preset] of Object.entries(cfg)) {
-    if (name === 'default') continue
-    if (preset == null || typeof preset !== 'object' || Array.isArray(preset)) {
-      throw new Error(`mndsite.yaml: collections.${name} must be a map of facet name to value(s)`)
-    }
-    for (const facet of Object.keys(preset)) {
-      if (!facets[facet]) throw new Error(`mndsite.yaml: collections.${name} references unknown facet '${facet}'`)
+  const facets = Object.fromEntries(entries.map(([name, spec], i) => [name, resolve_facet(name, spec || {}, i)]))
+  for (const [name, spec] of Object.entries(facets)) {
+    if (spec.group_by && !facets[spec.group_by]) {
+      throw new Error(`mndsite.yaml: facets.${name}.group_by references unknown facet '${spec.group_by}'`)
     }
   }
-
-  const active = cfg.default
-  if (active !== 'all' && !cfg[active]) {
-    throw new Error(`mndsite.yaml: collections.default '${active}' is not a declared collection`)
-  }
-  return cfg
-}
-
-
-function resolve_sidebar(raw, facets) {
-  /** Left-tree views: the directory tree plus one view per named facet. */
-  const cfg = { ...DEFAULTS.sidebar, ...(raw || {}) }
-  if (!Array.isArray(cfg.views) || !cfg.views.length) {
-    throw new Error(`mndsite.yaml: sidebar.views must be a non-empty list`)
-  }
-  for (const view of cfg.views) {
-    if (view !== 'tree' && !facets[view]) {
-      throw new Error(`mndsite.yaml: sidebar.views references unknown facet '${view}'`)
-    }
-  }
-  return cfg
+  return facets
 }
 
 
@@ -191,7 +188,7 @@ function resolve_display(raw, facets) {
     const items = cfg[list]
     if (!Array.isArray(items)) throw new Error(`mndsite.yaml: display.${list} must be a list`)
 
-    // Naming a facet in `header` places its values there regardless of the facet's ui.
+    // Naming a facet in `header` places its values there regardless of index.
     const valid = list === 'header' ? [...allowed, ...Object.keys(facets)] : allowed
     for (const item of items) {
       if (!valid.includes(item)) {
@@ -259,9 +256,9 @@ function load_config(yaml_path) {
   cfg.theme       = resolve_theme(theme)
   cfg.fields      = resolve_fields(raw.fields)
   cfg.facets      = resolve_facets(raw.facets)
-  cfg.collections = resolve_collections(raw.collections, cfg.facets)
-  cfg.sidebar     = resolve_sidebar(raw.sidebar, cfg.facets)
   cfg.display     = resolve_display(raw.display, cfg.facets)
+  cfg.release     = resolve_release(dir)
+  cfg.dir         = dir
 
   cfg.content = path.resolve(dir, cfg.content)
   cfg.output  = path.resolve(dir, cfg.output)
@@ -277,7 +274,7 @@ function write_site_config(config, dest_dir) {
   const dir  = dest_dir || path.join(__dirname, '..')
   const keys = [
     'title', 'repo_url', 'feed_url', 'description', 'footer',
-    'theme', 'nav_order', 'fields', 'facets', 'collections', 'sidebar',
+    'theme', 'nav_order', 'fields', 'facets', 'release',
     'display', 'edit',
   ]
   const values = Object.fromEntries(keys.map(k => [k, config[k]]))
