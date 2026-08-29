@@ -732,3 +732,81 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 }
 
 .site-footer a:hover { color: var(--site-primary-600); }
+
+
+/* Left-tree view tabs and facet views (components/SidebarViews.jsx).
+   The strip is portalled into Nextra's sidebar; `data-view` swaps tree and facet views. */
+.sidebar-views {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 1rem 0;
+}
+
+.sidebar-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--site-gray-200);
+}
+
+.sidebar-tab {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--site-gray-500);
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.sidebar-tab:hover { color: var(--site-gray-900); }
+
+.sidebar-tab.active {
+  color: var(--site-primary-600);
+  border-bottom-color: var(--site-primary-600);
+}
+
+.sidebar-collection select {
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--site-gray-600);
+  background: var(--site-gray-100);
+  border-radius: 0.375rem;
+}
+
+.sidebar-empty { font-size: 0.75rem; font-style: italic; color: var(--site-gray-500); }
+
+.facet-view { display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.875rem; }
+
+.facet-view .facet-group { margin-bottom: 0.375rem; }
+
+.facet-view ul ul { display: flex; flex-direction: column; gap: 0.125rem; padding-left: 0.5rem; }
+
+.facet-view a {
+  display: block;
+  padding: 0.25rem 0.5rem;
+  color: var(--site-gray-600);
+  border-radius: 0.375rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+.facet-view a:hover { color: var(--site-primary-600); background: var(--site-gray-100); }
+
+/* A facet view replaces the tree; Nextra still renders it, so hide it while one shows. */
+.nextra-sidebar-container[data-view]:not([data-view="tree"]) .nextra-menu-desktop,
+.nextra-sidebar-container[data-view]:not([data-view="tree"]) .nextra-menu-mobile {
+  display: none;
+}
+
+/* Rows filtered out by the active collection. Scoped to the row's own link or button so
+   a hidden child never collapses the folder that contains it. */
+.nextra-sidebar-container li:has(> a > [data-facet-hidden]),
+.nextra-sidebar-container li:has(> button > [data-facet-hidden]) {
+  display: none;
+}
+
+.facet-view a.active {
+  color: var(--site-primary-600);
+  background: var(--site-primary-100);
+  font-weight: 500;
+}

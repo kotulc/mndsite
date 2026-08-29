@@ -2,6 +2,8 @@
 title: Directory Feed
 categories:
   - spec
+version: 0.2
+status: stable
 ---
 
 # Directory Feed *(removed)*

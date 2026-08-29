@@ -14,6 +14,8 @@ related:
     url: /features/metadata
   - title: Configuration
     url: /configuration
+version: 0.2
+status: stable
 ---
 
 # Styling

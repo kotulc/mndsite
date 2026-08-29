@@ -13,6 +13,8 @@ related:
     url: /features/content-pipeline
   - title: Metadata Contract
     url: /specifications/metadata
+version: 0.2
+status: stable
 ---
 
 # Metadata Display

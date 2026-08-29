@@ -34,7 +34,8 @@ const TYPESETS = {
 
 function resolve_theme(theme) {
   /** Validate a theme block and return resolved values for site.config.js.
-   *  navbar/footer are background overrides: '' (off), 'primary', or any CSS color. */
+   *  navbar/footer are background overrides the loader has already resolved:
+   *  '' for the 'none' default, 'primary' for a theme tint, or any CSS color. */
   const { color, typeset, navbar = '', footer = '' } = theme
 
   if (!(color in COLOR_PRESETS)) {

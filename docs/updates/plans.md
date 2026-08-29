@@ -15,6 +15,8 @@ related:
     url: /features/components
   - title: Content Pipeline
     url: /features/content-pipeline
+version: 0.3
+status: draft
 ---
 
 # Future Plans

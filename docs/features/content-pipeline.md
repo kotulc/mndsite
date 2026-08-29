@@ -15,6 +15,8 @@ related:
     url: /getting-started
   - title: Configuration
     url: /configuration
+version: 0.2
+status: stable
 ---
 
 # Content Pipeline

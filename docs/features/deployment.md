@@ -13,6 +13,8 @@ related:
     url: /configuration
   - title: Content Pipeline
     url: /features/content-pipeline
+version: 0.2
+status: stable
 ---
 
 # Deployment

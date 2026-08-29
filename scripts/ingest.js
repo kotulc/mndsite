@@ -65,6 +65,17 @@ function fm_block(content) {
 }
 
 
+function set_fm_title(block, title) {
+  /** Stamp the resolved title onto the emitted frontmatter. Nextra reads its <title> and
+   *  search index from this key, so it must agree with the nav label `fields.title` gave. */
+  const line = `title: ${JSON.stringify(title)}`
+  if (!block) return `---\n${line}\n---\n\n`
+  // Only a top-level key: a nested `title:` (a related entry, say) is always indented.
+  if (/^title:/m.test(block)) return block.replace(/^title:.*$/m, line)
+  return block.replace(/^---\r?\n/, `---\n${line}\n`)
+}
+
+
 function check_refs(body, url) {
   /** Collect references the build cannot resolve — upstream owns link and import rewriting.
    *  Internal .md links 404 once exported; _assets/ imports leave the module graph. */
@@ -233,13 +244,16 @@ function ingest_page(src_entry, dest_dir, rel, slug, base, img_url) {
   const raw = fs.readFileSync(src_entry, 'utf8').replace(/\r\n?/g, '\n')
   const fm  = parse_fm(raw)
 
-  const dest = path.join(dest_dir, `${slug}.mdx`)
-  const body = prepare_body(raw, img_url)
-  fs.writeFileSync(dest, fm_block(raw) + body)
-
   const config = get_config()
   const fields = config.fields || {}
-  const title = meta.field_value(fm, fields.title || 'title') || fallback_title(src_entry, rel, slug, base)
+  // A null mapping disables the field, so no frontmatter key names the title at all.
+  const key   = 'title' in fields ? fields.title : 'title'
+  const title = (key && meta.field_value(fm, key)) || fallback_title(src_entry, rel, slug, base)
+
+  const dest = path.join(dest_dir, `${slug}.mdx`)
+  const body = prepare_body(raw, img_url)
+  fs.writeFileSync(dest, set_fm_title(fm_block(raw), title) + body)
+
   const parts = [...(rel ? rel.split('/') : []), ...(slug === 'index' ? [] : [slug])]
   const url   = '/' + parts.join('/') || '/'
   check_refs(body, url)
@@ -375,7 +389,7 @@ async function run(config) {
 
 
 module.exports = {
-  parse_fm, strip_fm, fm_block, fallback_title, auto_index, sort_entries, extract_content,
+  parse_fm, strip_fm, fm_block, set_fm_title, fallback_title, auto_index, sort_entries, extract_content,
   norm_path, slug_to_title, sync_assets, sync_components, run,
 }
 

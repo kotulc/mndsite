@@ -2,6 +2,8 @@
 title: Navtree Naming
 categories:
   - spec
+version: 0.2
+status: stable
 ---
 
 # Navtree Naming

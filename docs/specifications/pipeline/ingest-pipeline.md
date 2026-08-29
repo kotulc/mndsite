@@ -2,6 +2,8 @@
 title: Ingest Pipeline
 categories:
   - spec
+version: 0.2
+status: stable
 ---
 
 # Ingest Pipeline

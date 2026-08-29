@@ -2,6 +2,8 @@
 title: Spec Format
 categories:
   - spec
+version: 0.2
+status: stable
 ---
 
 # Feature Specification

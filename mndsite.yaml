@@ -1,11 +1,19 @@
+# mndsite's own site config, and the worked example for the 0.2 contract: every key is
+# set to a real value rather than left blank. Optional keys name their default instead —
+# `none` (feature off), `auto` (derive it), `default` (built-in) — so nothing here is "".
+
 title: mndsite
 description: Static documentation sites from plain markdown
 repo_url: https://github.com/kotulc/mndsite
 feed_url: updates
-footer: ""
+footer: MIT licensed · built with mndsite
 
 content: ./docs
 output: ./dist
+
+# Consumer extension points, mirrored into components/custom/ and public/assets/ each build.
+components: ./site/components
+assets: ./site/assets
 
 nav_order:
   "": [about, getting-started, configuration]
@@ -14,12 +22,14 @@ nav_order:
   updates: [welcome]
 
 theme:
-  color: default
-  typeset: sans
-  navbar: ""
-  footer: ""
+  color: default       # default, slate, gray, blue, indigo, violet, rose, orange, ...
+  typeset: sans        # sans, serif, humanist, geometric, mono
+  navbar: primary      # none, primary (theme tint), or any CSS color
+  footer: primary
 
 # Frontmatter keys mndsite reads. Frontmatter is inert unless named here or in facets.
+# `none` disables a mapping: with `title: none` no key names the title and pages fall
+# back to their slug, so nav labels and <title> still agree.
 fields:
   title: title
   description: [description, desc]
@@ -44,38 +54,45 @@ facets:
     color: violet
     ui: chips
     sort: alpha
-  # version:
-  #   field: version
-  #   sort: semver
-  #   default: latest
-  #   ui: select
-  # status:
-  #   field: status
-  #   values: [draft, stable, deprecated]
-  #   default: [stable, deprecated]
-  #   color: amber
+  version:
+    field: version
+    label: Contract
+    color: teal
+    ui: select
+    sort: semver
+  status:
+    field: status
+    label: Status
+    color: amber
+    ui: badge
+    sort: listed
+    values: [draft, stable, deprecated]
 
-# Named facet presets. `default` names the active preset, or "all" for no preset.
+# Named facet presets: a map of facet name to allowed value(s). `default` names the active
+# preset, or "all" for no preset. A facet a preset leaves out is unconstrained, so `current`
+# spans every contract version and `latest` spans every status.
 collections:
-  default: all
-  # latest: { version: latest, status: [stable] }
-  # archive: { version: all, status: [deprecated] }
+  default: current
+  current: { status: [stable] }              # what the shipped contract documents
+  preview: { status: [stable, draft] }       # plus what is planned
+  latest:  { version: latest }               # the newest contract, whatever its status
+  archive: { status: [deprecated] }          # superseded docs, kept for history
 
 # Left tree views: "tree" is the directory hierarchy, any other entry names a facet.
 sidebar:
-  views: [tree]
+  views: [tree, version, status]
 
 # Rendered elements, in display order. Omit an element to turn it off; `header` also
 # accepts any facet name, which places that facet's chips there whatever its ui.
 display:
   crumbs: [home, path]
-  header: [date, reading_time, facets]
+  header: [date, reading_time, version, status, facets]
   toc: [description, sections, related, edit]
+  contents: [description, sections, related]
   navbar: [theme, feed, github]
 
-# "Edit this page" targets. Used only when repo_url is set; path defaults to the content
-# directory relative to this file, and url defaults to a template for the repo_url host.
+# "Edit this page" targets. Used only when repo_url is set.
 edit:
   branch: main
-  path: docs
-  url: ""
+  path: docs            # auto derives this from the content dir
+  url: auto             # auto derives a template from the repo_url host

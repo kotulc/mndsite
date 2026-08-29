@@ -2,6 +2,8 @@
 title: Metadata Contract
 categories:
   - spec
+version: 0.2
+status: stable
 ---
 
 # Metadata Contract

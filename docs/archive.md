@@ -3,6 +3,8 @@ title: Archive
 description: Earlier plans and experiments, kept for history
 categories:
   - reference
+version: 0.1
+status: deprecated
 ---
 
 # Archive: Implementation Plan

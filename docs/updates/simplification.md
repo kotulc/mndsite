@@ -1,3 +1,8 @@
+---
+version: 0.2
+status: deprecated
+---
+
 # mndsite renderer simplification plan
 
 ## Status and authority

@@ -10,6 +10,8 @@ import GitHubLink from './components/GitHubLink'
 import FeedLink from './components/FeedLink'
 import ThemeToggle from './components/ThemeToggle'
 import { facet_chips } from './components/facets'
+import SidebarViews from './components/SidebarViews'
+import { resolve_filter, route_visible } from './components/filters'
 import siteConfig from './site.config'
 import siteMeta from './public/site-meta.json'
 
@@ -66,6 +68,16 @@ function PageMeta() {
       <TagList tags={chips} />
     </>
   )
+}
+
+
+function SidebarLabel({ title, route }) {
+  /** Nextra's only per-item hook. Filtered-out rows are marked here and hidden by CSS —
+   *  the marker sits inside the row's own link or button, so `li:has(> a > [...])` in
+   *  global.css hides that row alone and never its ancestors. */
+  const { query } = useRouter()
+  const hidden = !route_visible(route, resolve_filter(query))
+  return <span {...(hidden && { 'data-facet-hidden': '' })}>{title}</span>
 }
 
 
@@ -163,5 +175,7 @@ export default {
     ? { title: <TocTitle />, extraContent: <TocExtra />, headingComponent: TocHeading }
     : { component: () => <PageContents order={siteConfig.display.toc} /> },
   components: { h1: PageTitle },
-  main: ({ children }) => <>{children}</>,
+  sidebar: { titleComponent: SidebarLabel },
+  // SidebarViews has no place in the page — it only portals the view tabs into the sidebar.
+  main: ({ children }) => <><SidebarViews />{children}</>,
 }

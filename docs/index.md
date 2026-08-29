@@ -1,6 +1,8 @@
 ---
 title: mndsite
 description: Static site renderer for publication-ready Markdown and MDX
+version: 0.2
+status: stable
 ---
 
 # mndsite

@@ -14,6 +14,8 @@ related:
     url: /features/styling
   - title: Deployment
     url: /features/deployment
+version: 0.2
+status: stable
 ---
 
 # Features

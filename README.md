@@ -40,6 +40,7 @@ or browse [Features](docs/features/overview.md) for the full capability overview
 - **Images** — legacy `images/` subtrees copied and path-rewritten; corrupt EXIF stripped
 - **Reading time** — displayed when supplied in frontmatter
 - **Facets** — tags, categories, or any declared frontmatter dimension, rendered as colored chips
+- **Collections and facet views** — named facet presets and left-tree tabs, shareable by URL
 - **Related links** — outbound links and frontmatter `related` entries in the ToC sidebar
 - **Nav ordering** — sibling order via `nav_order` from mndmap or YAML
 - **Custom components** — optional consumer React components synced each build
@@ -97,29 +98,35 @@ and exits with the build's exit code.
 
 ## mndsite.yaml Reference
 
-Full schema with defaults:
+Only `title` is required. Every other key has a **named default** rather than a blank:
+`none` turns a feature off, `auto` derives a value, `default` keeps the built-in behavior.
+Writing `""` reads the same as the default, so nothing in the file ever needs to be empty.
+
+The repo's own [mndsite.yaml](mndsite.yaml) is the worked example — every key set to a real
+value. Full schema with defaults:
 
 ```yaml
 # Required
 title: My Site
 
 # Optional — site identity
-description: ""              # SEO meta description added to every page
-repo_url: ""                 # shows a GitHub icon in the navbar when set
-feed_url: ""                 # section slug linked from the navbar feed icon
-footer: ""                   # custom footer credits; empty keeps the default
+description: none            # SEO meta description added to every page
+repo_url: none               # shows a GitHub icon in the navbar when set
+feed_url: none               # section slug linked from the navbar feed icon
+footer: default              # custom footer credits; `default` keeps the built-in
 
 # Optional — theme presets (see docs/configuration.md for all values)
 theme:
   color: default             # accent palette: default, slate, blue, emerald, rose, ...
   typeset: sans              # body font stack: sans, serif, humanist, geometric, mono
-  navbar: ""                 # navbar background: "primary" (theme tint) or any CSS color
-  footer: ""                 # footer background: "primary" (theme tint) or any CSS color
+  navbar: none               # navbar background: "primary" (theme tint) or any CSS color
+  footer: none               # footer background: "primary" (theme tint) or any CSS color
 
 # Optional — navigation
 nav_order: {}                # map of section slug → ordered list of page slugs
 
-# Optional — frontmatter keys mndsite reads (frontmatter is inert unless named here)
+# Optional — frontmatter keys mndsite reads (frontmatter is inert unless named here).
+# `none` disables a mapping; pages then fall back to their slug for the title.
 fields:
   title: title
   description: [description, desc]
@@ -152,12 +159,12 @@ display:
 # Optional — "Edit this page" targets; used ONLY when repo_url is set
 edit:
   branch: main                 # branch the link targets
-  path: docs                   # repo-relative content root; default: content dir
-  url: ""                      # template override; empty derives one from the repo_url host
+  path: auto                   # repo-relative content root; `auto` uses the content dir
+  url: auto                    # template override; `auto` derives one from the repo_url host
 
 # Optional — consumer extensions
-components: ""               # React components mirrored into components/custom/
-assets: ""                   # static files mirrored into public/assets/
+components: none             # React components mirrored into components/custom/
+assets: none                 # static files mirrored into public/assets/
 
 # Paths — resolved relative to this file
 content: ./docs              # source markdown directory
@@ -191,8 +198,11 @@ Rules worth knowing:
 - Filtering scopes navigation and listings; every page keeps its route regardless.
 - Values not listed in a facet's `values` are dropped, so the config stays authoritative.
 
-`collections` and `sidebar.views` are read and validated today; the filtering UI that
-consumes them is still in progress.
+`collections` names facet presets and `sidebar.views` lists the left-tree tabs — `tree`
+filters the directory tree in place, and a facet view replaces it with pages bucketed under
+that facet's values. Selection lives in the URL (`?c=`, `?view=`, `?<facet>=`), so a
+filtered tree is shareable. Constraints resolve query param > collection preset > the
+facet's own `default`.
 
 ### Display and disabling features
 
@@ -226,23 +236,14 @@ host: GitHub, GitLab, and Bitbucket are known, and any other host falls back to 
 itself. `edit.path` defaults to the content directory relative to `mndsite.yaml`; set it
 explicitly when the config file is not at the repo root.
 
-### Removed configuration keys
+### Config contract version
 
-These top-level keys are **rejected at load time**:
+The release version's `MAJOR.MINOR` **is** the config contract version — `0.2.x` releases
+all read the **0.2** contract. There is no `contract:` key in the file and no load-time
+rejection of retired keys; pre-1.0, an unknown top-level key is simply ignored.
 
-| Key | Use instead |
-|-----|-------------|
-| `meta`, `flatten` | **mndmap** or frontmatter |
-| `toc`, `reading_time` (boolean) | `display.toc`, `display.header` |
-| `theme_toggle` | `display.navbar` — include or omit `theme` |
-| `limits` | Removed — content renders as supplied |
-
-These display lists are also rejected — use `display.contents` and `display.toc`:
-
-| List | Replacement |
-|------|-------------|
-| `display.title_row` | Contents toggle follows `display.contents` |
-| `display.info` | Renamed to `display.contents` |
+[CHANGELOG.md](CHANGELOG.md) is the migration record — it lists what each contract version
+added, changed, and removed, including the 0.1 → 0.2 key replacements.
 
 ### BASE_PATH environment variable
 

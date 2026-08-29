@@ -2,6 +2,8 @@
 title: Site Configuration
 categories:
   - spec
+version: 0.2
+status: stable
 ---
 
 # Site Configuration

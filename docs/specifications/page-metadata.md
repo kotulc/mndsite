@@ -2,6 +2,8 @@
 title: Page Metadata
 categories:
   - spec
+version: 0.2
+status: stable
 ---
 
 # Page Metadata

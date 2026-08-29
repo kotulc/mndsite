@@ -15,6 +15,8 @@ related:
     url: /features/content-pipeline
   - title: Deployment
     url: /features/deployment
+version: 0.2
+status: stable
 ---
 
 # Configuration
@@ -23,19 +25,23 @@ All site-level settings live in `mndsite.yaml`. In a mndmap workflow, mndmap emi
 
 The CLI reads the YAML at build time and generates the internal `site.config.js` consumed by Next.js and Nextra.
 
+Only `title` is required. Every other key has a **named default** rather than a blank —
+`none` turns a feature off, `auto` derives a value, `default` keeps the built-in behavior.
+Writing `""` reads the same as the default, so no value in the file ever needs to be empty.
+
 ## Fields
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `title` | string | *(required)* | Site name — shown in the logo, footer, and page titles |
-| `description` | string | `""` | SEO meta description added to every page's `<head>` |
-| `repo_url` | string | `""` | GitHub repo link shown as an icon in the header; leave empty to hide |
-| `feed_url` | string | `""` | Section slug linked from the navbar feed icon |
-| `footer` | string | `""` | Custom footer credits text; empty keeps "Powered by mndsite and Nextra" |
+| `description` | string | `none` | SEO meta description added to every page's `<head>` |
+| `repo_url` | string | `none` | GitHub repo link shown as an icon in the header; `none` hides it |
+| `feed_url` | string | `none` | Section slug linked from the navbar feed icon |
+| `footer` | string | `default` | Custom footer credits text; `default` keeps "Powered by mndsite and Nextra" |
 | `theme.color` | string | `"default"` | Named accent palette — see [Theme](#theme) below |
 | `theme.typeset` | string | `"sans"` | Named body font stack — see [Theme](#theme) below |
-| `theme.navbar` | string | `""` | Navbar background: `"primary"` (theme tint) or any CSS color |
-| `theme.footer` | string | `""` | Footer background: `"primary"` (theme tint) or any CSS color |
+| `theme.navbar` | string | `none` | Navbar background: `"primary"` (theme tint) or any CSS color |
+| `theme.footer` | string | `none` | Footer background: `"primary"` (theme tint) or any CSS color |
 | `nav_order` | object | `{}` | Explicit nav ordering per directory — see below |
 | `fields` | object | see below | Frontmatter keys behind the built-in metadata; frontmatter is inert unless named |
 | `facets` | object | `categories`, `tags` | Content dimensions rendered as chips and filters — see [Facets](#facets) |
@@ -49,8 +55,8 @@ The CLI reads the YAML at build time and generates the internal `site.config.js`
 | `edit` | object | see below | "Edit this page" targets — **only used when `repo_url` is set** |
 | `content` | path | `./docs` | Source markdown directory (resolved relative to this file) |
 | `output` | path | `./dist` | Output directory for the built site (resolved relative to this file) |
-| `components` | path | `""` | Optional directory of consumer React components, mirrored into `components/custom/` each build |
-| `assets` | path | `""` | Optional directory of static files mirrored into `public/assets/` each build |
+| `components` | path | `none` | Optional directory of consumer React components, mirrored into `components/custom/` each build |
+| `assets` | path | `none` | Optional directory of static files mirrored into `public/assets/` each build |
 
 ## Example
 
@@ -68,20 +74,19 @@ nav_order:
   "": [getting-started, configuration]
 ```
 
-## Removed configuration keys
+## Contract version
 
-These keys are **rejected at load time** with migration guidance:
+import Since from '../components/custom/Since'
 
-| Key | Move to |
-|-----|---------|
-| `meta` (tagging, related-link limits) | **mndmap** or frontmatter |
-| `flatten` (inline directory feeds) | **mndmap** organization |
-| `theme_toggle` (navbar/sidebar) | `display.navbar` — include or omit `theme` |
-| `limits` (chip and Related caps) | Removed — content renders as supplied |
-| `toc` (boolean) | `display.toc` — drop `sections` |
-| `reading_time` (boolean) | `display.header` — drop `reading_time` |
-| `display.title_row` | Removed — Contents toggle follows `display.contents` |
-| `display.info` | Renamed to `display.contents` |
+<Since v="0.2" />
+
+The release version's `MAJOR.MINOR` **is** the config contract version — `0.2.x` releases all
+read the **0.2** contract. There is no `contract:` key in the file, and pre-1.0 an unknown
+top-level key is ignored rather than rejected.
+
+`CHANGELOG.md` is the migration record: what each contract version added, changed, and
+removed, including the 0.1 keys (`meta`, `flatten`, `toc`, `reading_time`, `theme_toggle`,
+`limits`, `display.title_row`, `display.info`) and their replacements.
 
 mndsite configuration is limited to rendering, content paths, navigation order, theme, and deployment.
 
@@ -116,6 +121,30 @@ theme:
   footer: "hsl(161 30% 96%)"
 ```
 
+## Frontmatter fields
+
+`fields` maps mndsite's built-in renderer metadata onto the frontmatter keys that carry it.
+No key means anything unless `fields` or `facets` names it.
+
+```yaml
+fields:
+  title: title
+  description: [description, desc]   # a list tries each key in order
+  date: date
+  reading_time: reading_time
+  related: related
+  identity: doc_id
+  # title: none                      # disable: pages fall back to their slug
+```
+
+Setting a mapping to `none` disables it. With `title: none` no frontmatter key names the
+page title, and every page falls back to a title derived from its filename — the nav label
+and the browser `<title>` stay in step either way, so nothing goes unnamed in the tree.
+
+Remapping `title` to another key relabels the page everywhere: ingest stamps the resolved
+title back onto the emitted frontmatter, so Nextra's `<title>` and search index match the
+navigation label.
+
 ## Facets
 
 Every content dimension mndsite renders is declared in `facets`. `field` is required; `label`,
@@ -136,9 +165,42 @@ the next palette entry in declaration order.
 Values come from frontmatter only, never from paths and never generated. A page missing a
 facet's field simply has no value for it, and keeps its route either way.
 
-`collections` groups facet values into named presets (`default` names the active one), and
-`sidebar.views` lists the left-tree tabs. Both are validated today; the filtering UI that
-consumes them is in progress.
+### Collections and sidebar views
+
+`collections` groups facet values into named presets; the reserved `default` key names the
+active one, or `all` for no preset. `sidebar.views` lists the left-tree tabs — `tree` is the
+directory hierarchy, and any other entry names a facet to group by.
+
+```yaml
+collections:
+  default: current
+  current: { version: latest, status: [stable] }
+  archive: { version: all, status: [deprecated] }
+
+sidebar:
+  views: [tree, version, status]
+```
+
+The tab strip sits above the left tree. `tree` filters Nextra's directory tree in place;
+any other view replaces it with pages bucketed under that facet's values, newest first for
+`semver` and `date` facets.
+
+Selection lives in the URL, so a filtered view is shareable:
+
+| Param | Effect |
+|---|---|
+| `?c=<name>` | Switch collection; `all` drops every preset |
+| `?view=<name>` | Switch view — `tree` or a facet name from `sidebar.views` |
+| `?<facet>=<value,value>` | Constrain one facet directly, overriding the collection |
+
+Constraints resolve in precedence order: a query param, then the active collection's preset,
+then the facet's own `default`. A facet unset at every level is unconstrained. `latest`
+resolves against the facet's sort order, so `{ version: latest }` follows the newest version
+without naming it.
+
+Filtering scopes navigation only — every page keeps its route, and a page missing a facet's
+field matches any filter on it. A directory disappears from the tree when nothing under it
+survives the filter.
 
 ## Display
 
@@ -182,8 +244,8 @@ from — `docs/features/overview.md`, not the site root.
 repo_url: https://github.com/user/repo
 edit:
   branch: main     # branch the link targets
-  path: docs       # repo-relative location of the content root
-  url: ""          # template override; empty derives one from the repo_url host
+  path: auto       # `auto` uses the content dir, resolved relative to this file
+  url: auto        # `auto` derives a template from the repo_url host
 ```
 
 `edit.path` defaults to the content directory resolved relative to `mndsite.yaml` — `docs`

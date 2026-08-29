@@ -11,6 +11,8 @@ related:
     url: /getting-started
   - title: Content Pipeline
     url: /features/content-pipeline
+version: 0.2
+status: stable
 ---
 
 # About mndsite

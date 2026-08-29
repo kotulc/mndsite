@@ -1,25 +1,19 @@
 /**
  * YAML config loader for the mndsite CLI.
- * Reads mndsite.yaml, validates required fields, applies defaults, and generates
- * site.config.js so Next.js and Nextra can consume the config at build time.
+ * Reads mndsite.yaml, validates it, applies defaults, and generates site.config.js so
+ * Next.js and Nextra can consume the config at build time.
  *
- * `fields` names the frontmatter keys mdsite reads; `facets` declares the content
+ * `fields` names the frontmatter keys mndsite reads; `facets` declares the content
  * dimensions rendered as chips and filters. Frontmatter is inert unless named here.
+ *
+ * Every optional key has a named default — `none`, `auto`, or `default` — so no value in
+ * the file is ever blank. The loader resolves those tokens to the built-in behavior.
  */
 const fs   = require('fs')
 const path = require('path')
 const yaml = require('js-yaml')
 const { resolve_theme } = require('./theme')
 
-
-const REMOVED_KEYS = {
-  meta: 'Move tagging and related-link configuration upstream to mndmap or frontmatter.',
-  flatten: 'Move directory organization upstream to mndmap.',
-  toc: "Use display.toc — remove 'sections' to hide the section list.",
-  theme_toggle: "Use display.navbar — include or omit 'theme'; the sidebar toggle is gone.",
-  limits: 'Removed — chips and Related entries render as supplied.',
-  reading_time: "Use display.header — remove 'reading_time' to hide it.",
-}
 
 // Elements each display list accepts. `header` also accepts any declared facet name.
 // `toc` is the right sidebar; `contents` is the inline panel behind the Contents button.
@@ -29,12 +23,6 @@ const DISPLAY_ELEMENTS = {
   toc:      ['description', 'sections', 'related', 'edit'],
   contents: ['description', 'sections', 'related', 'edit'],
   navbar:   ['theme', 'feed', 'github'],
-}
-
-// Display lists that no longer exist, with the edit that replaces them.
-const REMOVED_DISPLAY = {
-  title_row: 'The Contents button follows display.contents — empty that list to hide it.',
-  info:      'Renamed to display.contents, which mirrors display.toc unless you set it.',
 }
 
 // Per-host "Edit this page" URL templates. Hosts without an entry fall back to repo_url.
@@ -50,20 +38,23 @@ const COLOR_ORDER = Object.keys(FACET_COLORS)
 const FACET_UI = ['chips', 'select', 'badge', 'none']
 const FACET_SORTS = ['alpha', 'semver', 'date', 'listed']
 
+// Tokens naming a key's built-in behavior rather than a value. A blank reads the same.
+const UNSET_TOKENS = new Set(['', 'none', 'auto', 'default'])
+
 
 const DEFAULTS = {
-  repo_url:       '',
-  feed_url:       '',
-  description:    '',
-  footer:         '',
-  theme:          { color: 'default', typeset: 'sans', navbar: '', footer: '' },
+  description:    'none',
+  repo_url:       'none',
+  feed_url:       'none',
+  footer:         'default',
+  theme:          { color: 'default', typeset: 'sans', navbar: 'none', footer: 'none' },
   display: {
     crumbs: ['home', 'path'],
     header: ['date', 'reading_time', 'facets'],
     toc:    ['description', 'sections', 'related', 'edit'],
     navbar: ['theme', 'feed', 'github'],
   },
-  edit:           { branch: 'main', path: null, url: '' },
+  edit:           { branch: 'main', path: 'auto', url: 'auto' },
   nav_order:      {},
   fields: {
     title:        'title',
@@ -81,17 +72,20 @@ const DEFAULTS = {
   sidebar:        { views: ['tree'] },
   content:        './docs',
   output:         './dist',
-  components:     '',
-  assets:         '',
+  components:     'none',
+  assets:         'none',
 }
 
 
-function reject_removed_keys(raw) {
-  for (const [key, hint] of Object.entries(REMOVED_KEYS)) {
-    if (raw && Object.prototype.hasOwnProperty.call(raw, key)) {
-      throw new Error(`mndsite.yaml: '${key}' is no longer supported. ${hint}`)
-    }
-  }
+function unset(value) {
+  /** True when a value names its built-in behavior (none/auto/default) or is blank. */
+  return value == null || UNSET_TOKENS.has(String(value).trim().toLowerCase())
+}
+
+
+function optional(value) {
+  /** An optional string; its default token resolves to '' for the consuming component. */
+  return unset(value) ? '' : String(value).trim()
 }
 
 
@@ -102,7 +96,7 @@ function label_for(name) {
 
 function resolve_hue(name, color, index) {
   /** Named token, raw hue number, or the next token in declaration order. */
-  if (color == null || color === '') return FACET_COLORS[COLOR_ORDER[index % COLOR_ORDER.length]]
+  if (unset(color)) return FACET_COLORS[COLOR_ORDER[index % COLOR_ORDER.length]]
   if (FACET_COLORS[color] != null) return FACET_COLORS[color]
   const hue = Number(color)
   if (Number.isFinite(hue) && hue >= 0 && hue < 360) return hue
@@ -182,9 +176,11 @@ function resolve_display(raw, facets) {
   /** Element lists: order is display order, and omission disables the element. The
    *  inline Contents panel mirrors the sidebar unless `contents` is given its own list. */
   for (const list of Object.keys(raw || {})) {
-    if (DISPLAY_ELEMENTS[list]) continue
-    const hint = REMOVED_DISPLAY[list] || `use ${Object.keys(DISPLAY_ELEMENTS).join(', ')}`
-    throw new Error(`mndsite.yaml: unknown display list '${list}' — ${hint}`)
+    if (!DISPLAY_ELEMENTS[list]) {
+      throw new Error(
+        `mndsite.yaml: unknown display list '${list}' — use ${Object.keys(DISPLAY_ELEMENTS).join(', ')}`
+      )
+    }
   }
 
   const cfg = { ...DEFAULTS.display, ...(raw || {}) }
@@ -207,6 +203,15 @@ function resolve_display(raw, facets) {
 }
 
 
+function resolve_fields(raw) {
+  /** Frontmatter key mappings. `none` disables one, so no key is read on its behalf. */
+  const cfg = { ...DEFAULTS.fields, ...(raw || {}) }
+  return Object.fromEntries(Object.entries(cfg).map(([name, key]) =>
+    [name, Array.isArray(key) ? key : (unset(key) ? null : String(key))]
+  ))
+}
+
+
 function content_in_repo(config_dir, content_dir) {
   /** Repo-relative location of the content root, assuming mndsite.yaml sits at the repo
    *  root. Anything outside that directory is unrepresentable — fall back to the root. */
@@ -221,10 +226,11 @@ function resolve_edit(raw, repo_url, config_dir, content_dir) {
   const cfg = { ...DEFAULTS.edit, ...(raw || {}) }
 
   if (!cfg.branch) throw new Error(`mndsite.yaml: edit.branch must be a branch name`)
-  cfg.path = cfg.path == null
+  cfg.path = unset(cfg.path)
     ? content_in_repo(config_dir, content_dir)
     : String(cfg.path).replace(/^\/+|\/+$/g, '')
 
+  cfg.url = optional(cfg.url)
   if (!cfg.url && repo_url) {
     const host = (repo_url.match(/^https?:\/\/([^/]+)/) || [])[1] || ''
     cfg.url = EDIT_TEMPLATES[host.replace(/^www\./, '')] || ''
@@ -237,13 +243,21 @@ function load_config(yaml_path) {
   const abs  = path.resolve(yaml_path)
   const dir  = path.dirname(abs)
   const raw  = yaml.load(fs.readFileSync(abs, 'utf8'))
-  reject_removed_keys(raw)
   const cfg  = { ...DEFAULTS, ...raw }
 
   if (!cfg.title) throw new Error(`mndsite.yaml: 'title' is required`)
 
-  cfg.theme       = resolve_theme({ ...DEFAULTS.theme, ...(raw.theme || {}) })
-  cfg.fields      = { ...DEFAULTS.fields, ...(raw.fields || {}) }
+  for (const key of ['description', 'repo_url', 'feed_url', 'footer', 'components', 'assets']) {
+    cfg[key] = optional(cfg[key])
+  }
+
+  // navbar/footer are optional background overrides; their 'none' default resolves to ''
+  const theme = { ...DEFAULTS.theme, ...(raw.theme || {}) }
+  theme.navbar = optional(theme.navbar)
+  theme.footer = optional(theme.footer)
+
+  cfg.theme       = resolve_theme(theme)
+  cfg.fields      = resolve_fields(raw.fields)
   cfg.facets      = resolve_facets(raw.facets)
   cfg.collections = resolve_collections(raw.collections, cfg.facets)
   cfg.sidebar     = resolve_sidebar(raw.sidebar, cfg.facets)
@@ -278,4 +292,4 @@ function write_site_config(config, dest_dir) {
 }
 
 
-module.exports = { load_config, write_site_config, DEFAULTS, REMOVED_KEYS, FACET_COLORS }
+module.exports = { load_config, write_site_config, unset, DEFAULTS, FACET_COLORS }
