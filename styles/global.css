@@ -735,24 +735,8 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 
 
 /* Left-nav index switcher (components/SidebarViews.jsx).
-   Mounted inside Nextra's `.nextra-scrollbar` so it shares the tree's nx-p-4 padding.
-   Facet rows use Nextra menu item classes (px-2 py-1.5, gap-1, nested ml-3 + left rule).
-   Toggles match the Contents outline button; one tree-item gap sits under the row. */
-.sidebar-views {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin: 0 0 0.25rem;
-  padding: 0;
-}
-
-.sidebar-index-toggles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
-  margin: 0 0 0.75rem;
-}
-
+   Mounted inside Nextra's `.nextra-scrollbar` (nx-p-4). Value rows reuse Nextra menu
+   classes in JSX; only the view toggles and chip buttons need local rules. */
 .sidebar-toggle {
   display: inline-flex;
   align-items: center;
@@ -783,44 +767,7 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
   outline-offset: 2px;
 }
 
-.sidebar-empty { font-size: 0.75rem; font-style: italic; color: var(--site-gray-500); }
-
-/* Match Nextra menu metrics: gap-1, px-2 py-1.5, nested ml-3 + pl-3 + 1px rule. */
-.index-tree {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.index-folder {
-  padding: 0 0 0.35rem;
-  min-height: var(--crumb-height);
-  display: flex;
-  align-items: center;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--site-gray-500);
-  text-transform: capitalize;
-}
-
-.index-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
-  padding: 0 0 0.5rem;
-}
-
-.index-nested {
-  margin: 0;
-  padding: 0 0 0.5rem;
-}
-
-.index-facet-block + .index-facet-block {
-  margin-top: 0.5rem;
-}
+.sidebar-empty { font-style: italic; }
 
 button.chip {
   cursor: pointer;

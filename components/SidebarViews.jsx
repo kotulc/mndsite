@@ -4,8 +4,8 @@
  * facet values. Nextra owns the tree; data-view hides it while an index is open.
  *
  * The portal mounts inside `.nextra-scrollbar` so the switcher and facet lists share
- * the tree's 1rem padding. Facet rows copy Nextra menu metrics (px-2 py-1.5, gap-1,
- * nested ml-3 with a left rule) so Versions/Tags line up with the directory tree.
+ * the tree's nx-p-4 padding. Value rows reuse Nextra menu metrics (gap-1, px-2 py-1.5,
+ * nested ml-3 + left rule) so Versions/Tags line up with the directory tree.
  *
  * State: ?view=<pages|group> ?facet=<name> ?on=<value>
  */
@@ -20,6 +20,19 @@ import {
 
 const SIDEBAR = '.nextra-sidebar-container'
 
+/** Nextra sidebar menu metrics (nextra-theme-docs Menu / Folder). */
+const MENU_LIST = 'nx-flex nx-flex-col nx-gap-1'
+const MENU_BORDER = [
+  "nx-relative before:nx-absolute before:nx-inset-y-1 before:nx-w-px",
+  "before:nx-bg-gray-200 before:nx-content-[''] dark:before:nx-bg-neutral-800",
+  'ltr:nx-pl-3 ltr:before:nx-left-0 rtl:nx-pr-3 rtl:before:nx-right-0',
+].join(' ')
+const GROUP_LABEL = [
+  'nx-px-2 nx-py-1.5 nx-text-sm nx-font-medium nx-capitalize',
+  'nx-text-gray-500 dark:nx-text-neutral-400',
+].join(' ')
+const CHIP_ROW = 'nx-flex nx-flex-wrap nx-gap-1 nx-px-2 nx-pb-1'
+
 
 function use_portal_host(enabled) {
   const [host, set_host] = useState(null)
@@ -31,7 +44,7 @@ function use_portal_host(enabled) {
     const parent = container.querySelector('.nextra-scrollbar') || container
 
     const node = document.createElement('div')
-    node.className = 'sidebar-views'
+    node.className = 'sidebar-views nx-flex nx-w-full nx-flex-col nx-gap-1'
     parent.prepend(node)
     set_host(node)
 
@@ -74,7 +87,7 @@ function ValueButton({ entry, selected, on_select, facet }) {
 
 function ChipRow({ items, facet, selected, on_select }) {
   return (
-    <div className="index-chips">
+    <div className={CHIP_ROW}>
       {items.map(entry => (
         <ValueButton
           key={entry.value}
@@ -95,7 +108,7 @@ function FacetList({ facet, selected_facet, selected_value, on_select }) {
   const active = facet === selected_facet ? selected_value : ''
 
   return (
-    <li className="index-facet-block">
+    <li>
       {groups.map(({ group, items }) => {
         const chips = (
           <ChipRow
@@ -110,8 +123,12 @@ function FacetList({ facet, selected_facet, selected_value, on_select }) {
         }
         return (
           <div key={group}>
-            <div className="index-folder">{group}</div>
-            <div className="index-nested">{chips}</div>
+            <div className={GROUP_LABEL}>{group}</div>
+            <div className="ltr:nx-pr-0 rtl:nx-pl-0 nx-pt-1">
+              <ul className={`${MENU_LIST} ${MENU_BORDER} ltr:nx-ml-3 rtl:nx-mr-3`}>
+                <li>{chips}</li>
+              </ul>
+            </div>
           </div>
         )
       })}
@@ -122,10 +139,12 @@ function FacetList({ facet, selected_facet, selected_value, on_select }) {
 
 function IndexList({ group, selected_facet, selected, on_select }) {
   const facets = group.facets.filter(name => index_entries(name).length)
-  if (!facets.length) return <p className="sidebar-empty">No values for this index.</p>
+  if (!facets.length) {
+    return <p className="sidebar-empty nx-px-2 nx-text-sm nx-text-gray-500 dark:nx-text-neutral-400">No values for this index.</p>
+  }
 
   return (
-    <ul className="index-tree">
+    <ul className={MENU_LIST}>
       {facets.map(facet => (
         <FacetList
           key={facet}
@@ -143,7 +162,7 @@ function IndexList({ group, selected_facet, selected, on_select }) {
 function Toggles({ current, on_select }) {
   const groups = sidebar_groups()
   return (
-    <div className="sidebar-index-toggles" role="tablist">
+    <div className="sidebar-index-toggles nx-mb-2 nx-flex nx-flex-wrap nx-gap-1" role="tablist">
       <button
         type="button"
         role="tab"
