@@ -7,24 +7,20 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import siteConfig from '../site.config'
 import PageHeader from './PageHeader'
-import { PageCrumbRow, PageHeading } from './PageChrome'
+import PageRail from './PageRail'
+import { PageHeading } from './PageChrome'
 import TagList from './TagList'
 import { group_chips, group_values, listing_field_keys, sidebar_group } from './groups'
 import { active_field, active_view, listed_pages, selected_value } from './filters'
 
 
 function IndexBreadcrumbs({ group }) {
-  const order = siteConfig.display.crumbs || []
-  if (!order.length) return null
+  if (!siteConfig.display.crumbs) return null
 
   return (
     <nav className="page-crumbs" aria-label="Breadcrumb">
-      {order.includes('home') && (
-        <>
-          <Link className="page-crumb" href="/">Home</Link>
-          <span className="page-crumb-sep" aria-hidden="true">›</span>
-        </>
-      )}
+      <Link className="page-crumb" href="/">Home</Link>
+      <span className="page-crumb-sep" aria-hidden="true">›</span>
       <span className="page-crumb" aria-current="page">{group.label}</span>
     </nav>
   )
@@ -101,9 +97,7 @@ export default function IndexListing({ children }) {
 
   return (
     <>
-      <PageCrumbRow>
-        <IndexBreadcrumbs group={group} />
-      </PageCrumbRow>
+      <PageRail trail={<IndexBreadcrumbs group={group} />} />
       <PageHeading>{label}</PageHeading>
       <div className="page-header">
         <span>{count}</span>

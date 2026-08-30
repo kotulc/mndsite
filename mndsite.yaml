@@ -58,7 +58,7 @@ frontmatter:
 
 # Optional edition tracking — wire into the sidebar via a group value of `versioning`.
 versioning:
-  field: version
+  key: version
   label: Versions
   color: teal
   inherit: true
@@ -69,7 +69,7 @@ versioning:
 # Rendered elements, in display order. `sidebar` lists browse groups; `header` also accepts
 # facet names and frontmatter field keys.
 display:
-  crumbs: [home, path]
+  crumbs: true
   sidebar: [pages, Tags, Versions]
   header: [date, reading_time, version, status, facets]
   toc: [description, sections, related, edit]

@@ -15,7 +15,6 @@ const { normalize_semver } = require('./semver')
 
 
 const DISPLAY_ELEMENTS = {
-  crumbs:   ['home', 'path'],
   header:   ['date', 'reading_time', 'facets'],
   sidebar:  ['pages'],
   toc:      ['description', 'sections', 'related', 'edit'],
@@ -65,7 +64,7 @@ const DEFAULTS = {
   footer:         'default',
   theme:          { color: 'default', typeset: 'sans', navbar: 'none', footer: 'none' },
   display: {
-    crumbs: ['home', 'path'],
+    crumbs: true,
     header: ['date', 'reading_time', 'facets'],
     sidebar: ['pages', 'Tags'],
     toc:    ['description', 'sections', 'related', 'edit'],
@@ -223,7 +222,10 @@ function resolve_versioning(raw) {
     throw new Error(`mndsite.yaml: versioning must be an object`)
   }
   const cfg = { ...raw }
-  cfg.field = unset(cfg.field) ? 'version' : String(cfg.field).trim()
+  cfg.key = unset(cfg.key) ? 'version' : String(cfg.key).trim()
+  if (!unset(cfg.field)) {
+    throw new Error(`mndsite.yaml: versioning.field is not supported — use key`)
+  }
   cfg.label = cfg.label || 'Versions'
   cfg.sort  = 'semver'
   cfg.hue   = resolve_hue('versioning', cfg.color, 0)
@@ -238,7 +240,7 @@ function resolve_versioning(raw) {
 function header_field_keys(facets, versioning) {
   const keys = []
   const add = key => { if (key && !keys.includes(key)) keys.push(key) }
-  if (versioning) add(versioning.field)
+  if (versioning) add(versioning.key)
   for (const spec of Object.values(facets || {})) {
     for (const key of spec.key) add(key)
   }
@@ -246,9 +248,20 @@ function header_field_keys(facets, versioning) {
 }
 
 
+function resolve_crumbs(value) {
+  if (value == null) return DEFAULTS.display.crumbs
+  if (typeof value === 'boolean') return value
+  if (Array.isArray(value)) {
+    throw new Error(`mndsite.yaml: display.crumbs must be true or false — lists are no longer supported`)
+  }
+  return as_bool('display.crumbs', value, DEFAULTS.display.crumbs)
+}
+
+
 function resolve_display(raw, facets, groups_cfg, versioning) {
   const raw_display = raw || {}
   for (const list of Object.keys(raw_display)) {
+    if (list === 'crumbs') continue
     if (!DISPLAY_ELEMENTS[list]) {
       throw new Error(
         `mndsite.yaml: unknown display list '${list}' — use ${Object.keys(DISPLAY_ELEMENTS).join(', ')}`
@@ -257,6 +270,7 @@ function resolve_display(raw, facets, groups_cfg, versioning) {
   }
 
   const cfg = { ...DEFAULTS.display, ...raw_display }
+  cfg.crumbs = resolve_crumbs(raw_display.crumbs)
   if (!Array.isArray(cfg.toc)) throw new Error(`mndsite.yaml: display.toc must be a list`)
   if (!cfg.contents) cfg.contents = [...cfg.toc]
 

@@ -92,7 +92,7 @@ describe('parse helpers', () => {
   })
 
   test('test_inherit_fills_and_normalizes_semver', () => {
-    const versioning = { field: 'version', inherit: true }
+    const versioning = { key: 'version', inherit: true }
     expect(build_facets({}, null, versioning, '0.4.1')).toEqual({ version: '0.4.1' })
     expect(build_facets({ version: '0.2' }, null, versioning, '0.4.1')).toEqual({ version: '0.2.0' })
   })

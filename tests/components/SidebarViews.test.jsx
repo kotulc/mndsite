@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import SidebarViews from '../../components/SidebarViews'
+import { ViewScopeProvider } from '../../components/ViewScope'
 
 
 jest.mock('next/router', () => ({
@@ -36,8 +37,12 @@ beforeEach(() => {
 
 
 test('test_sidebar_shows_facet_labels_for_multi_field_group', () => {
-  render(<SidebarViews />)
+  render(
+    <ViewScopeProvider>
+      <SidebarViews />
+    </ViewScopeProvider>,
+  )
   expect(screen.getByText('Status')).toBeInTheDocument()
   expect(screen.getByText('Category')).toBeInTheDocument()
-  expect(screen.getAllByText('Tags').length).toBeGreaterThanOrEqual(2)
+  expect(screen.getByRole('button', { name: 'overview' })).toBeInTheDocument()
 })

@@ -5,7 +5,7 @@ import { find_page } from '../../components/SectionContext'
 let mock_route = '/about'
 
 jest.mock('../../components/SectionContext', () => ({ find_page: jest.fn() }))
-jest.mock('../../site.config', () => ({ title: 'mndsite', display: { crumbs: ['home', 'path'] } }))
+jest.mock('../../site.config', () => ({ title: 'mndsite', display: { crumbs: true } }))
 jest.mock('next/router', () => ({ useRouter: () => ({ route: mock_route }) }))
 jest.mock('next/link', () => ({
   __esModule: true,
@@ -41,10 +41,10 @@ test('test_breadcrumbs_titles_directories_without_a_page_record', () => {
     .toEqual(['Home', 'Features'])
 })
 
-test('test_breadcrumbs_omitted_when_crumbs_list_is_empty', () => {
-  /** An empty display.crumbs turns the trail off entirely. */
+test('test_breadcrumbs_omitted_when_crumbs_disabled', () => {
+  /** display.crumbs: false turns the trail off entirely. */
   jest.resetModules()
-  jest.doMock('../../site.config', () => ({ title: 'mndsite', display: { crumbs: [] } }))
+  jest.doMock('../../site.config', () => ({ title: 'mndsite', display: { crumbs: false } }))
   const Fresh = require('../../components/Breadcrumbs').default
   const { container } = render(<Fresh />)
   expect(container).toBeEmptyDOMElement()

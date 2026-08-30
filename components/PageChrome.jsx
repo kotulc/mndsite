@@ -1,11 +1,9 @@
 /**
- * Shared page title chrome — breadcrumb row spacing and the h1 Nextra pages use.
+ * Shared page title chrome — the h1 Nextra pages use.
  * PageTitle (theme.config.jsx) and IndexListing both render through here so index
- * views line up with normal article pages.
+ * views line up with normal article pages. The page rail lives in PageRail.jsx and
+ * portals above the sidebar/body row.
  */
-export function PageCrumbRow({ children }) {
-  return <div className="page-crumb-row">{children}</div>
-}
 
 
 export function PageHeading({ children }) {

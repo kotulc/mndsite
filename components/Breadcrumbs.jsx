@@ -1,18 +1,15 @@
 /**
  * Breadcrumb trail above the page title, replacing Nextra's own (hidden in global.css)
  * so every page carries the same trail — Nextra drops it on root-level pages, which left
- * the title area jumping around. Follows display.crumbs: `home` roots the trail at the
- * site root, `path` adds the ancestor directories. The current page is the heading
- * directly below, so the trail never repeats it; every entry is a link. An empty
- * display.crumbs turns the trail off.
+ * the title area jumping around. When display.crumbs is true, the trail links Home and
+ * each ancestor directory; the current page is the heading directly below, so the trail
+ * never repeats it. display.crumbs: false turns the trail off.
  */
 import { Fragment } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { find_page } from './SectionContext'
 import siteConfig from '../site.config'
-
-const ORDER = siteConfig.display.crumbs
 
 
 function dir_label(slug) {
@@ -33,11 +30,10 @@ function path_trail(route) {
 
 
 export default function Breadcrumbs() {
-  const { route } = useRouter()
+  if (!siteConfig.display.crumbs) return null
 
-  const items = []
-  if (ORDER.includes('home')) items.push({ href: '/', name: 'Home' })
-  if (ORDER.includes('path')) items.push(...path_trail(route))
+  const { route } = useRouter()
+  const items = [{ href: '/', name: 'Home' }, ...path_trail(route)]
   if (!items.length) return null
 
   return (

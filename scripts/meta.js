@@ -49,10 +49,10 @@ function build_facets(fm, facets, versioning, release) {
   const out = {}
   const specs = facets || FACET_DEFAULTS
   if (versioning) {
-    const value = read_field_value(fm, versioning.field, 'semver', {
+    const value = read_field_value(fm, versioning.key, 'semver', {
       inherit: versioning.inherit, release,
     })
-    if (value != null) out[versioning.field] = value
+    if (value != null) out[versioning.key] = value
   }
   for (const spec of Object.values(specs)) {
     for (const field_key of spec.key) {

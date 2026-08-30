@@ -36,7 +36,7 @@ export function close_contents_panel(on_close) {
 }
 
 
-function ListIcon({ size = 14 }) {
+function ListIcon({ size = 12 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" aria-hidden="true">
       <line x1="8" y1="6" x2="21" y2="6" />
@@ -58,14 +58,14 @@ export function ContentsToggle({ open, on_toggle }) {
   return (
     <button
       type="button"
-      className="contents-toggle"
+      className={`contents-toggle sidebar-toggle${open ? ' is-active' : ''}`}
       aria-expanded={open}
       aria-controls="contents-panel"
       aria-label={open ? 'Hide page contents' : 'Show page contents'}
       onClick={on_toggle}
     >
       <ListIcon />
-      <span>Contents</span>
+      Contents
       {items.includes('sections') && <span className="contents-count">{sections.length}</span>}
     </button>
   )

@@ -6,7 +6,7 @@ jest.mock('../../site.config', () => ({
     sidebar: ['pages', 'Tags', 'Versions'],
     header: ['date', 'reading_time', 'version', 'status', 'facets'],
   },
-  versioning: { field: 'version', label: 'Versions', hue: 190, group_by: 'status' },
+  versioning: { key: 'version', label: 'Versions', hue: 190, group_by: 'status' },
   frontmatter: {
     groups: {
       Tags: ['status', 'categories', 'tags'],

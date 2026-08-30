@@ -1,18 +1,12 @@
 /**
- * Left-nav index switcher and value lists.
- * Pages is the directory tree. Each configured facet (and optional versioning) is a
- * sidebar group; field keys within a group render as chips in declaration order.
- *
- * State: ?view=<pages|group> ?field=<frontmatter-key> ?on=<value>
+ * Facet index body for the left nav. View toggles live in the page rail above the layout;
+ * this component only portals value chips into Nextra's sidebar while a group index is open.
  */
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useRouter } from 'next/router'
-import siteConfig from '../site.config'
 import { field_label } from './groups'
-import {
-  active_field, active_view, index_entries, selected_value, sidebar_groups, sidebar_toggles,
-} from './filters'
+import { index_entries } from './filters'
+import { useViewScope } from './ViewScope'
 
 
 const SIDEBAR = '.nextra-sidebar-container'
@@ -40,14 +34,11 @@ function use_portal_host(enabled) {
     const parent = container.querySelector('.nextra-scrollbar') || container
 
     const node = document.createElement('div')
-    node.className = 'sidebar-views nx-flex nx-w-full nx-flex-col'
+    node.className = 'sidebar-index nx-flex nx-w-full nx-flex-col'
     parent.prepend(node)
     set_host(node)
 
-    return () => {
-      node.remove()
-      delete container.dataset.view
-    }
+    return () => node.remove()
   }, [enabled])
 
   return host
@@ -160,88 +151,19 @@ function IndexList({ group, selected_field, selected, on_select }) {
 }
 
 
-function Toggles({ current, on_select }) {
-  const toggles = sidebar_toggles()
-  return (
-    <div className="sidebar-index-toggles nx-flex nx-flex-wrap nx-gap-1" role="tablist">
-      {toggles.map(toggle => (
-        <button
-          key={toggle.id}
-          type="button"
-          role="tab"
-          aria-selected={current === toggle.id}
-          className={current === toggle.id ? 'sidebar-toggle is-active' : 'sidebar-toggle'}
-          onClick={() => on_select(toggle.id)}
-        >
-          {toggle.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-
 export default function SidebarViews() {
-  const router = useRouter()
-  const toggles = sidebar_toggles()
-  const groups = sidebar_groups()
-  const host = use_portal_host(toggles.length > 1)
+  const { toggles, group, field, selected, set_on } = useViewScope()
+  const host = use_portal_host(toggles.length > 1 && !!group)
 
-  const view = active_view(router.query)
-  const group = view === 'pages' ? null : groups.find(g => g.id === view)
-  const field = group ? active_field(router.query, view) : ''
-  const selected = group ? selected_value(router.query, view) : ''
-
-  useEffect(() => {
-    if (toggles.length <= 1) return
-    const container = document.querySelector(SIDEBAR)
-    if (container) container.dataset.view = view
-    document.documentElement.dataset.view = view
-    return () => { delete document.documentElement.dataset.view }
-  }, [view, toggles.length])
-
-  function set_view(next) {
-    const query = { ...router.query }
-    delete query.view
-    delete query.field
-    delete query.on
-    if (next !== 'pages') {
-      const group = groups.find(g => g.id === next)
-      if (!group) return
-      query.view = next
-      const value = selected_value({}, next)
-      const versioning = siteConfig.versioning
-      const default_on = group.versioning && versioning ? versioning.default : ''
-      if (value && value !== default_on) query.on = value
-    }
-    router.replace({ query }, undefined, { shallow: true, scroll: false })
-  }
-
-  function set_on(field_key, value) {
-    const query = { ...router.query, view }
-    if (field_key !== group.fields[0]) query.field = field_key
-    else delete query.field
-    const versioning = siteConfig.versioning
-    const default_on = group.versioning && versioning ? versioning.default : ''
-    if (value && value !== default_on) query.on = value
-    else delete query.on
-    router.replace({ query }, undefined, { shallow: true, scroll: false })
-  }
-
-  if (!host || toggles.length <= 1) return null
+  if (!host || !group) return null
 
   return createPortal(
-    <>
-      <Toggles current={view} on_select={set_view} />
-      {group && (
-        <IndexList
-          group={group}
-          selected_field={field}
-          selected={selected}
-          on_select={set_on}
-        />
-      )}
-    </>,
-    host
+    <IndexList
+      group={group}
+      selected_field={field}
+      selected={selected}
+      on_select={set_on}
+    />,
+    host,
   )
 }

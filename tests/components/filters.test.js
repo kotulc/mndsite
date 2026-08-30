@@ -8,7 +8,7 @@ jest.mock('../../site.config', () => ({
     header: ['date', 'reading_time', 'version', 'status', 'facets'],
   },
   versioning: {
-    field: 'version',
+    key: 'version',
     label: 'Versions',
     sort: 'semver',
     hue: 190,

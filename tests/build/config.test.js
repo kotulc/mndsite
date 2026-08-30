@@ -279,9 +279,17 @@ versioning:
   history: true
 `))
     expect(cfg.versioning).toMatchObject({
-      field: 'version', label: 'Versions', sort: 'semver',
+      key: 'version', label: 'Versions', sort: 'semver',
       inherit: true, history: true, default: 'latest', group_by: '',
     })
+  })
+
+  test('test_versioning_rejects_field', () => {
+    const p = write_yaml(`title: t
+versioning:
+  field: version
+`)
+    expect(() => load_config(p)).toThrow(/versioning\.field is not supported/)
   })
 
   test('test_versioning_absent_by_default', () => {
@@ -311,13 +319,18 @@ describe('load_config — display lists', () => {
     expect(load_config(p).display.contents).toEqual(['description'])
   })
 
-  test('test_empty_list_disables_zone', () => {
-    expect(load_config(write_yaml('title: t\ndisplay:\n  crumbs: []\n')).display.crumbs).toEqual([])
+  test('test_crumbs_disabled', () => {
+    expect(load_config(write_yaml('title: t\ndisplay:\n  crumbs: false\n')).display.crumbs).toBe(false)
+  })
+
+  test('test_crumbs_rejects_list', () => {
+    expect(() => load_config(write_yaml('title: t\ndisplay:\n  crumbs: [home, path]\n')))
+      .toThrow(/display\.crumbs must be true or false/)
   })
 
   test('test_header_accepts_field_key', () => {
     const p = write_yaml(`title: t
-versioning: { field: version }
+versioning: { key: version }
 frontmatter:
   facets:
     tags: { key: tags }

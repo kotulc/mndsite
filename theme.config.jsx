@@ -12,7 +12,9 @@ import ThemeToggle from './components/ThemeToggle'
 import { group_chips, header_field_keys } from './components/groups'
 import IndexListing from './components/IndexListing'
 import SidebarViews from './components/SidebarViews'
-import { PageCrumbRow, PageHeading } from './components/PageChrome'
+import PageRail, { PageRailProvider } from './components/PageRail'
+import { PageHeading } from './components/PageChrome'
+import { ViewScopeProvider } from './components/ViewScope'
 import siteConfig from './site.config'
 import siteMeta from './public/site-meta.json'
 
@@ -79,7 +81,7 @@ function chip_rules(groups, versioning) {
     `{background:hsl(${hue} 35% 22%);color:hsl(${hue} 70% 75%)}`
 
   const rules = []
-  if (versioning) rules.push(pair(versioning.field, versioning.hue))
+  if (versioning) rules.push(pair(versioning.key, versioning.hue))
   for (const spec of Object.values(groups || {})) {
     for (const key of spec.key || []) rules.push(pair(key, spec.hue))
   }
@@ -111,10 +113,10 @@ function PageTitle({ children }) {
 
   return (
     <>
-      <PageCrumbRow>
-        <Breadcrumbs />
-        <ContentsToggle open={open} on_toggle={() => set_open(v => !v)} />
-      </PageCrumbRow>
+      <PageRail
+        trail={<Breadcrumbs />}
+        actions={<ContentsToggle open={open} on_toggle={() => set_open(v => !v)} />}
+      />
       <PageHeading>{children}</PageHeading>
       <PageMeta />
       <ContentsPanel open={open} on_close={close_panel} on_route_close={dismiss} />
@@ -167,5 +169,12 @@ export default {
   components: { h1: PageTitle },
   sidebar: { titleComponent: SidebarLabel },
   // SidebarViews has no place in the page — it only portals the view tabs into the sidebar.
-  main: ({ children }) => <><SidebarViews /><IndexListing>{children}</IndexListing></>,
+  main: ({ children }) => (
+    <ViewScopeProvider>
+      <PageRailProvider>
+        <SidebarViews />
+        <IndexListing>{children}</IndexListing>
+      </PageRailProvider>
+    </ViewScopeProvider>
+  ),
 }

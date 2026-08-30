@@ -67,7 +67,7 @@ export function field_domain(field_key, { head, sort } = {}) {
     for (const value of facet_of(page, field_key)) seen.add(value)
   }
   const versioning = siteConfig.versioning
-  if (versioning && versioning.history && field_key === versioning.field) {
+  if (versioning && versioning.history && field_key === versioning.key) {
     for (const page of PAGES) {
       if (page.snapshot) seen.add(page.snapshot)
     }
@@ -156,7 +156,7 @@ export function listed_pages(group_id, field_key, value) {
 
 export function resolve_semver(value) {
   const versioning = siteConfig.versioning
-  const field_key = versioning ? versioning.field : 'version'
+  const field_key = versioning ? versioning.key : 'version'
   if (value === 'latest') return RELEASE || (field_domain(field_key, { sort: 'semver' }).slice(-1)[0] || '')
   return normalize_semver(value) || value
 }

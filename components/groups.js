@@ -46,7 +46,7 @@ function singular_title(key) {
 export function field_label(field_key) {
   /** Tooltip prefix for a frontmatter field key. */
   const versioning = siteConfig.versioning
-  if (versioning && field_key === versioning.field) return singular_title(versioning.field)
+  if (versioning && field_key === versioning.key) return singular_title(versioning.key)
   const spec = facet_spec_for_field(field_key)
   if (spec) {
     const keys = facet_keys(spec)
@@ -71,7 +71,7 @@ export function all_field_keys() {
   const keys = []
   const add = key => { if (key && !keys.includes(key)) keys.push(key) }
   const versioning = siteConfig.versioning
-  if (versioning) add(versioning.field)
+  if (versioning) add(versioning.key)
   for (const spec of Object.values(configured_facets())) {
     for (const key of facet_keys(spec)) add(key)
   }
@@ -91,8 +91,8 @@ export function header_field_keys(header) {
       for (const key of all_field_keys()) add(key)
     } else if (facets[item]) {
       for (const key of facet_keys(facets[item])) add(key)
-    } else if (versioning && item === versioning.field) {
-      add(versioning.field)
+    } else if (versioning && item === versioning.key) {
+      add(versioning.key)
     } else if (all_field_keys().includes(item)) {
       add(item)
     }
@@ -132,7 +132,7 @@ function build_sidebar_group(name, value) {
     return {
       id: name,
       label: versioning.label,
-      fields: [versioning.field],
+      fields: [versioning.key],
       versioning: true,
     }
   }
