@@ -40,7 +40,7 @@ function use_portal_host(enabled) {
     const parent = container.querySelector('.nextra-scrollbar') || container
 
     const node = document.createElement('div')
-    node.className = 'sidebar-views nx-flex nx-w-full nx-flex-col nx-gap-1'
+    node.className = 'sidebar-views nx-flex nx-w-full nx-flex-col'
     parent.prepend(node)
     set_host(node)
 
@@ -163,7 +163,7 @@ function IndexList({ group, selected_field, selected, on_select }) {
 function Toggles({ current, on_select }) {
   const toggles = sidebar_toggles()
   return (
-    <div className="sidebar-index-toggles nx-mb-2 nx-flex nx-flex-wrap nx-gap-1" role="tablist">
+    <div className="sidebar-index-toggles nx-flex nx-flex-wrap nx-gap-1" role="tablist">
       {toggles.map(toggle => (
         <button
           key={toggle.id}

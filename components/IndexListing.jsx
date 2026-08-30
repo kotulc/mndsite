@@ -82,8 +82,11 @@ function ResultGroup({ group, pages, view, field, selected }) {
 
 
 export default function IndexListing({ children }) {
-  const { query } = useRouter()
-  const view = active_view(query)
+  const { query, asPath } = useRouter()
+  // router.query can lag behind asPath during client transitions; only treat facet
+  // view as active when the URL still carries view=.
+  const has_facet_view = /\bview=/.test(asPath.split('#')[0])
+  const view = has_facet_view ? active_view(query) : 'pages'
   if (view === 'pages') return children
 
   const group = sidebar_group(view)

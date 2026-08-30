@@ -1,6 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react'
-import { ContentsToggle, ContentsPanel } from '../../components/ContentsMenu'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { ContentsToggle, ContentsPanel, close_contents_panel } from '../../components/ContentsMenu'
 import { useSection } from '../../components/SectionContext'
+import { useRouter } from 'next/router'
 
 jest.mock('../../components/SectionContext', () => ({ useSection: jest.fn() }))
 jest.mock('../../components/PageContents', () => ({
@@ -9,9 +10,21 @@ jest.mock('../../components/PageContents', () => ({
   contents_items: (order, page) => (page ? order : []),
 }))
 jest.mock('../../site.config', () => ({ display: { contents: ['sections', 'related'] } }))
-jest.mock('next/router', () => ({
-  useRouter: () => ({ events: { on: jest.fn(), off: jest.fn() } }),
-}))
+jest.mock('next/router', () => {
+  const handlers = new Map()
+  return {
+    useRouter: () => ({
+      events: {
+        on: (event, fn) => {
+          if (!handlers.has(event)) handlers.set(event, new Set())
+          handlers.get(event).add(fn)
+        },
+        off: (event, fn) => handlers.get(event)?.delete(fn),
+        emit: (event) => handlers.get(event)?.forEach(fn => fn()),
+      },
+    }),
+  }
+})
 
 
 test('test_contents_toggle_hidden_without_page', () => {
@@ -54,4 +67,38 @@ test('test_contents_panel_closes_on_escape', () => {
   render(<ContentsPanel open={true} on_close={on_close} />)
   fireEvent.keyDown(document, { key: 'Escape' })
   expect(on_close).toHaveBeenCalled()
+})
+
+test('test_close_contents_panel_compensates_scroll_when_panel_is_above_viewport', async () => {
+  const panel = document.createElement('section')
+  panel.id = 'contents-panel'
+  Object.defineProperty(panel, 'offsetHeight', { value: 120 })
+  panel.getBoundingClientRect = () => ({ top: -200, bottom: -80, height: 120 })
+  document.body.appendChild(panel)
+
+  const scrollTo = jest.fn()
+  window.scrollTo = scrollTo
+  Object.defineProperty(window, 'scrollY', { value: 400, configurable: true })
+
+  const on_close = jest.fn()
+  close_contents_panel(on_close)
+
+  expect(on_close).toHaveBeenCalled()
+  await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 280))
+
+  panel.remove()
+})
+
+test('test_contents_panel_closes_after_route_change_completes', () => {
+  useSection.mockReturnValue({ page: { name: 'Config' }, sections: [] })
+  const on_close = jest.fn()
+  const on_route_close = jest.fn()
+  render(<ContentsPanel open={true} on_close={on_close} on_route_close={on_route_close} />)
+  const { events } = useRouter()
+  act(() => { events.emit('routeChangeStart') })
+  expect(on_close).not.toHaveBeenCalled()
+  expect(on_route_close).not.toHaveBeenCalled()
+  act(() => { events.emit('routeChangeComplete') })
+  expect(on_route_close).toHaveBeenCalled()
+  expect(on_close).not.toHaveBeenCalled()
 })

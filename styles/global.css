@@ -382,6 +382,7 @@ img {
   border-top: 1px solid #e5e7eb;
   border-bottom: 1px solid #e5e7eb;
   font-size: 0.875rem;
+  overflow-anchor: none;
 }
 
 :is(html[class~="dark"]) .contents-panel {
@@ -737,6 +738,15 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 /* Left-nav index switcher (components/SidebarViews.jsx).
    Mounted inside Nextra's `.nextra-scrollbar` (nx-p-4). Value rows reuse Nextra menu
    classes in JSX; only the view toggles and chip buttons need local rules. */
+.sidebar-views {
+  gap: 0.75rem;
+}
+
+/* Pages view has no index body — pad below toggles to match toggle→index gap on Tags/Versions. */
+.nextra-sidebar-container[data-view="pages"] .sidebar-views {
+  margin-bottom: 0.75rem;
+}
+
 .sidebar-toggle {
   display: inline-flex;
   align-items: center;

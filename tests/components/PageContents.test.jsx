@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import PageContents, { cap_name, contents_items, edit_href } from '../../components/PageContents'
 import { useSection, find_page } from '../../components/SectionContext'
 import site_config from '../../site.config'
@@ -13,7 +13,23 @@ jest.mock('../../site.config', () => ({
   display: { toc: ['description', 'sections', 'related', 'edit'] },
   edit: { branch: 'main', path: 'docs', url: '{repo_url}/edit/{branch}/{file}' },
 }))
-jest.mock('next/link', () => ({ __esModule: true, default: ({ href, children }) => <a href={href}>{children}</a> }))
+jest.mock('next/link', () => ({
+  __esModule: true,
+  default: ({ href, children, onClick, title }) => (
+    <a href={href} onClick={onClick} title={title}>{children}</a>
+  ),
+}))
+
+const mock_push = jest.fn(() => Promise.resolve())
+const mock_replace = jest.fn(() => Promise.resolve())
+jest.mock('next/router', () => ({
+  useRouter: () => ({
+    pathname: '/current',
+    query: {},
+    push: mock_push,
+    replace: mock_replace,
+  }),
+}))
 
 const ORDER = ['description', 'sections', 'related', 'edit']
 
@@ -21,7 +37,11 @@ function mock_page(page, sections = []) {
   useSection.mockReturnValue({ page: { links: [], related: [], ...page }, sections })
 }
 
-beforeEach(() => { find_page.mockReturnValue(undefined) })
+beforeEach(() => {
+  find_page.mockReturnValue(undefined)
+  mock_push.mockClear()
+  mock_replace.mockClear()
+})
 
 
 test('test_page_contents_returns_null_without_page', () => {
@@ -117,6 +137,33 @@ test('test_page_contents_follows_the_supplied_order', () => {
   render(<PageContents order={['sections']} />)
   expect(screen.queryByText('Summary.')).not.toBeInTheDocument()
   expect(screen.getByText('On This Page')).toBeInTheDocument()
+})
+
+test('test_page_contents_related_leaves_panel_open_on_click', () => {
+  find_page.mockReturnValue({ name: 'Other', url: '/other' })
+  mock_page({ links: ['/other'] })
+  const on_close = jest.fn()
+  render(<PageContents order={['related']} on_navigate={on_close} />)
+  fireEvent.click(screen.getByRole('link', { name: 'Other' }))
+  expect(on_close).not.toHaveBeenCalled()
+})
+
+test('test_page_contents_section_scrolls_after_clearing_facet_view', async () => {
+  const scrollIntoView = jest.fn()
+  const target = document.createElement('h2')
+  target.id = 'fields'
+  target.scrollIntoView = scrollIntoView
+  document.body.appendChild(target)
+
+  mock_page({}, [{ name: 'Fields', level: 2 }])
+  const on_close = jest.fn()
+  render(<PageContents order={['sections']} on_navigate={on_close} />)
+  fireEvent.click(screen.getByRole('link', { name: 'Fields' }))
+
+  expect(on_close).toHaveBeenCalled()
+  await waitFor(() => expect(scrollIntoView).toHaveBeenCalled())
+
+  target.remove()
 })
 
 

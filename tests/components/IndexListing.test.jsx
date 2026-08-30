@@ -2,7 +2,8 @@ import { render, screen } from '@testing-library/react'
 import IndexListing from '../../components/IndexListing'
 
 
-jest.mock('next/router', () => ({ useRouter: () => ({ query: { view: 'Versions' } }) }))
+let asPath = '/about?view=Versions&field=version&on=0.2.0'
+jest.mock('next/router', () => ({ useRouter: () => ({ query: { view: 'Versions' }, asPath }) }))
 jest.mock('next/link', () => ({
   __esModule: true,
   default: ({ href, children, className }) => <a href={href} className={className}>{children}</a>,
@@ -38,6 +39,7 @@ jest.mock('../../components/filters', () => ({
 
 
 test('test_index_listing_renders_header_shaped_cards', () => {
+  asPath = '/about?view=Versions&field=version&on=0.2.0'
   render(<IndexListing><p>PAGE BODY</p></IndexListing>)
   expect(screen.queryByText('PAGE BODY')).not.toBeInTheDocument()
   expect(screen.getByText('Versions')).toBeInTheDocument()
@@ -50,4 +52,10 @@ test('test_index_listing_renders_header_shaped_cards', () => {
   expect(screen.getByText('overview')).toBeInTheDocument()
   expect(screen.getByText('A portable static site renderer.')).toBeInTheDocument()
   expect(screen.getAllByText('0.2.0')).toHaveLength(1)
+})
+
+test('test_index_listing_shows_article_when_url_has_no_facet_view', () => {
+  asPath = '/about'
+  render(<IndexListing><p>PAGE BODY</p></IndexListing>)
+  expect(screen.getByText('PAGE BODY')).toBeInTheDocument()
 })

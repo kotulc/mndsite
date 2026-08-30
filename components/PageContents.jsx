@@ -9,8 +9,45 @@
  * inline — see components/ContentsMenu.jsx.
  */
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import { useSection, find_page, section_anchor } from './SectionContext'
+import { active_view } from './filters'
 import siteConfig from '../site.config'
+
+
+const FACET_QUERY_KEYS = ['view', 'field', 'on']
+
+
+function without_facet_query(query) {
+  const next = { ...query }
+  for (const key of FACET_QUERY_KEYS) delete next[key]
+  return next
+}
+
+
+function use_contents_navigate(on_close) {
+  const router = useRouter()
+
+  function dismiss() {
+    on_close?.()
+  }
+
+  function clear_facet_view() {
+    if (active_view(router.query) === 'pages') return Promise.resolve()
+    const query = without_facet_query(router.query)
+    return router.replace({ pathname: router.pathname, query }, undefined, { shallow: true, scroll: false })
+  }
+
+  function navigate_to_section(e, id) {
+    e.preventDefault()
+    dismiss()
+    clear_facet_view().then(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+    })
+  }
+
+  return { navigate_to_section }
+}
 
 // Longest entry name rendered in full; past this, Sections and Related elide. Sized to
 // one line of a panel column (12rem) so a capped name never wraps.
@@ -110,18 +147,25 @@ function Description({ page }) {
 }
 
 
-function Sections({ sections, on_navigate }) {
+function Sections({ sections, navigate_to_section }) {
   return (
     <div className="page-contents-block">
       <Label>On This Page</Label>
       <ul className="page-contents-list">
-        {sections.map((section, i) => (
-          <li key={`${section.name}-${i}`} className={section.level >= 3 ? 'page-contents-sub' : undefined}>
-            <a href={`#${section_anchor(section.name)}`} title={section.name} onClick={on_navigate}>
-              {cap_name(section.name)}
-            </a>
-          </li>
-        ))}
+        {sections.map((section, i) => {
+          const id = section_anchor(section.name)
+          return (
+            <li key={`${section.name}-${i}`} className={section.level >= 3 ? 'page-contents-sub' : undefined}>
+              <a
+                href={`#${id}`}
+                title={section.name}
+                onClick={(e) => navigate_to_section(e, id)}
+              >
+                {cap_name(section.name)}
+              </a>
+            </li>
+          )
+        })}
       </ul>
     </div>
   )
@@ -158,8 +202,11 @@ function EditLink({ page }) {
 }
 
 
-export default function PageContents({ order, on_navigate }) {
-  const { page, sections } = useSection()
+export default function PageContents({ order, on_navigate, page: page_override, sections: sections_override }) {
+  const ctx = useSection()
+  const page = page_override ?? ctx.page
+  const sections = sections_override ?? ctx.sections
+  const { navigate_to_section } = use_contents_navigate(on_navigate)
   const items = contents_items(order, page, sections)
   if (!items.length) return null
 
@@ -167,7 +214,7 @@ export default function PageContents({ order, on_navigate }) {
     <div className="page-contents">
       {items.map(item => {
         if (item === 'description') return <Description key={item} page={page} />
-        if (item === 'sections') return <Sections key={item} sections={sections} on_navigate={on_navigate} />
+        if (item === 'sections') return <Sections key={item} sections={sections} navigate_to_section={navigate_to_section} />
         if (item === 'related') return <Related key={item} page={page} />
         return <EditLink key={item} page={page} />
       })}

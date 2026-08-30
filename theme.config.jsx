@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import Breadcrumbs from './components/Breadcrumbs'
 import PageHeader from './components/PageHeader'
 import TagList from './components/TagList'
 import PageContents, { TocTitle, TocExtra, TocHeading } from './components/PageContents'
-import { ContentsToggle, ContentsPanel } from './components/ContentsMenu'
+import { ContentsToggle, ContentsPanel, close_contents_panel } from './components/ContentsMenu'
 import SiteFooter from './components/SiteFooter'
 import GitHubLink from './components/GitHubLink'
 import FeedLink from './components/FeedLink'
@@ -103,6 +103,11 @@ function PageTitle({ children }) {
    *  heading, page metadata, then the panel that action opens — the same sidebar body,
    *  inline, at widths where Nextra hides the sidebar. */
   const [open, set_open] = useState(false)
+  const dismiss = useCallback(() => set_open(false), [])
+  const close_panel = useCallback(
+    () => close_contents_panel(dismiss),
+    [dismiss],
+  )
 
   return (
     <>
@@ -112,7 +117,7 @@ function PageTitle({ children }) {
       </PageCrumbRow>
       <PageHeading>{children}</PageHeading>
       <PageMeta />
-      <ContentsPanel open={open} on_close={() => set_open(false)} />
+      <ContentsPanel open={open} on_close={close_panel} on_route_close={dismiss} />
     </>
   )
 }
