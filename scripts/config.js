@@ -3,13 +3,8 @@
  * Reads mndsite.yaml, validates it, applies defaults, and generates site.config.js so
  * Next.js and Nextra can consume the config at build time.
  *
- * `fields` names the frontmatter keys mndsite reads; `facets` declares the content
- * dimensions rendered as page chips and as optional sidebar indexes. Frontmatter is
- * inert unless named here.
- *
- * Every optional key has a named default — `none`, `auto`, or `default` — so no value in
- * the file is ever blank. The loader resolves those tokens to the built-in behavior.
- * On/off facet flags are booleans; enums are used only when several values are valid.
+ * `frontmatter.facets` declare content dimensions; `frontmatter.groups` bundle facet names
+ * into sidebar browse groups. `versioning` is optional.
  */
 const fs   = require('fs')
 const path = require('path')
@@ -19,30 +14,48 @@ const { resolve_theme } = require('./theme')
 const { normalize_semver } = require('./semver')
 
 
-// Elements each display list accepts. `header` also accepts any declared facet name.
-// `toc` is the right sidebar; `contents` is the inline panel behind the Contents button.
 const DISPLAY_ELEMENTS = {
   crumbs:   ['home', 'path'],
   header:   ['date', 'reading_time', 'facets'],
+  sidebar:  ['pages'],
   toc:      ['description', 'sections', 'related', 'edit'],
   contents: ['description', 'sections', 'related', 'edit'],
   navbar:   ['theme', 'feed', 'github'],
 }
 
-// Per-host "Edit this page" URL templates. Hosts without an entry fall back to repo_url.
 const EDIT_TEMPLATES = {
   'github.com':    '{repo_url}/edit/{branch}/{file}',
   'gitlab.com':    '{repo_url}/-/edit/{branch}/{file}',
   'bitbucket.org': '{repo_url}/src/{branch}/{file}?mode=edit',
 }
 
-// Chip hues, reused for facets that do not name a color (assigned in declaration order).
 const FACET_COLORS = { blue: 210, violet: 265, amber: 35, rose: 340, green: 150, teal: 190 }
 const COLOR_ORDER = Object.keys(FACET_COLORS)
-const FACET_SORTS = ['alpha', 'semver', 'date', 'listed']
+const FACET_SORTS = ['alpha', 'semver', 'date']
 
-// Tokens naming a key's built-in behavior rather than a value. A blank reads the same.
 const UNSET_TOKENS = new Set(['', 'none', 'auto', 'default'])
+
+const FACET_DEFAULTS = {
+  categories: { key: ['categories'], label: 'Category', color: 'blue' },
+  tags:       { key: ['tags'],       label: 'Tag',      color: 'violet' },
+  status:     { key: ['status'],     label: 'Status',     color: 'amber' },
+}
+
+const SIDEBAR_GROUP_DEFAULTS = {
+  Tags: ['status', 'categories', 'tags'],
+}
+
+
+function default_groups(versioning) {
+  const groups = { ...SIDEBAR_GROUP_DEFAULTS }
+  if (versioning) groups.Versions = 'versioning'
+  return groups
+}
+
+
+function default_sidebar(versioning) {
+  return versioning ? ['pages', 'Tags', 'Versions'] : ['pages', 'Tags']
+}
 
 
 const DEFAULTS = {
@@ -54,23 +67,21 @@ const DEFAULTS = {
   display: {
     crumbs: ['home', 'path'],
     header: ['date', 'reading_time', 'facets'],
+    sidebar: ['pages', 'Tags'],
     toc:    ['description', 'sections', 'related', 'edit'],
     navbar: ['theme', 'feed', 'github'],
   },
   edit:           { branch: 'main', path: 'auto', url: 'auto' },
   nav_order:      {},
-  fields: {
+  frontmatter: {
     title:        'title',
     description:  ['description', 'desc'],
     date:         'date',
     reading_time: 'reading_time',
     related:      'related',
-    identity:     'doc_id',
+    facets:         FACET_DEFAULTS,
   },
-  facets: {
-    categories: { field: 'categories', label: 'Category', color: 'blue' },
-    tags:       { field: 'tags',       label: 'Tag',      color: 'violet' },
-  },
+  versioning:     null,
   content:        './docs',
   output:         './dist',
   components:     'none',
@@ -79,13 +90,11 @@ const DEFAULTS = {
 
 
 function unset(value) {
-  /** True when a value names its built-in behavior (none/auto/default) or is blank. */
   return value == null || UNSET_TOKENS.has(String(value).trim().toLowerCase())
 }
 
 
 function optional(value) {
-  /** An optional string; its default token resolves to '' for the consuming component. */
   return unset(value) ? '' : String(value).trim()
 }
 
@@ -95,20 +104,23 @@ function label_for(name) {
 }
 
 
+function sidebar_tokens(groups_cfg) {
+  return ['pages', ...Object.keys(groups_cfg || {})]
+}
+
+
 function resolve_hue(name, color, index) {
-  /** Named token, raw hue number, or the next token in declaration order. */
   if (unset(color)) return FACET_COLORS[COLOR_ORDER[index % COLOR_ORDER.length]]
   if (FACET_COLORS[color] != null) return FACET_COLORS[color]
   const hue = Number(color)
   if (Number.isFinite(hue) && hue >= 0 && hue < 360) return hue
   throw new Error(
-    `mndsite.yaml: unknown facets.${name}.color '${color}' — use ${COLOR_ORDER.join(', ')} or a hue 0-359`
+    `mndsite.yaml: unknown color '${color}' on ${name} — use ${COLOR_ORDER.join(', ')} or a hue 0-359`
   )
 }
 
 
 function as_bool(name, value, fallback = false) {
-  /** On/off flags. Absent is the fallback; anything other than a YAML boolean throws. */
   if (value == null || value === '') return fallback
   if (typeof value === 'boolean') return value
   throw new Error(`mndsite.yaml: ${name} must be true or false`)
@@ -116,7 +128,6 @@ function as_bool(name, value, fallback = false) {
 
 
 function resolve_release(config_dir) {
-  /** Site release: package.json version, then the nearest git tag. Empty if neither. */
   try {
     const pkg = JSON.parse(fs.readFileSync(path.join(config_dir, 'package.json'), 'utf8'))
     const v = normalize_semver(pkg.version)
@@ -133,90 +144,114 @@ function resolve_release(config_dir) {
 }
 
 
-function resolve_facet(name, spec, index) {
-  /** Fill one facet declaration: field is required, everything else has a default. */
-  const cfg = { ...spec }
-  if (!cfg.field) throw new Error(`mndsite.yaml: facets.${name} requires a 'field'`)
+function normalize_key_list(key, path_label) {
+  if (key == null || key === '') throw new Error(`mndsite.yaml: ${path_label} requires a 'key'`)
+  const list = Array.isArray(key) ? key : [key]
+  if (!list.length) throw new Error(`mndsite.yaml: ${path_label}.key must be a non-empty list`)
+  return list.map(v => String(v).trim())
+}
 
+
+function resolve_facet(name, spec, index) {
+  const cfg = { ...spec }
+  if (cfg.field != null && cfg.field !== '') {
+    throw new Error(`mndsite.yaml: frontmatter.facets.${name}.field was renamed to 'key'`)
+  }
+  cfg.key = normalize_key_list(cfg.key, `frontmatter.facets.${name}`)
   cfg.label = cfg.label || label_for(name)
   cfg.sort  = cfg.sort || 'alpha'
-  cfg.hue   = resolve_hue(name, cfg.color, index)
-  cfg.index   = as_bool(`facets.${name}.index`, cfg.index)
-  cfg.inherit = as_bool(`facets.${name}.inherit`, cfg.inherit)
-  cfg.history = as_bool(`facets.${name}.history`, cfg.history)
-  cfg.default = unset(cfg.default) ? '' : String(cfg.default).trim()
-  cfg.group_by = unset(cfg.group_by) ? '' : String(cfg.group_by).trim()
+  cfg.hue   = resolve_hue(`frontmatter.facets.${name}`, cfg.color, index)
 
   if (!FACET_SORTS.includes(cfg.sort)) {
-    throw new Error(`mndsite.yaml: unknown facets.${name}.sort '${cfg.sort}' — use ${FACET_SORTS.join(', ')}`)
+    throw new Error(
+      `mndsite.yaml: unknown frontmatter.facets.${name}.sort '${cfg.sort}' — use ${FACET_SORTS.join(', ')}`
+    )
   }
-  if (cfg.values != null && !Array.isArray(cfg.values)) {
-    throw new Error(`mndsite.yaml: facets.${name}.values must be a list`)
+  for (const legacy of ['index', 'inherit', 'history', 'default', 'group_by', 'values', 'field']) {
+    if (legacy === 'field') continue
+    if (cfg[legacy] != null && cfg[legacy] !== '') {
+      throw new Error(
+        `mndsite.yaml: frontmatter.facets.${name}.${legacy} is not supported — use versioning for edition behavior`
+      )
+    }
   }
   return cfg
 }
 
 
 function resolve_facets(raw) {
-  const entries = Object.entries(raw || DEFAULTS.facets)
-  const facets = Object.fromEntries(entries.map(([name, spec], i) => [name, resolve_facet(name, spec || {}, i)]))
-  for (const [name, spec] of Object.entries(facets)) {
-    if (spec.group_by && !facets[spec.group_by]) {
-      throw new Error(`mndsite.yaml: facets.${name}.group_by references unknown facet '${spec.group_by}'`)
+  const entries = Object.entries(raw || FACET_DEFAULTS)
+  return Object.fromEntries(entries.map(([name, spec], i) => [name, resolve_facet(name, spec || {}, i)]))
+}
+
+
+function resolve_config_groups(raw, facets, versioning) {
+  const facet_names = Object.keys(facets || {})
+  const entries = Object.entries(raw || SIDEBAR_GROUP_DEFAULTS)
+  return Object.fromEntries(entries.map(([name, value]) => {
+    if (value === 'versioning') {
+      if (!versioning) {
+        throw new Error(
+          `mndsite.yaml: frontmatter.groups.${name} is versioning but no versioning block is configured`
+        )
+      }
+      return [name, 'versioning']
     }
-  }
-  return facets
-}
-
-
-function resolve_sidebar_group(group, facets, index) {
-  /** One left-nav index group: a label and one or more facet names. The first facet
-   *  is the default selection target and the group id for ?view=. */
-  if (!group || typeof group !== 'object' || Array.isArray(group)) {
-    throw new Error(`mndsite.yaml: display.sidebar[${index}] must be an object with label and facets`)
-  }
-  const label = group.label
-  if (!label || typeof label !== 'string' || !label.trim()) {
-    throw new Error(`mndsite.yaml: display.sidebar[${index}] requires a label`)
-  }
-  const names = group.facets
-  if (!Array.isArray(names) || !names.length) {
-    throw new Error(`mndsite.yaml: display.sidebar[${index}].facets must be a non-empty list`)
-  }
-  for (const name of names) {
-    if (!facets[name]) {
-      throw new Error(`mndsite.yaml: display.sidebar[${index}].facets references unknown facet '${name}'`)
+    if (typeof value === 'string') {
+      throw new Error(
+        `mndsite.yaml: frontmatter.groups.${name} must be a facet list or 'versioning'`
+      )
     }
+    if (!Array.isArray(value) || !value.length) {
+      throw new Error(`mndsite.yaml: frontmatter.groups.${name} must be a non-empty list of facet names`)
+    }
+    const items = value.map(facet => {
+      const key = String(facet).trim()
+      if (!facet_names.includes(key)) {
+        throw new Error(`mndsite.yaml: frontmatter.groups.${name} references unknown facet '${key}'`)
+      }
+      return key
+    })
+    return [name, items]
+  }))
+}
+
+
+function resolve_versioning(raw) {
+  if (raw == null || unset(raw)) return null
+  if (typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error(`mndsite.yaml: versioning must be an object`)
   }
-  const id = unset(group.id) ? names[0] : String(group.id).trim()
-  if (!id) throw new Error(`mndsite.yaml: display.sidebar[${index}].id must be a non-empty string`)
-  return { id, label: label.trim(), facets: [...names] }
+  const cfg = { ...raw }
+  cfg.field = unset(cfg.field) ? 'version' : String(cfg.field).trim()
+  cfg.label = cfg.label || 'Versions'
+  cfg.sort  = 'semver'
+  cfg.hue   = resolve_hue('versioning', cfg.color, 0)
+  cfg.inherit = as_bool('versioning.inherit', cfg.inherit)
+  cfg.history = as_bool('versioning.history', cfg.history)
+  cfg.default = unset(cfg.default) ? 'latest' : String(cfg.default).trim()
+  cfg.group_by = unset(cfg.group_by) ? '' : String(cfg.group_by).trim()
+  return cfg
 }
 
 
-function sidebar_groups_from_facets(facets) {
-  /** Legacy fallback: one group per facet with index: true, in declaration order. */
-  return Object.entries(facets)
-    .filter(([, spec]) => spec.index)
-    .map(([name, spec]) => ({ id: name, label: spec.label || label_for(name), facets: [name] }))
+function header_field_keys(facets, versioning) {
+  const keys = []
+  const add = key => { if (key && !keys.includes(key)) keys.push(key) }
+  if (versioning) add(versioning.field)
+  for (const spec of Object.values(facets || {})) {
+    for (const key of spec.key) add(key)
+  }
+  return keys
 }
 
 
-function resolve_sidebar(raw, facets) {
-  if (raw == null) return sidebar_groups_from_facets(facets)
-  if (!Array.isArray(raw)) throw new Error(`mndsite.yaml: display.sidebar must be a list`)
-  return raw.map((group, i) => resolve_sidebar_group(group, facets, i))
-}
-
-
-function resolve_display(raw, facets) {
-  /** Element lists: order is display order, and omission disables the element. The
-   *  inline Contents panel mirrors the sidebar unless `contents` is given its own list. */
+function resolve_display(raw, facets, groups_cfg, versioning) {
   const raw_display = raw || {}
   for (const list of Object.keys(raw_display)) {
-    if (!DISPLAY_ELEMENTS[list] && list !== 'sidebar') {
+    if (!DISPLAY_ELEMENTS[list]) {
       throw new Error(
-        `mndsite.yaml: unknown display list '${list}' — use ${[...Object.keys(DISPLAY_ELEMENTS), 'sidebar'].join(', ')}`
+        `mndsite.yaml: unknown display list '${list}' — use ${Object.keys(DISPLAY_ELEMENTS).join(', ')}`
       )
     }
   }
@@ -224,14 +259,19 @@ function resolve_display(raw, facets) {
   const cfg = { ...DEFAULTS.display, ...raw_display }
   if (!Array.isArray(cfg.toc)) throw new Error(`mndsite.yaml: display.toc must be a list`)
   if (!cfg.contents) cfg.contents = [...cfg.toc]
-  cfg.sidebar = resolve_sidebar(raw_display.sidebar, facets)
+
+  const field_keys = header_field_keys(facets, versioning)
+  const sidebar_valid = sidebar_tokens(groups_cfg)
 
   for (const [list, allowed] of Object.entries(DISPLAY_ELEMENTS)) {
     const items = cfg[list]
     if (!Array.isArray(items)) throw new Error(`mndsite.yaml: display.${list} must be a list`)
 
-    // Naming a facet in `header` places its values there regardless of index.
-    const valid = list === 'header' ? [...allowed, ...Object.keys(facets)] : allowed
+    const valid = list === 'header'
+      ? [...allowed, ...Object.keys(facets), ...field_keys]
+      : list === 'sidebar'
+        ? sidebar_valid
+        : allowed
     for (const item of items) {
       if (!valid.includes(item)) {
         throw new Error(`mndsite.yaml: unknown display.${list} element '${item}' — use ${valid.join(', ')}`)
@@ -242,26 +282,28 @@ function resolve_display(raw, facets) {
 }
 
 
-function resolve_fields(raw) {
-  /** Frontmatter key mappings. `none` disables one, so no key is read on its behalf. */
-  const cfg = { ...DEFAULTS.fields, ...(raw || {}) }
-  return Object.fromEntries(Object.entries(cfg).map(([name, key]) =>
+function resolve_frontmatter(raw) {
+  const raw_fm = raw || {}
+  const facets = resolve_facets({ ...FACET_DEFAULTS, ...(raw_fm.facets || {}) })
+  const cfg = { ...DEFAULTS.frontmatter, ...raw_fm }
+  delete cfg.facets
+  delete cfg.groups
+
+  const mappings = Object.fromEntries(Object.entries(cfg).map(([name, key]) =>
     [name, Array.isArray(key) ? key : (unset(key) ? null : String(key))]
   ))
+  mappings.facets = facets
+  return mappings
 }
 
 
 function content_in_repo(config_dir, content_dir) {
-  /** Repo-relative location of the content root, assuming mndsite.yaml sits at the repo
-   *  root. Anything outside that directory is unrepresentable — fall back to the root. */
   const rel = path.relative(config_dir, content_dir).split(path.sep).join('/')
   return !rel || rel.startsWith('..') || path.isAbsolute(rel) ? '' : rel
 }
 
 
 function resolve_edit(raw, repo_url, config_dir, content_dir) {
-  /** "Edit this page" targets, used only when repo_url is set. An empty url template
-   *  means the host is unknown, and the link falls back to repo_url itself. */
   const cfg = { ...DEFAULTS.edit, ...(raw || {}) }
 
   if (!cfg.branch) throw new Error(`mndsite.yaml: edit.branch must be a branch name`)
@@ -285,20 +327,37 @@ function load_config(yaml_path) {
   const cfg  = { ...DEFAULTS, ...raw }
 
   if (!cfg.title) throw new Error(`mndsite.yaml: 'title' is required`)
+  if (raw && raw.fields != null) {
+    throw new Error(`mndsite.yaml: 'fields' was renamed to 'frontmatter'`)
+  }
+  if (raw && raw.facets != null) {
+    throw new Error(`mndsite.yaml: top-level 'facets' belongs under frontmatter.facets`)
+  }
+  if (raw && raw.groups != null) {
+    throw new Error(`mndsite.yaml: top-level 'groups' belongs under frontmatter.groups`)
+  }
 
   for (const key of ['description', 'repo_url', 'feed_url', 'footer', 'components', 'assets']) {
     cfg[key] = optional(cfg[key])
   }
 
-  // navbar/footer are optional background overrides; their 'none' default resolves to ''
   const theme = { ...DEFAULTS.theme, ...(raw.theme || {}) }
   theme.navbar = optional(theme.navbar)
   theme.footer = optional(theme.footer)
 
   cfg.theme       = resolve_theme(theme)
-  cfg.fields      = resolve_fields(raw.fields)
-  cfg.facets      = resolve_facets(raw.facets)
-  cfg.display     = resolve_display(raw.display, cfg.facets)
+  cfg.versioning  = resolve_versioning(raw.versioning)
+  cfg.frontmatter = resolve_frontmatter(raw.frontmatter)
+  cfg.frontmatter.groups = resolve_config_groups(
+    { ...default_groups(cfg.versioning), ...(raw?.frontmatter?.groups || {}) },
+    cfg.frontmatter.facets,
+    cfg.versioning,
+  )
+  const display_raw = { ...DEFAULTS.display, ...(raw?.display || {}) }
+  if (!raw?.display?.sidebar) display_raw.sidebar = default_sidebar(cfg.versioning)
+  cfg.display = resolve_display(
+    display_raw, cfg.frontmatter.facets, cfg.frontmatter.groups, cfg.versioning,
+  )
   cfg.release     = resolve_release(dir)
   cfg.dir         = dir
 
@@ -316,7 +375,7 @@ function write_site_config(config, dest_dir) {
   const dir  = dest_dir || path.join(__dirname, '..')
   const keys = [
     'title', 'repo_url', 'feed_url', 'description', 'footer',
-    'theme', 'nav_order', 'fields', 'facets', 'release',
+    'theme', 'nav_order', 'frontmatter', 'versioning', 'release',
     'display', 'edit',
   ]
   const values = Object.fromEntries(keys.map(k => [k, config[k]]))
@@ -331,4 +390,7 @@ function write_site_config(config, dest_dir) {
 }
 
 
-module.exports = { load_config, write_site_config, unset, DEFAULTS, FACET_COLORS }
+module.exports = {
+  load_config, write_site_config, unset, DEFAULTS, FACET_COLORS, FACET_DEFAULTS,
+  SIDEBAR_GROUP_DEFAULTS, header_field_keys, default_groups, default_sidebar,
+}

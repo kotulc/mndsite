@@ -28,60 +28,50 @@ theme:
   navbar: primary      # none, primary (theme tint), or any CSS color
   footer: primary
 
-# Frontmatter keys mndsite reads. Frontmatter is inert unless named here or in facets.
-# `none` disables a mapping: with `title: none` no key names the title and pages fall
-# back to their slug, so nav labels and <title> still agree.
-fields:
+# Frontmatter keys mndsite reads. `facets` declare content dimensions; `groups` bundle
+# facet names for the sidebar (chip order within each group follows the facet list).
+frontmatter:
   title: title
   description: [description, desc]
   date: date
   reading_time: reading_time
   related: related
-  identity: doc_id
+  facets:
+    categories:
+      key: categories
+      label: Category
+      color: blue
+      sort: alpha
+    tags:
+      key: tags
+      label: Tags
+      color: violet
+      sort: alpha
+    status:
+      key: status
+      label: Status
+      color: amber
+      sort: alpha
+  groups:
+    Tags: [status, categories, tags]
+    Versions: versioning
 
-# Content dimensions. `field` is required. `index: true` puts a chip after Pages in the
-# left nav; the tree is replaced by that facet's values and the body lists matching pages.
-# Pages is built-in — chips render only when at least one facet is an index.
-facets:
-  version:
-    field: version
-    label: Versions
-    color: teal          # blue, violet, amber, rose, green, teal, or a hue 0-359
-    sort: semver         # alpha, semver, date, listed
-    default: latest      # latest, or a specific version
-    inherit: true
-    history: true
-    group_by: status
-    index: true
-  tags:
-    field: tags
-    label: Tags
-    color: violet
-    index: true
-  categories:
-    field: categories
-    label: Category
-    color: blue
-  status:
-    field: status
-    label: Status
-    color: amber
-    sort: listed         # alpha, semver, date, listed
-    values: [draft, stable, deprecated]
+# Optional edition tracking — wire into the sidebar via a group value of `versioning`.
+versioning:
+  field: version
+  label: Versions
+  color: teal
+  inherit: true
+  history: true
+  default: latest
+  group_by: status
 
-# Rendered elements, in display order. Omit an element to turn it off; `header` also
-# accepts any facet name, which places that facet's chips there.
-# `sidebar` groups left-nav index chips; each group lists one or more facets whose
-# values appear when that chip is selected. Omit `sidebar` to derive one group per
-# facet with `index: true`.
+# Rendered elements, in display order. `sidebar` lists browse groups; `header` also accepts
+# facet names and frontmatter field keys.
 display:
   crumbs: [home, path]
+  sidebar: [pages, Tags, Versions]
   header: [date, reading_time, version, status, facets]
-  sidebar:
-    - label: Versions
-      facets: [version, status]
-    - label: Tags
-      facets: [tags, categories]
   toc: [description, sections, related, edit]
   contents: [description, sections, related]
   navbar: [theme, feed, github]

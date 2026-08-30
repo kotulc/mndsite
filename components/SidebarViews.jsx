@@ -1,26 +1,22 @@
 /**
  * Left-nav index switcher and value lists.
- * Pages is the directory tree. Any other toggle replaces the tree with that group's
- * facet values. Nextra owns the tree; data-view hides it while an index is open.
+ * Pages is the directory tree. Each configured facet (and optional versioning) is a
+ * sidebar group; field keys within a group render as chips in declaration order.
  *
- * The portal mounts inside `.nextra-scrollbar` so the switcher and facet lists share
- * the tree's nx-p-4 padding. Value rows reuse Nextra menu metrics (gap-1, px-2 py-1.5,
- * nested ml-3 + left rule) so Versions/Tags line up with the directory tree.
- *
- * State: ?view=<pages|group> ?facet=<name> ?on=<value>
+ * State: ?view=<pages|group> ?field=<frontmatter-key> ?on=<value>
  */
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/router'
-import { facet_config } from './facets'
+import siteConfig from '../site.config'
+import { field_label } from './groups'
 import {
-  active_facet, active_view, index_entries, selected_value, sidebar_groups,
+  active_field, active_view, index_entries, selected_value, sidebar_groups, sidebar_toggles,
 } from './filters'
 
 
 const SIDEBAR = '.nextra-sidebar-container'
 
-/** Nextra sidebar menu metrics (nextra-theme-docs Menu / Folder). */
 const MENU_LIST = 'nx-flex nx-flex-col nx-gap-1'
 const MENU_BORDER = [
   "nx-relative before:nx-absolute before:nx-inset-y-1 before:nx-w-px",
@@ -70,14 +66,14 @@ function group_entries(entries) {
 }
 
 
-function ValueButton({ entry, selected, on_select, facet }) {
+function ValueButton({ entry, selected, on_select, field_key }) {
   const active = entry.value === selected
   return (
     <button
       type="button"
-      className={`chip chip-${facet}${active ? ' is-active' : ''}`}
+      className={`chip chip-${field_key}${active ? ' is-active' : ''}`}
       aria-pressed={active}
-      onClick={() => on_select(facet, entry.value)}
+      onClick={() => on_select(field_key, entry.value)}
     >
       {entry.label}
     </button>
@@ -85,7 +81,7 @@ function ValueButton({ entry, selected, on_select, facet }) {
 }
 
 
-function ChipRow({ items, facet, selected, on_select }) {
+function ChipRow({ items, field_key, selected, on_select }) {
   return (
     <div className={CHIP_ROW}>
       {items.map(entry => (
@@ -94,7 +90,7 @@ function ChipRow({ items, facet, selected, on_select }) {
           entry={entry}
           selected={selected}
           on_select={on_select}
-          facet={facet}
+          field_key={field_key}
         />
       ))}
     </div>
@@ -102,18 +98,19 @@ function ChipRow({ items, facet, selected, on_select }) {
 }
 
 
-function FacetList({ facet, selected_facet, selected_value, on_select }) {
-  const groups = group_entries(index_entries(facet))
+function FieldList({ group_id, field_key, selected_field, selected_value, on_select, show_label }) {
+  const groups = group_entries(index_entries(group_id, field_key))
   if (!groups.length) return null
-  const active = facet === selected_facet ? selected_value : ''
+  const active = field_key === selected_field ? selected_value : ''
 
   return (
     <li>
+      {show_label ? <div className={GROUP_LABEL}>{field_label(field_key)}</div> : null}
       {groups.map(({ group, items }) => {
         const chips = (
           <ChipRow
             items={items}
-            facet={facet}
+            field_key={field_key}
             selected={active}
             on_select={on_select}
           />
@@ -137,21 +134,25 @@ function FacetList({ facet, selected_facet, selected_value, on_select }) {
 }
 
 
-function IndexList({ group, selected_facet, selected, on_select }) {
-  const facets = group.facets.filter(name => index_entries(name).length)
-  if (!facets.length) {
+function IndexList({ group, selected_field, selected, on_select }) {
+  const fields = group.fields.filter(key => index_entries(group.id, key).length)
+  if (!fields.length) {
     return <p className="sidebar-empty nx-px-2 nx-text-sm nx-text-gray-500 dark:nx-text-neutral-400">No values for this index.</p>
   }
 
+  const show_labels = fields.length > 1
+
   return (
     <ul className={MENU_LIST}>
-      {facets.map(facet => (
-        <FacetList
-          key={facet}
-          facet={facet}
-          selected_facet={selected_facet}
+      {fields.map(field_key => (
+        <FieldList
+          key={field_key}
+          group_id={group.id}
+          field_key={field_key}
+          selected_field={selected_field}
           selected_value={selected}
           on_select={on_select}
+          show_label={show_labels}
         />
       ))}
     </ul>
@@ -160,28 +161,19 @@ function IndexList({ group, selected_facet, selected, on_select }) {
 
 
 function Toggles({ current, on_select }) {
-  const groups = sidebar_groups()
+  const toggles = sidebar_toggles()
   return (
     <div className="sidebar-index-toggles nx-mb-2 nx-flex nx-flex-wrap nx-gap-1" role="tablist">
-      <button
-        type="button"
-        role="tab"
-        aria-selected={current === 'pages'}
-        className={current === 'pages' ? 'sidebar-toggle is-active' : 'sidebar-toggle'}
-        onClick={() => on_select('pages')}
-      >
-        Pages
-      </button>
-      {groups.map(group => (
+      {toggles.map(toggle => (
         <button
-          key={group.id}
+          key={toggle.id}
           type="button"
           role="tab"
-          aria-selected={current === group.id}
-          className={current === group.id ? 'sidebar-toggle is-active' : 'sidebar-toggle'}
-          onClick={() => on_select(group.id)}
+          aria-selected={current === toggle.id}
+          className={current === toggle.id ? 'sidebar-toggle is-active' : 'sidebar-toggle'}
+          onClick={() => on_select(toggle.id)}
         >
-          {group.label}
+          {toggle.label}
         </button>
       ))}
     </div>
@@ -191,50 +183,52 @@ function Toggles({ current, on_select }) {
 
 export default function SidebarViews() {
   const router = useRouter()
+  const toggles = sidebar_toggles()
   const groups = sidebar_groups()
-  const host = use_portal_host(groups.length > 0)
+  const host = use_portal_host(toggles.length > 1)
 
   const view = active_view(router.query)
   const group = view === 'pages' ? null : groups.find(g => g.id === view)
-  const facet = group ? active_facet(router.query, view) : ''
+  const field = group ? active_field(router.query, view) : ''
   const selected = group ? selected_value(router.query, view) : ''
 
   useEffect(() => {
-    if (!groups.length) return
+    if (toggles.length <= 1) return
     const container = document.querySelector(SIDEBAR)
     if (container) container.dataset.view = view
     document.documentElement.dataset.view = view
     return () => { delete document.documentElement.dataset.view }
-  }, [view, groups.length])
+  }, [view, toggles.length])
 
   function set_view(next) {
     const query = { ...router.query }
     delete query.view
-    delete query.facet
+    delete query.field
     delete query.on
     if (next !== 'pages') {
       const group = groups.find(g => g.id === next)
       if (!group) return
       query.view = next
-      const facet = group.facets[0]
-      const spec = facet_config(facet) || {}
       const value = selected_value({}, next)
-      if (value && value !== spec.default) query.on = value
+      const versioning = siteConfig.versioning
+      const default_on = group.versioning && versioning ? versioning.default : ''
+      if (value && value !== default_on) query.on = value
     }
     router.replace({ query }, undefined, { shallow: true, scroll: false })
   }
 
-  function set_on(facet, value) {
+  function set_on(field_key, value) {
     const query = { ...router.query, view }
-    if (facet !== group.facets[0]) query.facet = facet
-    else delete query.facet
-    const spec = facet_config(facet) || {}
-    if (value && value !== (spec.default || 'latest')) query.on = value
+    if (field_key !== group.fields[0]) query.field = field_key
+    else delete query.field
+    const versioning = siteConfig.versioning
+    const default_on = group.versioning && versioning ? versioning.default : ''
+    if (value && value !== default_on) query.on = value
     else delete query.on
     router.replace({ query }, undefined, { shallow: true, scroll: false })
   }
 
-  if (!host || !groups.length) return null
+  if (!host || toggles.length <= 1) return null
 
   return createPortal(
     <>
@@ -242,7 +236,7 @@ export default function SidebarViews() {
       {group && (
         <IndexList
           group={group}
-          selected_facet={facet}
+          selected_field={field}
           selected={selected}
           on_select={set_on}
         />

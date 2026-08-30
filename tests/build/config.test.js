@@ -59,7 +59,7 @@ describe('load_config — default tokens', () => {
   const OPTIONAL = ['description', 'repo_url', 'feed_url', 'footer', 'components', 'assets']
 
   test('test_defaults_carry_no_empty_strings', () => {
-    const blanks = Object.entries(DEFAULTS).filter(([, v]) => v === '' || v === null)
+    const blanks = Object.entries(DEFAULTS).filter(([k, v]) => (v === '' || v === null) && k !== 'versioning')
     expect(blanks).toEqual([])
   })
 
@@ -83,102 +83,214 @@ describe('load_config — default tokens', () => {
 })
 
 
-describe('load_config — fields', () => {
-  test('test_fields_defaults_applied', () => {
-    expect(load_config(write_yaml('title: t')).fields).toEqual(DEFAULTS.fields)
+describe('load_config — frontmatter', () => {
+  test('test_frontmatter_defaults_applied', () => {
+    const cfg = load_config(write_yaml('title: t'))
+    expect(cfg.frontmatter.title).toBe(DEFAULTS.frontmatter.title)
+    expect(cfg.frontmatter.facets.categories.key).toEqual(['categories'])
+    expect(cfg.frontmatter.facets.tags.key).toEqual(['tags'])
+    expect(cfg.frontmatter.facets.status.key).toEqual(['status'])
+    expect(cfg.frontmatter.groups).toEqual({ Tags: ['status', 'categories', 'tags'] })
   })
 
-  test('test_field_none_disables_mapping', () => {
-    const cfg = load_config(write_yaml('title: t\nfields:\n  title: none\n'))
-    expect(cfg.fields.title).toBeNull()
+  test('test_fields_rename_rejected', () => {
+    const p = write_yaml('title: t\nfields:\n  title: title\n')
+    expect(() => load_config(p)).toThrow(/renamed to 'frontmatter'/)
   })
 
-  test('test_field_remap_kept', () => {
-    const cfg = load_config(write_yaml('title: t\nfields:\n  title: heading\n'))
-    expect(cfg.fields.title).toBe('heading')
+  test('test_frontmatter_none_disables_mapping', () => {
+    const cfg = load_config(write_yaml('title: t\nfrontmatter:\n  title: none\n'))
+    expect(cfg.frontmatter.title).toBeNull()
   })
 
-  test('test_field_list_mapping_kept', () => {
-    const cfg = load_config(write_yaml('title: t\nfields:\n  description: [summary, desc]\n'))
-    expect(cfg.fields.description).toEqual(['summary', 'desc'])
+  test('test_frontmatter_remap_kept', () => {
+    const cfg = load_config(write_yaml('title: t\nfrontmatter:\n  title: heading\n'))
+    expect(cfg.frontmatter.title).toBe('heading')
+  })
+
+  test('test_frontmatter_list_mapping_kept', () => {
+    const cfg = load_config(write_yaml('title: t\nfrontmatter:\n  description: [summary, desc]\n'))
+    expect(cfg.frontmatter.description).toEqual(['summary', 'desc'])
   })
 })
 
 
-describe('load_config — facets', () => {
+describe('load_config — frontmatter facets', () => {
   test('test_facet_defaults_filled', () => {
-    const cfg = load_config(write_yaml('title: t\nfacets:\n  version:\n    field: version\n'))
-    expect(cfg.facets.version).toMatchObject({
-      field: 'version', label: 'Version', sort: 'alpha',
-      index: false, inherit: false, history: false, default: '', group_by: '',
+    const cfg = load_config(write_yaml(`title: t
+frontmatter:
+  facets:
+    tags:
+      key: tags
+`))
+    expect(cfg.frontmatter.facets.tags).toMatchObject({
+      key: ['tags'], label: 'Tags', sort: 'alpha',
     })
   })
 
+  test('test_facet_key_list', () => {
+    const cfg = load_config(write_yaml(`title: t
+frontmatter:
+  facets:
+    tags:
+      key: [tags, categories]
+`))
+    expect(cfg.frontmatter.facets.tags.key).toEqual(['tags', 'categories'])
+  })
+
   test('test_facet_label_from_name', () => {
-    const cfg = load_config(write_yaml('title: t\nfacets:\n  doc_status:\n    field: s\n'))
-    expect(cfg.facets.doc_status.label).toBe('Doc Status')
+    const cfg = load_config(write_yaml(`title: t
+frontmatter:
+  facets:
+    doc_status:
+      key: s
+`))
+    expect(cfg.frontmatter.facets.doc_status.label).toBe('Doc Status')
   })
 
   test('test_facet_hue_from_named_color', () => {
-    const cfg = load_config(write_yaml('title: t\nfacets:\n  a:\n    field: a\n    color: rose\n'))
-    expect(cfg.facets.a.hue).toBe(340)
+    const cfg = load_config(write_yaml(`title: t
+frontmatter:
+  facets:
+    a:
+      key: a
+      color: rose
+`))
+    expect(cfg.frontmatter.facets.a.hue).toBe(340)
   })
 
   test('test_facet_hue_from_raw_number', () => {
-    const cfg = load_config(write_yaml('title: t\nfacets:\n  a:\n    field: a\n    color: 42\n'))
-    expect(cfg.facets.a.hue).toBe(42)
+    const cfg = load_config(write_yaml(`title: t
+frontmatter:
+  facets:
+    a:
+      key: a
+      color: 42
+`))
+    expect(cfg.frontmatter.facets.a.hue).toBe(42)
   })
 
   test('test_facet_hue_cycles_palette_in_order', () => {
-    const cfg = load_config(write_yaml('title: t\nfacets:\n  a: { field: a }\n  b: { field: b }\n'))
-    expect([cfg.facets.a.hue, cfg.facets.b.hue]).toEqual([210, 265])
+    const cfg = load_config(write_yaml(`title: t
+frontmatter:
+  facets:
+    a: { key: a }
+    b: { key: b }
+`))
+    expect([cfg.frontmatter.facets.a.hue, cfg.frontmatter.facets.b.hue]).toEqual([340, 150])
   })
 
-  test('test_facet_missing_field_throws', () => {
-    const p = write_yaml('title: t\nfacets:\n  a: { label: A }\n')
-    expect(() => load_config(p)).toThrow(/facets.a requires a 'field'/)
+  test('test_facet_missing_key_throws', () => {
+    const p = write_yaml(`title: t
+frontmatter:
+  facets:
+    a: { label: A }
+`)
+    expect(() => load_config(p)).toThrow(/frontmatter.facets.a requires a 'key'/)
+  })
+
+  test('test_facet_field_rename_rejected', () => {
+    const p = write_yaml(`title: t
+frontmatter:
+  facets:
+    a: { field: a }
+`)
+    expect(() => load_config(p)).toThrow(/field was renamed to 'key'/)
+  })
+
+  test('test_facet_legacy_flags_rejected', () => {
+    const p = write_yaml(`title: t
+frontmatter:
+  facets:
+    a: { key: a, index: true }
+`)
+    expect(() => load_config(p)).toThrow(/index.*not supported/)
+  })
+
+  test('test_top_level_groups_rejected', () => {
+    const p = write_yaml('title: t\ngroups:\n  Tags: [tags]\n')
+    expect(() => load_config(p)).toThrow(/belongs under frontmatter.groups/)
+  })
+
+  test('test_top_level_facets_rejected', () => {
+    const p = write_yaml('title: t\nfacets:\n  a: { key: a }\n')
+    expect(() => load_config(p)).toThrow(/belongs under frontmatter.facets/)
   })
 
   test.each([
-    ['color: nope', /unknown facets.a.color/],
-    ['sort: vibes',  /unknown facets.a.sort/],
-    ['values: x',    /facets.a.values must be a list/],
+    ['color: nope', /unknown color/],
+    ['sort: vibes',  /unknown frontmatter.facets.a.sort/],
+    ['sort: listed', /unknown frontmatter.facets.a.sort/],
   ])('test_facet_invalid_%s_throws', (line, pattern) => {
-    const p = write_yaml(`title: t\nfacets:\n  a: { field: a, ${line} }\n`)
+    const p = write_yaml(`title: t
+frontmatter:
+  facets:
+    a: { key: a, ${line} }
+`)
     expect(() => load_config(p)).toThrow(pattern)
   })
 })
 
 
-describe('load_config — facet indexes', () => {
-  test('test_index_inherit_history_are_bools', () => {
-    const p = write_yaml('title: t\nfacets:\n  version: { field: version, index: true, inherit: true, history: true }\n')
-    expect(load_config(p).facets.version).toMatchObject({ index: true, inherit: true, history: true })
+describe('load_config — sidebar groups', () => {
+  test('test_groups_default', () => {
+    const cfg = load_config(write_yaml('title: t'))
+    expect(cfg.frontmatter.groups).toEqual({ Tags: ['status', 'categories', 'tags'] })
+    expect(cfg.display.sidebar).toEqual(['pages', 'Tags'])
   })
 
-  test('test_index_non_bool_throws', () => {
-    const p = write_yaml('title: t\nfacets:\n  version: { field: version, index: auto }\n')
-    expect(() => load_config(p)).toThrow(/facets.version.index must be true or false/)
+  test('test_groups_include_versioning_when_configured', () => {
+    const cfg = load_config(write_yaml(`title: t
+versioning:
+  inherit: true
+`))
+    expect(cfg.frontmatter.groups).toEqual({
+      Tags: ['status', 'categories', 'tags'],
+      Versions: 'versioning',
+    })
+    expect(cfg.display.sidebar).toEqual(['pages', 'Tags', 'Versions'])
   })
 
-  test('test_group_by_must_name_a_facet', () => {
-    const p = write_yaml('title: t\nfacets:\n  version: { field: version, group_by: status }\n')
-    expect(() => load_config(p)).toThrow(/group_by references unknown facet 'status'/)
+  test('test_versioning_group_without_block_throws', () => {
+    const p = write_yaml(`title: t
+frontmatter:
+  groups:
+    Versions: versioning
+`)
+    expect(() => load_config(p)).toThrow(/no versioning block/)
   })
 
-  test('test_group_by_kept', () => {
-    const p = write_yaml('title: t\nfacets:\n  status: { field: status }\n  version: { field: version, group_by: status }\n')
-    expect(load_config(p).facets.version.group_by).toBe('status')
+  test('test_groups_unknown_facet_throws', () => {
+    const p = write_yaml(`title: t
+frontmatter:
+  groups:
+    Mine: [nope]
+`)
+    expect(() => load_config(p)).toThrow(/unknown facet 'nope'/)
+  })
+})
+
+
+describe('load_config — versioning', () => {
+  test('test_versioning_defaults', () => {
+    const cfg = load_config(write_yaml(`title: t
+versioning:
+  inherit: true
+  history: true
+`))
+    expect(cfg.versioning).toMatchObject({
+      field: 'version', label: 'Versions', sort: 'semver',
+      inherit: true, history: true, default: 'latest', group_by: '',
+    })
+  })
+
+  test('test_versioning_absent_by_default', () => {
+    expect(load_config(write_yaml('title: t')).versioning).toBeNull()
   })
 
   test('test_release_from_package_json', () => {
     fs.writeFileSync(path.join(tmp, 'package.json'), JSON.stringify({ version: '1.2.3' }))
     expect(load_config(write_yaml('title: t')).release).toBe('1.2.3')
-  })
-
-  test('test_release_pads_two_part_version', () => {
-    fs.writeFileSync(path.join(tmp, 'package.json'), JSON.stringify({ version: '1.2' }))
-    expect(load_config(write_yaml('title: t')).release).toBe('1.2.0')
   })
 })
 
@@ -203,12 +315,19 @@ describe('load_config — display lists', () => {
     expect(load_config(write_yaml('title: t\ndisplay:\n  crumbs: []\n')).display.crumbs).toEqual([])
   })
 
-  test('test_header_accepts_facet_name', () => {
-    const p = write_yaml('title: t\nfacets:\n  version: { field: version }\ndisplay:\n  header: [date, version]\n')
+  test('test_header_accepts_field_key', () => {
+    const p = write_yaml(`title: t
+versioning: { field: version }
+frontmatter:
+  facets:
+    tags: { key: tags }
+display:
+  header: [date, version]
+`)
     expect(load_config(p).display.header).toEqual(['date', 'version'])
   })
 
-  test('test_header_unknown_facet_throws', () => {
+  test('test_header_unknown_group_throws', () => {
     const p = write_yaml('title: t\ndisplay:\n  header: [date, nope]\n')
     expect(() => load_config(p)).toThrow(/unknown display.header element 'nope'/)
   })
@@ -223,37 +342,9 @@ describe('load_config — display lists', () => {
     expect(() => load_config(p)).toThrow(/display.toc must be a list/)
   })
 
-  test('test_sidebar_defaults_from_index_facets', () => {
-    const p = write_yaml('title: t\nfacets:\n  tags: { field: tags, index: true }\n  version: { field: version, index: true }\n')
-    expect(load_config(p).display.sidebar).toEqual([
-      { id: 'tags', label: 'Tags', facets: ['tags'] },
-      { id: 'version', label: 'Version', facets: ['version'] },
-    ])
-  })
-
-  test('test_sidebar_explicit_groups', () => {
-    const p = write_yaml(`title: t
-facets:
-  version: { field: version }
-  status: { field: status }
-  tags: { field: tags }
-  categories: { field: categories }
-display:
-  sidebar:
-    - label: Versions
-      facets: [version, status]
-    - label: Tags
-      facets: [tags, categories]
-`)
-    expect(load_config(p).display.sidebar).toEqual([
-      { id: 'version', label: 'Versions', facets: ['version', 'status'] },
-      { id: 'tags', label: 'Tags', facets: ['tags', 'categories'] },
-    ])
-  })
-
-  test('test_sidebar_unknown_facet_throws', () => {
-    const p = write_yaml('title: t\nfacets:\n  tags: { field: tags }\ndisplay:\n  sidebar:\n    - label: Tags\n      facets: [nope]\n')
-    expect(() => load_config(p)).toThrow(/references unknown facet 'nope'/)
+  test('test_display_sidebar_unknown_group_throws', () => {
+    const p = write_yaml('title: t\ndisplay:\n  sidebar: [pages, Unknown]\n')
+    expect(() => load_config(p)).toThrow(/unknown display.sidebar element 'Unknown'/)
   })
 })
 

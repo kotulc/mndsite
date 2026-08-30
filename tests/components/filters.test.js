@@ -1,29 +1,34 @@
 /**
  * Unit tests for facet indexes (components/filters.js).
- * The site config and page metadata are mocked.
  */
 jest.mock('../../site.config', () => ({
   release: '0.3.0',
   display: {
+    sidebar: ['pages', 'Tags', 'Versions'],
     header: ['date', 'reading_time', 'version', 'status', 'facets'],
-    sidebar: [
-      { id: 'version', label: 'Versions', facets: ['version', 'status'] },
-      { id: 'tags', label: 'Tags', facets: ['tags'] },
-    ],
   },
-  facets: {
-    version: {
-      field: 'version', label: 'Versions', sort: 'semver', hue: 190,
-      index: true, inherit: true, history: true, default: 'latest', group_by: 'status',
+  versioning: {
+    field: 'version',
+    label: 'Versions',
+    sort: 'semver',
+    hue: 190,
+    inherit: true,
+    history: true,
+    default: 'latest',
+    group_by: 'status',
+  },
+  frontmatter: {
+    groups: {
+      Tags: ['tags'],
+      Versions: 'versioning',
     },
-    tags: {
-      field: 'tags', label: 'Tags', sort: 'alpha', hue: 265,
-      index: true, inherit: false, history: false, default: '', group_by: '',
-    },
-    status: {
-      field: 'status', label: 'Status', sort: 'listed', hue: 35,
-      index: false, inherit: false, history: false, default: '', group_by: '',
-      values: ['draft', 'stable', 'deprecated'],
+    facets: {
+      tags: {
+        key: ['tags'],
+        label: 'Tags',
+        sort: 'alpha',
+        hue: 265,
+      },
     },
   },
 }), { virtual: true })
@@ -40,8 +45,8 @@ jest.mock('../../public/site-meta.json', () => ({
 }), { virtual: true })
 
 const {
-  active_facet, active_view, facet_domain, index_entries, index_facets,
-  listed_pages, selected_value, sidebar_groups,
+  active_field, active_view, field_domain, index_entries, sidebar_groups,
+  listed_pages, selected_value,
 } = require('../../components/filters')
 
 
@@ -49,29 +54,18 @@ const urls = pages => pages.map(p => p.url)
 
 
 describe('sidebar_groups', () => {
-  test('test_sidebar_groups_from_display', () => {
+  test('test_sidebar_groups_follow_display_sidebar', () => {
     expect(sidebar_groups()).toEqual([
-      { id: 'version', label: 'Versions', facets: ['version', 'status'] },
-      { id: 'tags', label: 'Tags', facets: ['tags'] },
+      { id: 'Tags', label: 'Tags', fields: ['tags'] },
+      { id: 'Versions', label: 'Versions', fields: ['version'], versioning: true },
     ])
   })
 })
 
 
-describe('index_facets', () => {
-  test('test_index_facets_primary_facet_per_group', () => {
-    expect(index_facets().map(f => f.name)).toEqual(['version', 'tags'])
-  })
-})
-
-
-describe('facet_domain', () => {
+describe('field_domain', () => {
   test('test_domain_semver_normalized_ascending', () => {
-    expect(facet_domain('version')).toEqual(['0.1.0', '0.2.0', '0.3.0'])
-  })
-
-  test('test_domain_listed_follows_declared_values', () => {
-    expect(facet_domain('status')).toEqual(['draft', 'stable', 'deprecated'])
+    expect(field_domain('version', { sort: 'semver' })).toEqual(['0.1.0', '0.2.0', '0.3.0'])
   })
 })
 
@@ -82,7 +76,7 @@ describe('active_view and selected_value', () => {
   })
 
   test('test_view_from_query', () => {
-    expect(active_view({ view: 'version' })).toBe('version')
+    expect(active_view({ view: 'Versions' })).toBe('Versions')
   })
 
   test('test_view_unknown_falls_back_to_pages', () => {
@@ -90,45 +84,45 @@ describe('active_view and selected_value', () => {
   })
 
   test('test_selected_defaults_to_latest', () => {
-    expect(selected_value({}, 'version')).toBe('latest')
+    expect(selected_value({}, 'Versions')).toBe('latest')
   })
 
   test('test_selected_from_query', () => {
-    expect(selected_value({ on: '0.2.0' }, 'version')).toBe('0.2.0')
+    expect(selected_value({ on: '0.2.0' }, 'Versions')).toBe('0.2.0')
   })
 
-  test('test_active_facet_defaults_to_group_primary', () => {
-    expect(active_facet({}, 'version')).toBe('version')
+  test('test_active_field_defaults_to_group_primary', () => {
+    expect(active_field({}, 'Tags')).toBe('tags')
   })
 
-  test('test_active_facet_from_query', () => {
-    expect(active_facet({ facet: 'status' }, 'version')).toBe('status')
+  test('test_active_field_from_query', () => {
+    expect(active_field({ field: 'tags' }, 'Tags')).toBe('tags')
   })
 })
 
 
 describe('listed_pages', () => {
   test('test_latest_with_history_is_head_tree', () => {
-    expect(urls(listed_pages('version', 'latest'))).toEqual(['/a', '/b', '/g/c', '/g/d', '/plain'])
+    expect(urls(listed_pages('Versions', 'version', 'latest'))).toEqual(['/a', '/b', '/g/c', '/g/d', '/plain'])
   })
 
   test('test_snapshot_value_uses_frozen_tree', () => {
-    expect(urls(listed_pages('version', '0.1.0'))).toEqual(['/_history/0.1.0/a'])
+    expect(urls(listed_pages('Versions', 'version', '0.1.0'))).toEqual(['/_history/0.1.0/a'])
   })
 
   test('test_unstamped_head_value_lists_matching_pages', () => {
-    expect(urls(listed_pages('version', '0.2.0'))).toEqual(['/b', '/g/d'])
+    expect(urls(listed_pages('Versions', 'version', '0.2.0'))).toEqual(['/b', '/g/d'])
   })
 })
 
 
 describe('index_entries', () => {
   test('test_semver_lists_newest_first', () => {
-    expect(index_entries('version').map(e => e.value)[0]).toBe('0.3.0')
+    expect(index_entries('Versions', 'version').map(e => e.value)[0]).toBe('0.3.0')
   })
 
   test('test_group_by_repeats_a_value_under_each_status', () => {
-    const groups = index_entries('version').filter(e => e.value === '0.2.0').map(e => e.group)
+    const groups = index_entries('Versions', 'version').filter(e => e.value === '0.2.0').map(e => e.group)
     expect(groups).toEqual(['stable'])
   })
 })

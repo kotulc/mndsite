@@ -9,7 +9,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import PageHeader from './PageHeader'
 import TagList from './TagList'
-import { facet_chips } from './facets'
+import { group_chips } from './groups'
 import siteConfig from '../site.config'
 
 
@@ -45,7 +45,7 @@ export default function DirFeed({ dir }) {
           <PageHeader date={header.includes('date') ? e.date : ''}
                       reading_time={header.includes('reading_time') ? e.reading_time : null}
                       order={header} />
-          <TagList tags={facet_chips(e.facets)} />
+          <TagList tags={group_chips(e.facets)} />
           <div className="feed-section-content">
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={md_components(basePath)}>{e.content}</ReactMarkdown>
           </div>

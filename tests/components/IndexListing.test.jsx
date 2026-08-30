@@ -2,23 +2,29 @@ import { render, screen } from '@testing-library/react'
 import IndexListing from '../../components/IndexListing'
 
 
-jest.mock('next/router', () => ({ useRouter: () => ({ query: { view: 'version' } }) }))
+jest.mock('next/router', () => ({ useRouter: () => ({ query: { view: 'Versions' } }) }))
 jest.mock('next/link', () => ({
   __esModule: true,
   default: ({ href, children, className }) => <a href={href} className={className}>{children}</a>,
 }))
 jest.mock('../../site.config', () => ({
-  display: { header: ['date', 'reading_time', 'version', 'status', 'facets'] },
-  facets: {
-    version: { field: 'version', label: 'Versions', group_by: 'status', index: true },
-    tags:    { field: 'tags',    label: 'Tags', index: true },
-    status:  { field: 'status',  label: 'Status', values: ['draft', 'stable', 'deprecated'] },
+  display: {
+    sidebar: ['pages', 'Tags', 'Versions'],
+    crumbs: ['home'],
+    header: ['date', 'reading_time', 'version', 'status', 'facets'],
+  },
+  versioning: { field: 'version', label: 'Versions', group_by: 'status' },
+  frontmatter: {
+    groups: { Tags: ['tags', 'status'], Versions: 'versioning' },
+    facets: {
+      tags: { key: ['tags'], label: 'Tags' },
+      status: { key: ['status'], label: 'Status' },
+    },
   },
 }))
 jest.mock('../../components/filters', () => ({
-  active_view: () => 'version',
-  active_facet: () => 'version',
-  sidebar_group: () => ({ id: 'version', label: 'Versions', facets: ['version', 'status'] }),
+  active_view: () => 'Versions',
+  active_field: () => 'version',
   selected_value: () => '0.2.0',
   listed_pages: () => [{
     url: '/about',
@@ -32,8 +38,6 @@ jest.mock('../../components/filters', () => ({
 
 
 test('test_index_listing_renders_header_shaped_cards', () => {
-  /** Each hit is its own card: title, date/reading time, leftover chips, body excerpt.
-   *  Status is a group heading; the selected version is the page title, not a chip. */
   render(<IndexListing><p>PAGE BODY</p></IndexListing>)
   expect(screen.queryByText('PAGE BODY')).not.toBeInTheDocument()
   expect(screen.getByText('Versions')).toBeInTheDocument()

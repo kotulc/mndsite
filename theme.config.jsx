@@ -9,9 +9,10 @@ import SiteFooter from './components/SiteFooter'
 import GitHubLink from './components/GitHubLink'
 import FeedLink from './components/FeedLink'
 import ThemeToggle from './components/ThemeToggle'
-import { facet_chips, header_facet_names } from './components/facets'
+import { group_chips, header_field_keys } from './components/groups'
 import IndexListing from './components/IndexListing'
 import SidebarViews from './components/SidebarViews'
+import { PageCrumbRow, PageHeading } from './components/PageChrome'
 import siteConfig from './site.config'
 import siteMeta from './public/site-meta.json'
 
@@ -38,7 +39,7 @@ function PageMeta() {
    *  the metrics line, then facet chips, both in listed order. */
   const meta = use_page_meta()
   const header = siteConfig.display.header
-  const chips = facet_chips(meta.facets, header_facet_names(header))
+  const chips = group_chips(meta.facets, header_field_keys(header))
 
   return (
     <>
@@ -70,13 +71,19 @@ function bg_rules(selector, value) {
 }
 
 
-function chip_rules(facets) {
-  /** One chip color pair per declared facet, from its resolved hue. */
-  return Object.entries(facets || {}).map(([name, facet]) =>
-    `.chip-${name}{background:hsl(${facet.hue} 70% 92%);color:hsl(${facet.hue} 55% 32%)}` +
+function chip_rules(groups, versioning) {
+  /** One chip color pair per frontmatter field key, from its group or versioning hue. */
+  const pair = (name, hue) =>
+    `.chip-${name}{background:hsl(${hue} 70% 92%);color:hsl(${hue} 55% 32%)}` +
     `:is(html[class~="dark"]) .chip-${name}` +
-    `{background:hsl(${facet.hue} 35% 22%);color:hsl(${facet.hue} 70% 75%)}`
-  ).join('')
+    `{background:hsl(${hue} 35% 22%);color:hsl(${hue} 70% 75%)}`
+
+  const rules = []
+  if (versioning) rules.push(pair(versioning.field, versioning.hue))
+  for (const spec of Object.values(groups || {})) {
+    for (const key of spec.key || []) rules.push(pair(key, spec.hue))
+  }
+  return rules.join('')
 }
 
 
@@ -87,7 +94,7 @@ const THEME_CSS = [
   siteConfig.theme.font_stack && `body{font-family:${siteConfig.theme.font_stack}}`,
   bg_rules('.nextra-nav-container-blur', siteConfig.theme.navbar),
   bg_rules('footer.nx-bg-gray-100', siteConfig.theme.footer),
-  chip_rules(siteConfig.facets),
+  chip_rules(siteConfig.frontmatter.facets, siteConfig.versioning),
 ].filter(Boolean).join('')
 
 
@@ -99,11 +106,11 @@ function PageTitle({ children }) {
 
   return (
     <>
-      <div className="page-crumb-row">
+      <PageCrumbRow>
         <Breadcrumbs />
         <ContentsToggle open={open} on_toggle={() => set_open(v => !v)} />
-      </div>
-      <h1 className="nx-mt-2 nx-text-4xl nx-font-bold nx-tracking-tight nx-text-slate-900 dark:nx-text-slate-100">{children}</h1>
+      </PageCrumbRow>
+      <PageHeading>{children}</PageHeading>
       <PageMeta />
       <ContentsPanel open={open} on_close={() => set_open(false)} />
     </>

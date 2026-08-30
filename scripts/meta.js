@@ -1,21 +1,14 @@
 /**
  * Flat page metadata builder (no site graph, no content hashing).
- * Projects supplied frontmatter through the configured `fields` and `facets` maps —
- * frontmatter is inert unless the config names it, and no value is ever generated.
- *
- * Output shape (public/site-meta.json):
- *   { pages: [ { url, name, slug, identity, source, published, created, desc, excerpt,
- *                metrics, links, related, facets, sections } ] }
- *
- * Facet values keep their supplied shape: a list stays a list, a scalar stays a scalar.
+ * Projects supplied frontmatter through `frontmatter.facets` — frontmatter is inert unless
+ * the config names it.
  */
 const { word_count, extract_links, section_tree, first_paragraph } = require('./text')
-const { DEFAULTS } = require('./config')
+const { DEFAULTS, FACET_DEFAULTS } = require('./config')
 const { normalize_semver } = require('./semver')
 
 
 function field_value(fm, key) {
-  /** First non-empty frontmatter value for a field mapping (one key or a list of keys). */
   for (const k of (Array.isArray(key) ? key : [key])) {
     const value = (fm || {})[k]
     if (value != null && String(value).trim() !== '') return value
@@ -25,7 +18,6 @@ function field_value(fm, key) {
 
 
 function clean_list(raw) {
-  /** Trimmed, de-duplicated string list. */
   const seen = new Set()
   return raw.map(String).map(v => v.trim()).filter(v => {
     const key = v.toLowerCase()
@@ -36,65 +28,64 @@ function clean_list(raw) {
 }
 
 
-function facet_value(fm, spec, release) {
-  /** One facet's value, restricted to `values` when the config declares them.
-   *  Semver stamps are normalized to major.minor.patch. inherit fills a missing
-   *  stamp from the site release. */
-  let raw = field_value(fm, spec.field)
-  if (raw == null && spec.inherit && release) raw = release
+function read_field_value(fm, field_key, sort, { inherit, release } = {}) {
+  let raw = field_value(fm, field_key)
+  if (raw == null && inherit && release) raw = release
   if (raw == null) return null
 
-  const allowed = Array.isArray(spec.values) ? spec.values.map(String) : null
   if (Array.isArray(raw)) {
-    const list = clean_list(raw)
-      .map(v => spec.sort === 'semver' ? (normalize_semver(v) || v) : v)
-      .filter(v => !allowed || allowed.includes(v))
+    const list = clean_list(raw).map(v => sort === 'semver' ? (normalize_semver(v) || v) : v)
     return list.length ? list : null
   }
 
   let value = String(raw).trim()
-  if (spec.sort === 'semver') value = normalize_semver(value) || value
-  return !allowed || allowed.includes(value) ? value : null
+  if (sort === 'semver') value = normalize_semver(value) || value
+  return value
 }
 
 
-function build_facets(fm, facets, release) {
-  /** Declared facets present on this page, in declaration order. */
+function build_facets(fm, facets, versioning, release) {
+  /** Facet values keyed by frontmatter field name. */
   const out = {}
-  for (const [name, spec] of Object.entries(facets || DEFAULTS.facets)) {
-    const value = facet_value(fm || {}, spec, release)
-    if (value != null) out[name] = value
+  const specs = facets || FACET_DEFAULTS
+  if (versioning) {
+    const value = read_field_value(fm, versioning.field, 'semver', {
+      inherit: versioning.inherit, release,
+    })
+    if (value != null) out[versioning.field] = value
+  }
+  for (const spec of Object.values(specs)) {
+    for (const field_key of spec.key) {
+      const value = read_field_value(fm, field_key, spec.sort)
+      if (value != null) out[field_key] = value
+    }
   }
   return out
 }
 
 
-function parse_desc(fm, fields) {
-  /** Optional page summary from the configured description field. */
-  const value = field_value(fm, (fields || DEFAULTS.fields).description)
+function parse_desc(fm, frontmatter) {
+  const value = field_value(fm, (frontmatter || DEFAULTS.frontmatter).description)
   return value == null ? null : String(value).trim() || null
 }
 
 
-function parse_published(fm, fields) {
-  /** Publication date (YYYY-MM-DD) from the configured date field. */
-  const value = field_value(fm, (fields || DEFAULTS.fields).date)
+function parse_published(fm, frontmatter) {
+  const value = field_value(fm, (frontmatter || DEFAULTS.frontmatter).date)
   return value == null ? '' : String(value).slice(0, 10)
 }
 
 
-function parse_reading_time(fm, fields) {
-  /** Reading time from frontmatter only — never computed locally. */
-  const raw = field_value(fm, (fields || DEFAULTS.fields).reading_time)
+function parse_reading_time(fm, frontmatter) {
+  const raw = field_value(fm, (frontmatter || DEFAULTS.frontmatter).reading_time)
   if (raw == null) return null
   const mins = Number(raw)
   return Number.isFinite(mins) && mins > 0 ? Math.round(mins) : null
 }
 
 
-function parse_related(fm, fields) {
-  /** Optional related links: [{ url, title }] or [url strings]. */
-  const raw = field_value(fm, (fields || DEFAULTS.fields).related)
+function parse_related(fm, frontmatter) {
+  const raw = field_value(fm, (frontmatter || DEFAULTS.frontmatter).related)
   if (!Array.isArray(raw)) return []
   return raw.map(entry => {
     if (typeof entry === 'string') return { url: entry, name: entry }
@@ -106,15 +97,7 @@ function parse_related(fm, fields) {
 }
 
 
-function parse_identity(fm, fields) {
-  /** Stable id grouping variants of the same document (supplied by mndmap). */
-  const value = field_value(fm, (fields || DEFAULTS.fields).identity)
-  return value == null ? '' : String(value).trim()
-}
-
-
 function build_sections(section_nodes) {
-  /** Recursively build section records from the heading tree. */
   return (section_nodes || []).map(node => ({
     name: node.name,
     level: node.level,
@@ -124,16 +107,15 @@ function build_sections(section_nodes) {
 
 
 function build_page({ slug, title, url, content, source, created, fm, snapshot }, config) {
-  /** Build one flat page record from supplied frontmatter and content. */
-  const fields = (config && config.fields) || DEFAULTS.fields
-  const facets = (config && config.facets) || DEFAULTS.facets
+  const frontmatter = (config && config.frontmatter) || DEFAULTS.frontmatter
+  const facets = (frontmatter && frontmatter.facets) || FACET_DEFAULTS
   const body = content.replace(/\r\n?/g, '\n').replace(/^\s*#\s+.+\n?/, '')
   const { intro, sections: tree } = section_tree(body)
   const excerpt = first_paragraph(intro)
     || first_paragraph((tree[0] || {}).content)
-    || parse_desc(fm, fields)
+    || parse_desc(fm, frontmatter)
 
-  const mins = parse_reading_time(fm, fields)
+  const mins = parse_reading_time(fm, frontmatter)
   const metrics = { word_count: word_count(body) }
   if (mins != null) metrics.reading_time = mins
 
@@ -141,16 +123,15 @@ function build_page({ slug, title, url, content, source, created, fm, snapshot }
     name: title,
     url,
     slug,
-    identity:  parse_identity(fm, fields),
     source:    source || '',
-    published: parse_published(fm, fields),
+    published: parse_published(fm, frontmatter),
     created:   created || '',
-    desc:      parse_desc(fm, fields),
+    desc:      parse_desc(fm, frontmatter),
     excerpt:   excerpt || '',
     metrics,
     links:     extract_links(content),
-    related:   parse_related(fm, fields),
-    facets:    build_facets(fm, facets, config && config.release),
+    related:   parse_related(fm, frontmatter),
+    facets:    build_facets(fm, facets, config && config.versioning, config && config.release),
     sections:  build_sections(tree),
     snapshot:  snapshot || '',
   }
@@ -159,7 +140,7 @@ function build_page({ slug, title, url, content, source, created, fm, snapshot }
 
 module.exports = {
   word_count, extract_links, section_tree,
-  field_value, facet_value, build_facets,
-  parse_desc, parse_published, parse_reading_time, parse_related, parse_identity,
+  field_value, read_field_value, build_facets,
+  parse_desc, parse_published, parse_reading_time, parse_related,
   build_page, build_sections,
 }

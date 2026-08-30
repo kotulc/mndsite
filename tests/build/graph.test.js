@@ -83,17 +83,18 @@ describe('build_page', () => {
 
 describe('parse helpers', () => {
   test('test_build_facets_dedupes_values', () => {
-    expect(build_facets({ tags: ['a', 'B', 'a'] })).toEqual({ tags: ['a', 'B'] })
+    const groups = { tags: { key: ['tags'], sort: 'alpha' } }
+    expect(build_facets({ tags: ['a', 'B', 'a'] }, groups, null, '')).toEqual({ tags: ['a', 'B'] })
   })
 
   test('test_build_facets_ignores_undeclared_fields', () => {
-    expect(build_facets({ status: ['stable'] })).toEqual({})
+    expect(build_facets({ status: ['stable'] }, {}, null, '')).toEqual({})
   })
 
   test('test_inherit_fills_and_normalizes_semver', () => {
-    const facets = { version: { field: 'version', sort: 'semver', inherit: true } }
-    expect(build_facets({}, facets, '0.4.1')).toEqual({ version: '0.4.1' })
-    expect(build_facets({ version: '0.2' }, facets, '0.4.1')).toEqual({ version: '0.2.0' })
+    const versioning = { field: 'version', inherit: true }
+    expect(build_facets({}, null, versioning, '0.4.1')).toEqual({ version: '0.4.1' })
+    expect(build_facets({ version: '0.2' }, null, versioning, '0.4.1')).toEqual({ version: '0.2.0' })
   })
 
   test('test_parse_desc_null_when_absent', () => {

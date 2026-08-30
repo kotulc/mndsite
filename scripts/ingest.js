@@ -246,9 +246,9 @@ function ingest_page(src_entry, dest_dir, rel, slug, base, img_url, extra = {}) 
   const fm  = parse_fm(raw)
 
   const config = get_config()
-  const fields = config.fields || {}
+  const frontmatter = config.frontmatter || {}
   // A null mapping disables the field, so no frontmatter key names the title at all.
-  const key   = 'title' in fields ? fields.title : 'title'
+  const key   = 'title' in frontmatter ? frontmatter.title : 'title'
   const title = (key && meta.field_value(fm, key)) || fallback_title(src_entry, rel, slug, base)
 
   const dest = path.join(dest_dir, `${slug}.mdx`)
@@ -311,8 +311,8 @@ function write_dir_meta(dir) {
 
 function ingest_history(config) {
   /** Frozen trees from git tags, written under pages/_history/<version>/. */
-  const spec = Object.values(config.facets || {}).find(f => f.history)
-  if (!spec) return []
+  const versioning = config.versioning
+  if (!versioning || !versioning.history) return []
 
   const repo = config.dir || ROOT
   const prefix = path.relative(repo, config.content).split(path.sep).join('/')

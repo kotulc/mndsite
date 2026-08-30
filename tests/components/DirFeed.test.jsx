@@ -14,7 +14,9 @@ jest.mock('react-markdown', () => ({
 jest.mock('remark-gfm', () => ({ __esModule: true, default: () => {} }))
 jest.mock('../../site.config', () => ({
   display: { header: ['date', 'reading_time', 'facets'] },
-  facets: { categories: { field: 'categories', label: 'Category' } },
+  frontmatter: {
+    facets: { categories: { key: ['categories'], label: 'Category' } },
+  },
 }))
 
 const ENTRIES = [{
