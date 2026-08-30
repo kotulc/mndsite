@@ -12,7 +12,7 @@ import ThemeToggle from './components/ThemeToggle'
 import { group_chips, header_field_keys } from './components/groups'
 import IndexListing from './components/IndexListing'
 import SidebarViews from './components/SidebarViews'
-import PageRail, { PageRailProvider } from './components/PageRail'
+import PageRail from './components/PageRail'
 import { PageHeading } from './components/PageChrome'
 import { ViewScopeProvider } from './components/ViewScope'
 import siteConfig from './site.config'
@@ -168,13 +168,11 @@ export default {
     : { component: () => <PageContents order={siteConfig.display.toc} /> },
   components: { h1: PageTitle },
   sidebar: { titleComponent: SidebarLabel },
-  // SidebarViews has no place in the page — it only portals the view tabs into the sidebar.
+  // SidebarViews only portals facet value chips into the left nav.
   main: ({ children }) => (
     <ViewScopeProvider>
-      <PageRailProvider>
-        <SidebarViews />
-        <IndexListing>{children}</IndexListing>
-      </PageRailProvider>
+      <SidebarViews />
+      <IndexListing>{children}</IndexListing>
     </ViewScopeProvider>
   ),
 }

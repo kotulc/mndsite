@@ -1,12 +1,13 @@
 /**
- * Facet index body for the left nav. View toggles live in the page rail above the layout;
- * this component only portals value chips into Nextra's sidebar while a group index is open.
+ * Left-nav chrome: view chips above the sidebar tree, then facet value lists when a
+ * group index is open. Portaled into Nextra's sidebar container (flex order) so chips
+ * stay above nav content on desktop and inside the mobile sidebar menu.
  */
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { field_label } from './groups'
 import { index_entries } from './filters'
-import { useViewScope } from './ViewScope'
+import { ViewToggles, useViewScope } from './ViewScope'
 
 
 const SIDEBAR = '.nextra-sidebar-container'
@@ -24,24 +25,75 @@ const GROUP_LABEL = [
 const CHIP_ROW = 'nx-flex nx-flex-wrap nx-gap-1 nx-px-2 nx-pb-1'
 
 
-function use_portal_host(enabled) {
-  const [host, set_host] = useState(null)
+function tag_mobile_search(container) {
+  if (!container) return () => {}
+  const search = [...container.children].find(el => (
+    !el.classList.contains('sidebar-views')
+    && !el.classList.contains('nextra-scrollbar')
+    && !el.classList.contains('sidebar-search')
+    && [...el.classList].some(c => c === 'md:nx-hidden' || c.includes('nx-pt-4'))
+  ))
+  if (!search) return () => {}
+  search.classList.add('sidebar-search')
+  return () => search.classList.remove('sidebar-search')
+}
+
+
+function use_sidebar_search_tag() {
+  useEffect(() => {
+    let observer
+    let release_search = () => {}
+
+    function attach() {
+      const container = document.querySelector(SIDEBAR)
+      if (!container) return
+      release_search()
+      release_search = tag_mobile_search(container)
+    }
+
+    attach()
+    if (!document.querySelector(SIDEBAR)) {
+      observer = new MutationObserver(attach)
+      observer.observe(document.body, { childList: true, subtree: true })
+    }
+
+    return () => {
+      observer?.disconnect()
+      release_search()
+    }
+  }, [])
+}
+
+
+function use_sidebar_portal_target(enabled) {
+  const [target, set_target] = useState(null)
 
   useEffect(() => {
-    if (!enabled) return
-    const container = document.querySelector(SIDEBAR)
-    if (!container) return
-    const parent = container.querySelector('.nextra-scrollbar') || container
+    if (!enabled) {
+      set_target(null)
+      return
+    }
 
-    const node = document.createElement('div')
-    node.className = 'sidebar-index nx-flex nx-w-full nx-flex-col'
-    parent.prepend(node)
-    set_host(node)
+    let observer
 
-    return () => node.remove()
+    function attach() {
+      const container = document.querySelector(SIDEBAR)
+      if (container) set_target(container)
+    }
+
+    attach()
+    if (!document.querySelector(SIDEBAR)) {
+      observer = new MutationObserver(attach)
+      observer.observe(document.body, { childList: true, subtree: true })
+    }
+
+    return () => {
+      observer?.disconnect()
+      set_target(null)
+    }
   }, [enabled])
 
-  return host
+  return target
 }
 
 
@@ -134,36 +186,45 @@ function IndexList({ group, selected_field, selected, on_select }) {
   const show_labels = fields.length > 1
 
   return (
-    <ul className={MENU_LIST}>
-      {fields.map(field_key => (
-        <FieldList
-          key={field_key}
-          group_id={group.id}
-          field_key={field_key}
-          selected_field={selected_field}
-          selected_value={selected}
-          on_select={on_select}
-          show_label={show_labels}
-        />
-      ))}
-    </ul>
+    <div className="sidebar-index">
+      <ul className={MENU_LIST}>
+        {fields.map(field_key => (
+          <FieldList
+            key={field_key}
+            group_id={group.id}
+            field_key={field_key}
+            selected_field={selected_field}
+            selected_value={selected}
+            on_select={on_select}
+            show_label={show_labels}
+          />
+        ))}
+      </ul>
+    </div>
   )
 }
 
 
 export default function SidebarViews() {
   const { toggles, group, field, selected, set_on } = useViewScope()
-  const host = use_portal_host(toggles.length > 1 && !!group)
+  use_sidebar_search_tag()
+  const show_toggles = toggles.length > 1
+  const target = use_sidebar_portal_target(show_toggles || !!group)
 
-  if (!host || !group) return null
+  if (!target) return null
 
   return createPortal(
-    <IndexList
-      group={group}
-      selected_field={field}
-      selected={selected}
-      on_select={set_on}
-    />,
-    host,
+    <div className="sidebar-views nx-flex nx-w-full nx-flex-col">
+      {show_toggles ? <ViewToggles /> : null}
+      {group ? (
+        <IndexList
+          group={group}
+          selected_field={field}
+          selected={selected}
+          on_select={set_on}
+        />
+      ) : null}
+    </div>,
+    target,
   )
 }

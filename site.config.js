@@ -7,9 +7,9 @@ module.exports = {
   footer: "MIT licensed · built with mndsite",
   theme: {"color":"default","typeset":"sans","navbar":"primary","footer":"primary","hue":{"light":212,"dark":204},"saturation":100,"font_stack":""},
   nav_order: {"":["about","getting-started","configuration"],"features":["overview","components"],"specifications":["format"],"updates":["welcome"]},
-  frontmatter: {"title":"title","description":["description","desc"],"date":"date","reading_time":"reading_time","related":"related","facets":{"categories":{"key":["categories"],"label":"Category","color":"blue","sort":"alpha","hue":210},"tags":{"key":["tags"],"label":"Tags","color":"violet","sort":"alpha","hue":265},"status":{"key":["status"],"label":"Status","color":"amber","sort":"alpha","hue":35}},"groups":{"Tags":["status","categories","tags"],"Versions":"versioning"}},
+  frontmatter: {"title":"title","description":["description","desc"],"date":"date","reading_time":"reading_time","related":"related","facets":{"categories":{"key":["categories"],"label":"Category","color":"blue","sort":"alpha","hue":210},"tags":{"key":["tags"],"label":"Tags","color":"violet","sort":"alpha","hue":265},"status":{"key":["status"],"label":"Status","color":"amber","sort":"alpha","hue":35}},"groups":{"Tags":["status","categories","tags"],"Versions":"versioning","Categories":["categories"],"Status":["categories"]}},
   versioning: {"key":"version","label":"Versions","color":"teal","inherit":true,"history":true,"default":"latest","group_by":"status","sort":"semver","hue":190},
   release: "0.3.0",
-  display: {"crumbs":true,"header":["date","reading_time","version","status","facets"],"sidebar":["pages","Tags","Versions"],"toc":["description","sections","related","edit"],"navbar":["theme","feed","github"],"contents":["description","sections","related"]},
+  display: {"crumbs":true,"header":["date","reading_time","version","status","facets"],"sidebar":["pages","Categories","Tags","Status","Versions"],"toc":["description","sections","related","edit"],"navbar":["theme","feed","github"],"contents":["description","sections","related"]},
   edit: {"branch":"main","path":"docs","url":"{repo_url}/edit/{branch}/{file}"},
 }

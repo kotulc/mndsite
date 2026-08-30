@@ -4,7 +4,12 @@ import { ViewScopeProvider } from '../../components/ViewScope'
 
 
 jest.mock('next/router', () => ({
-  useRouter: () => ({ query: { view: 'Tags' }, replace: jest.fn() }),
+  useRouter: () => ({
+    query: { view: 'Tags' },
+    asPath: '/?view=Tags',
+    replace: jest.fn(),
+    events: { on: jest.fn(), off: jest.fn() },
+  }),
 }))
 
 jest.mock('react-dom', () => ({
@@ -32,7 +37,24 @@ jest.mock('../../public/site-meta.json', () => ({
 }), { virtual: true })
 
 beforeEach(() => {
-  document.body.innerHTML = '<div class="nextra-sidebar-container"><div class="nextra-scrollbar"></div></div>'
+  document.body.innerHTML = [
+    '<div class="nextra-sidebar-container">',
+    '<div class="nx-px-4 nx-pt-4 md:nx-hidden"><input type="search" /></div>',
+    '<div class="nextra-scrollbar"></div>',
+    '</div>',
+  ].join('')
+})
+
+
+test('test_sidebar_tags_mobile_search_above_view_chrome', () => {
+  render(
+    <ViewScopeProvider>
+      <SidebarViews />
+    </ViewScopeProvider>,
+  )
+  const search = document.querySelector('.nextra-sidebar-container > .sidebar-search')
+  expect(search).toBeTruthy()
+  expect(search.querySelector('input')).toBeTruthy()
 })
 
 

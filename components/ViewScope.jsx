@@ -6,13 +6,14 @@ import { createContext, useContext, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import siteConfig from '../site.config'
 import { active_field, active_view, selected_value, sidebar_groups, sidebar_toggles } from './filters'
+import { MobileDrawerBackdrop, useMobileDrawer } from './MobileDrawer'
 
 
 const ViewScopeContext = createContext(null)
 const SIDEBAR = '.nextra-sidebar-container'
 
 
-function use_view_scope_state() {
+function use_view_scope_state(drawer) {
   const router = useRouter()
   const toggles = sidebar_toggles()
   const groups = sidebar_groups()
@@ -34,6 +35,7 @@ function use_view_scope_state() {
   }, [view, toggles.length])
 
   function set_view(next) {
+    drawer.pin_for_group_toggle()
     const query = { ...router.query }
     delete query.view
     delete query.field
@@ -52,6 +54,7 @@ function use_view_scope_state() {
 
   function set_on(field_key, value) {
     if (!group) return
+    drawer.clear()
     const query = { ...router.query, view }
     if (field_key !== group.fields[0]) query.field = field_key
     else delete query.field
@@ -67,8 +70,14 @@ function use_view_scope_state() {
 
 
 export function ViewScopeProvider({ children }) {
-  const value = use_view_scope_state()
-  return <ViewScopeContext.Provider value={value}>{children}</ViewScopeContext.Provider>
+  const drawer = useMobileDrawer()
+  const value = use_view_scope_state(drawer)
+  return (
+    <ViewScopeContext.Provider value={value}>
+      <MobileDrawerBackdrop pinned={drawer.pinned} on_close={drawer.clear} />
+      {children}
+    </ViewScopeContext.Provider>
+  )
 }
 
 

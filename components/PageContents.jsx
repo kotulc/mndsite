@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useSection, find_page, section_anchor } from './SectionContext'
 import { active_view } from './filters'
+import { clear_mobile_drawer } from './mobileMenu'
 import siteConfig from '../site.config'
 
 
@@ -38,12 +39,24 @@ function use_contents_navigate(on_close) {
     return router.replace({ pathname: router.pathname, query }, undefined, { shallow: true, scroll: false })
   }
 
+  function scroll_to_section(id) {
+    function try_scroll() {
+      const el = document.getElementById(id)
+      if (!el) return false
+      el.scrollIntoView({ behavior: 'smooth' })
+      return true
+    }
+    if (try_scroll()) return
+    requestAnimationFrame(() => {
+      if (!try_scroll()) setTimeout(() => try_scroll(), 50)
+    })
+  }
+
   function navigate_to_section(e, id) {
     e.preventDefault()
     dismiss()
-    clear_facet_view().then(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
-    })
+    clear_mobile_drawer()
+    clear_facet_view().then(() => scroll_to_section(id))
   }
 
   return { navigate_to_section }

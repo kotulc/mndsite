@@ -292,65 +292,15 @@ img {
   border-radius: 4px;
 }
 
-/* Page rail — full-width band above sidebar/body, columns mirror Nextra's layout. */
-.page-rail-host:empty { display: none; }
-
-.page-rail-host {
-  margin-top: 1.25rem;
-}
-
-.page-rail-band {
-  display: grid;
-  align-items: center;
-  gap: 0.75rem;
-  min-height: var(--crumb-height);
-  font-size: 0.875rem;
-  color: var(--site-gray-500);
-}
-
-/* Below md the sidebar is an overlay — stack toggles and body in one column. */
-.page-rail-band {
-  grid-template-columns: 1fr;
-}
-
-@media (min-width: 768px) {
-  .page-rail-band {
-    grid-template-columns: 16rem 1fr;
-  }
-}
-
-@media (min-width: 1280px) {
-  .page-rail-band {
-    grid-template-columns: 16rem 1fr 16rem;
-  }
-}
-
-.page-rail-sidebar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem;
-  padding-left: 1rem;
-}
-
-.page-rail-body[aria-hidden="true"] {
-  min-height: var(--crumb-height);
-  padding: 0;
-}
-
-.page-rail-trail {
+/* Content-column rail — breadcrumbs and Contents above the title. */
+.page-rail {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   min-height: var(--crumb-height);
+  margin-top: 0.375rem;
   font-size: 0.875rem;
   color: var(--site-gray-500);
-}
-
-.page-rail-toc { display: none; }
-
-@media (min-width: 1280px) {
-  .page-rail-toc { display: block; }
 }
 
 .page-rail-actions {
@@ -364,8 +314,8 @@ img {
 .view-toggles {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.25rem;
-  flex-shrink: 0;
 }
 
 .page-crumbs {
@@ -764,10 +714,82 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 .site-footer a:hover { color: var(--site-primary-600); }
 
 
-/* Left-nav facet index (components/SidebarViews.jsx). View toggles live in the page rail. */
+/* Left-nav chrome (components/SidebarViews.jsx) — view chips above the nav tree. */
+@media (min-width: 768px) {
+  .nextra-sidebar-container > .sidebar-views {
+    order: -1;
+    flex-shrink: 0;
+  }
+}
+
+/* Mobile drawer: search, then group toggles / facet chips, then nav tree. */
+@media (max-width: 767px) {
+  .nextra-sidebar-container > .sidebar-search {
+    order: 0;
+    flex-shrink: 0;
+  }
+
+  .nextra-sidebar-container > .sidebar-views {
+    order: 1;
+    flex-shrink: 0;
+  }
+
+  .nextra-sidebar-container > .nextra-scrollbar {
+    order: 2;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  html[data-mobile-drawer="open"] .nextra-sidebar-container {
+    transform: translate3d(0, 0, 0) !important;
+    z-index: 11;
+  }
+}
+
+.mobile-drawer-backdrop {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  html[data-mobile-drawer="open"] .mobile-drawer-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.8);
+  }
+}
+
+.sidebar-views {
+  gap: 0.75rem;
+  padding: 0.75rem 0.75rem 0.5rem;
+  background: #fff;
+}
+
+:is(html[class~="dark"]) .sidebar-views {
+  background: #111;
+}
+
+.sidebar-views .view-toggles {
+  padding: 0 0.25rem;
+}
+
 .sidebar-index {
   gap: 0.75rem;
-  margin-bottom: 0.75rem;
+}
+
+.sidebar-index + .nextra-scrollbar,
+.nextra-sidebar-container:has(.sidebar-views) .nextra-scrollbar {
+  padding-top: 0.5rem;
+}
+
+/* Left-nav facet value chips */
+.sidebar-views button.chip,
+.sidebar-index button.chip {
+  padding: 0 0.5rem;
+  min-height: var(--crumb-height);
+  font-size: 0.75rem;
+  line-height: 1;
 }
 
 .sidebar-toggle {
@@ -802,14 +824,6 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 }
 
 .sidebar-empty { font-style: italic; }
-
-.sidebar-views button.chip,
-.sidebar-index button.chip {
-  padding: 0 0.5rem;
-  min-height: var(--crumb-height);
-  font-size: 0.75rem;
-  line-height: 1;
-}
 
 button.chip {
   cursor: pointer;

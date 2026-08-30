@@ -1,7 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import IndexListing from '../../components/IndexListing'
+import SidebarViews from '../../components/SidebarViews'
 import { ViewScopeProvider } from '../../components/ViewScope'
 
+
+jest.mock('react-dom', () => ({
+  ...jest.requireActual('react-dom'),
+  createPortal: node => node,
+}))
 
 let asPath = '/about?view=Versions&field=version&on=0.2.0'
 jest.mock('next/router', () => ({
@@ -46,12 +52,22 @@ jest.mock('../../components/filters', () => ({
     metrics: { reading_time: 3 },
     facets: { version: '0.2.0', tags: ['overview'], status: 'stable' },
   }],
+  index_entries: () => [],
 }))
 
 
 function render_listing(children) {
-  return render(<ViewScopeProvider><IndexListing>{children}</IndexListing></ViewScopeProvider>)
+  return render(
+    <ViewScopeProvider>
+      <SidebarViews />
+      <IndexListing>{children}</IndexListing>
+    </ViewScopeProvider>,
+  )
 }
+
+beforeEach(() => {
+  document.body.innerHTML = '<div class="nextra-sidebar-container"></div>'
+})
 
 
 test('test_index_listing_renders_header_shaped_cards', () => {
