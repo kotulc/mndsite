@@ -25,8 +25,8 @@ nav_order:
 theme:
   color: default       # default, slate, gray, blue, indigo, violet, rose, orange, ...
   typeset: sans        # sans, serif, humanist, geometric, mono
-  navbar: primary      # none, primary (theme tint), or any CSS color
-  footer: primary
+  navbar: background   # none, primary (theme tint), background (match page), or any CSS color
+  footer: none
 
 # Frontmatter keys mndsite reads. `facets` declare content dimensions; `groups` bundle
 # facet names for the sidebar (chip order within each group follows the facet list).

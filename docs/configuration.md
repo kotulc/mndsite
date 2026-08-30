@@ -40,8 +40,8 @@ Writing `""` reads the same as the default, so no value in the file ever needs t
 | `footer` | string | `default` | Custom footer credits text; `default` keeps "Powered by mndsite and Nextra" |
 | `theme.color` | string | `"default"` | Named accent palette — see [Theme](#theme) below |
 | `theme.typeset` | string | `"sans"` | Named body font stack — see [Theme](#theme) below |
-| `theme.navbar` | string | `none` | Navbar background: `"primary"` (theme tint) or any CSS color |
-| `theme.footer` | string | `none` | Footer background: `"primary"` (theme tint) or any CSS color |
+| `theme.navbar` | string | `none` | Navbar background: `primary` (theme tint), `background` (match page), or any CSS color |
+| `theme.footer` | string | `none` | Footer background: `primary` (theme tint), `background` (match page), or any CSS color |
 | `nav_order` | object | `{}` | Explicit nav ordering per directory — see below |
 | `fields` | object | see below | Frontmatter keys behind the built-in metadata; frontmatter is inert unless named |
 | `facets` | object | `categories`, `tags` | Content dimensions — page chips and optional left-nav indexes |
@@ -111,13 +111,19 @@ requests, no layout shift:
 | `mono` | System monospace |
 
 **`theme.navbar`** and **`theme.footer`** override the navbar and footer backgrounds.
-Set `"primary"` for a soft tint derived from `theme.color`, or any CSS color applied as-is:
+
+| Value | Effect |
+|-------|--------|
+| `none` | Nextra defaults (navbar white/dark; footer light gray / dark neutral) |
+| `primary` | Soft tint from `theme.color` |
+| `background` | Match the page background (white in light mode, `#111` in dark) |
+| CSS color | Applied as-is in both modes, e.g. `"#f8fafc"` |
 
 ```yaml
 theme:
   color: emerald
-  navbar: primary
-  footer: "hsl(161 30% 96%)"
+  navbar: background
+  footer: background
 ```
 
 ## Frontmatter fields

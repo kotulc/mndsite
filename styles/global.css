@@ -14,6 +14,7 @@
   --site-gray-500: #6b7280;
   --site-gray-600: #4b5563;
   --site-gray-900: #111827;
+  --site-chrome-bg: #fff;   /* page background — used by theme.navbar/footer: background */
 }
 
 :is(html[class~="dark"]) {
@@ -26,6 +27,29 @@
   --site-gray-500: #8a8a8a;
   --site-gray-600: #a3a3a3;
   --site-gray-900: #ededed;
+  --site-chrome-bg: #111;
+}
+
+/* Navbar/footer chrome — loaded after Nextra; html data attrs set in theme.config.jsx. */
+html[data-chrome-navbar="primary"] .nextra-nav-container-blur {
+  background-color: hsl(var(--site-hs) 94%) !important;
+}
+
+:is(html[class~="dark"])[data-chrome-navbar="primary"] .nextra-nav-container-blur {
+  background-color: hsl(var(--site-hs) 45% / 0.2) !important;
+}
+
+html[data-chrome-footer="primary"] footer {
+  background-color: hsl(var(--site-hs) 94%) !important;
+}
+
+:is(html[class~="dark"])[data-chrome-footer="primary"] footer {
+  background-color: hsl(var(--site-hs) 45% / 0.2) !important;
+}
+
+html[data-chrome-navbar="background"] .nextra-nav-container-blur,
+html[data-chrome-footer="background"] footer {
+  background-color: var(--site-chrome-bg) !important;
 }
 
 
@@ -772,6 +796,13 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 
 .sidebar-views .view-toggles {
   padding: 0 0.25rem;
+}
+
+/* Align with content-column page rail (main nx-pt-4 + .page-rail margin-top). */
+@media (min-width: 768px) {
+  .sidebar-views .view-toggles {
+    padding-top: 0.625rem;
+  }
 }
 
 .sidebar-index {

@@ -63,13 +63,24 @@ function SidebarLabel({ title }) {
 
 
 function bg_rules(selector, value) {
-  /** Background override CSS for a configured navbar/footer color ('' | 'primary' | CSS color). */
-  if (!value) return ''
-  if (value === 'primary') return (
-    `${selector}{background:hsl(var(--site-hs) 94%)!important}` +
-    `html.dark ${selector}{background:hsl(var(--site-hs) 45%/0.2)!important}`
+  /** Custom navbar/footer colors only — primary/background/none live in global.css. */
+  if (!value || value === 'primary' || value === 'background' || value === 'none') return ''
+  return `${selector}{background-color:${value}!important}`
+}
+
+
+function chrome_head_script(navbar, footer) {
+  const lines = []
+  if (navbar) lines.push(`document.documentElement.dataset.chromeNavbar=${JSON.stringify(navbar)}`)
+  if (footer) lines.push(`document.documentElement.dataset.chromeFooter=${JSON.stringify(footer)}`)
+  if (!lines.length) return null
+  return (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `${lines.join(';')};`,
+      }}
+    />
   )
-  return `${selector}{background:${value}!important}`
 }
 
 
@@ -95,7 +106,7 @@ const TOC_HAS_SECTIONS = siteConfig.display.toc.includes('sections')
 const THEME_CSS = [
   siteConfig.theme.font_stack && `body{font-family:${siteConfig.theme.font_stack}}`,
   bg_rules('.nextra-nav-container-blur', siteConfig.theme.navbar),
-  bg_rules('footer.nx-bg-gray-100', siteConfig.theme.footer),
+  bg_rules('footer', siteConfig.theme.footer),
   chip_rules(siteConfig.frontmatter.facets, siteConfig.versioning),
 ].filter(Boolean).join('')
 
@@ -152,6 +163,7 @@ export default {
   },
   head: (
     <>
+      {chrome_head_script(siteConfig.theme.navbar, siteConfig.theme.footer)}
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       {siteConfig.description && <meta name="description" content={siteConfig.description} />}
       {THEME_CSS && <style dangerouslySetInnerHTML={{ __html: THEME_CSS }} />}

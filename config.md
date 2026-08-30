@@ -37,8 +37,8 @@ footer: default                # footer credits; `default` keeps the built-in
 theme:
   color: default               # default, slate, blue, emerald, rose, ...
   typeset: sans                # sans, serif, humanist, geometric, mono
-  navbar: none                 # none, "primary", or any CSS color
-  footer: none                 # none, "primary", or any CSS color
+  navbar: none                 # none, primary, background, or any CSS color
+  footer: none                 # none, primary, background, or any CSS color
 
 # ---- Frontmatter keys (built) ---------------------------------------------
 fields:
