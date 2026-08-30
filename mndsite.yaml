@@ -53,9 +53,9 @@ frontmatter:
       color: amber
       sort: alpha
   groups:
-    Categories: [categories]
-    Tags: [status, categories, tags]
-    Status: [categories]
+    Tags: [tags]
+    Topics: [categories, tags, status]
+    Status: [status]
     Versions: versioning
 
 # Optional edition tracking — wire into the sidebar via a group value of `versioning`.
@@ -72,7 +72,7 @@ versioning:
 # facet names and frontmatter field keys.
 display:
   crumbs: true
-  sidebar: [pages, Categories, Tags, Status, Versions]
+  sidebar: [pages, Topics, Tags, Status, Versions]
   header: [date, reading_time, version, status, facets]
   toc: [description, sections, related, edit]
   contents: [description, sections, related]

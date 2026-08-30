@@ -141,14 +141,14 @@ function ChipRow({ items, field_key, selected, on_select }) {
 }
 
 
-function FieldList({ group_id, field_key, selected_field, selected_value, on_select, show_label }) {
+function FieldList({ group_id, field_key, selected_field, selected_value, on_select }) {
   const groups = group_entries(index_entries(group_id, field_key))
   if (!groups.length) return null
   const active = field_key === selected_field ? selected_value : ''
 
   return (
     <li>
-      {show_label ? <div className={GROUP_LABEL}>{field_label(field_key)}</div> : null}
+      <div className={GROUP_LABEL}>{field_label(field_key)}</div>
       {groups.map(({ group, items }) => {
         const chips = (
           <ChipRow
@@ -183,8 +183,6 @@ function IndexList({ group, selected_field, selected, on_select }) {
     return <p className="sidebar-empty nx-px-2 nx-text-sm nx-text-gray-500 dark:nx-text-neutral-400">No values for this index.</p>
   }
 
-  const show_labels = fields.length > 1
-
   return (
     <div className="sidebar-index">
       <ul className={MENU_LIST}>
@@ -196,7 +194,6 @@ function IndexList({ group, selected_field, selected, on_select }) {
             selected_field={selected_field}
             selected_value={selected}
             on_select={on_select}
-            show_label={show_labels}
           />
         ))}
       </ul>
