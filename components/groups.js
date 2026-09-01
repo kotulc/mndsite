@@ -127,21 +127,34 @@ export function group_chips(facets, field_keys) {
 function build_sidebar_group(name, value) {
   const facets = configured_facets()
   const versioning = siteConfig.versioning
-  if (value === 'versioning') {
+  const VERSIONING = 'versioning'
+
+  function versioning_group(fields) {
     if (!versioning) return null
     return {
       id: name,
-      label: versioning.label,
-      fields: [versioning.key],
+      label: fields.length === 1 && fields[0] === versioning.key ? versioning.label : name,
+      fields,
       versioning: true,
     }
   }
+
+  if (value === VERSIONING) {
+    return versioning_group(versioning ? [versioning.key] : [])
+  }
   if (!Array.isArray(value)) return null
+
+  const uses_versioning = value.includes(VERSIONING)
   const fields = []
-  for (const facet_name of value) {
-    const spec = facets[facet_name]
+  for (const item of value) {
+    if (item === VERSIONING) {
+      if (versioning) fields.push(versioning.key)
+      continue
+    }
+    const spec = facets[item]
     if (spec) for (const key of facet_keys(spec)) fields.push(key)
   }
+  if (uses_versioning) return versioning_group(fields)
   return { id: name, label: name, fields }
 }
 

@@ -885,10 +885,7 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 .view-toggles .sidebar-toggle[aria-selected="true"] {
   color: var(--site-gray-900);
   font-weight: 600;
-  text-decoration: underline;
-  text-decoration-color: var(--site-primary-600);
-  text-underline-offset: 0.2em;
-  text-decoration-thickness: 1px;
+  text-decoration: none;
   background: transparent;
 }
 

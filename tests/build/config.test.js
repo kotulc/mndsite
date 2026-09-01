@@ -251,6 +251,28 @@ versioning:
     expect(cfg.display.sidebar).toEqual(['pages', 'Tags', 'Versions'])
   })
 
+  test('test_groups_versioning_list_form', () => {
+    const cfg = load_config(write_yaml(`title: t
+versioning:
+  inherit: true
+frontmatter:
+  groups:
+    Versions: [versioning]
+`))
+    expect(cfg.frontmatter.groups.Versions).toBe('versioning')
+  })
+
+  test('test_groups_versioning_mixed_with_facets', () => {
+    const cfg = load_config(write_yaml(`title: t
+versioning:
+  inherit: true
+frontmatter:
+  groups:
+    Versions: [status, versioning]
+`))
+    expect(cfg.frontmatter.groups.Versions).toEqual(['status', 'versioning'])
+  })
+
   test('test_versioning_group_without_block_throws', () => {
     const p = write_yaml(`title: t
 frontmatter:

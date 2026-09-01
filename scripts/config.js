@@ -186,15 +186,20 @@ function resolve_facets(raw) {
 
 function resolve_config_groups(raw, facets, versioning) {
   const facet_names = Object.keys(facets || {})
-  const entries = Object.entries(raw || SIDEBAR_GROUP_DEFAULTS)
-  return Object.fromEntries(entries.map(([name, value]) => {
-    if (value === 'versioning') {
-      if (!versioning) {
-        throw new Error(
-          `mndsite.yaml: frontmatter.groups.${name} is versioning but no versioning block is configured`
-        )
-      }
-      return [name, 'versioning']
+  const VERSIONING = 'versioning'
+
+  function require_versioning(name) {
+    if (!versioning) {
+      throw new Error(
+        `mndsite.yaml: frontmatter.groups.${name} is versioning but no versioning block is configured`
+      )
+    }
+  }
+
+  return Object.fromEntries(Object.entries(raw || SIDEBAR_GROUP_DEFAULTS).map(([name, value]) => {
+    if (value === VERSIONING) {
+      require_versioning(name)
+      return [name, VERSIONING]
     }
     if (typeof value === 'string') {
       throw new Error(
@@ -204,14 +209,26 @@ function resolve_config_groups(raw, facets, versioning) {
     if (!Array.isArray(value) || !value.length) {
       throw new Error(`mndsite.yaml: frontmatter.groups.${name} must be a non-empty list of facet names`)
     }
-    const items = value.map(facet => {
+
+    let uses_versioning = false
+    const ordered = []
+    for (const facet of value) {
       const key = String(facet).trim()
+      if (key === VERSIONING) {
+        uses_versioning = true
+        if (!ordered.includes(VERSIONING)) ordered.push(VERSIONING)
+        continue
+      }
       if (!facet_names.includes(key)) {
         throw new Error(`mndsite.yaml: frontmatter.groups.${name} references unknown facet '${key}'`)
       }
-      return key
-    })
-    return [name, items]
+      if (!ordered.includes(key)) ordered.push(key)
+    }
+
+    if (uses_versioning) require_versioning(name)
+    if (uses_versioning && ordered.length === 1) return [name, VERSIONING]
+    if (uses_versioning) return [name, ordered]
+    return [name, ordered]
   }))
 }
 

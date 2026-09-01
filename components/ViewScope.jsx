@@ -118,15 +118,10 @@ function use_wrap_separators(item_count) {
       ))
     }
 
-    measure()
-    const container = container_ref.current
-    if (!container) return undefined
-
-    const observer = new ResizeObserver(measure)
-    observer.observe(container)
+    const id = requestAnimationFrame(measure)
     window.addEventListener('resize', measure)
     return () => {
-      observer.disconnect()
+      cancelAnimationFrame(id)
       window.removeEventListener('resize', measure)
     }
   }, [item_count])
