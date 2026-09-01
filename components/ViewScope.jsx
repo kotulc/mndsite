@@ -2,7 +2,7 @@
  * Shared sidebar view state (?view= / ?field= / ?on=) for the page rail toggles and the
  * facet index portaled into Nextra's left nav.
  */
-import { createContext, useContext, useEffect } from 'react'
+import { createContext, Fragment, useContext, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import siteConfig from '../site.config'
 import { active_field, active_view, selected_value, sidebar_groups, sidebar_toggles } from './filters'
@@ -95,23 +95,74 @@ export function useViewScope() {
 }
 
 
+function use_wrap_separators(item_count) {
+  const container_ref = useRef(null)
+  const item_refs = useRef([])
+  const [wrap_before, set_wrap_before] = useState(() => Array(item_count).fill(false))
+
+  useEffect(() => {
+    item_refs.current = item_refs.current.slice(0, item_count)
+
+    function measure() {
+      const items = item_refs.current
+      const hidden = Array(item_count).fill(false)
+      for (let i = 1; i < items.length; i++) {
+        const prev = items[i - 1]
+        const curr = items[i]
+        if (prev && curr && curr.offsetTop > prev.offsetTop) hidden[i] = true
+      }
+      set_wrap_before(prev => (
+        prev.length === hidden.length && prev.every((v, i) => v === hidden[i])
+          ? prev
+          : hidden
+      ))
+    }
+
+    measure()
+    const container = container_ref.current
+    if (!container) return undefined
+
+    const observer = new ResizeObserver(measure)
+    observer.observe(container)
+    window.addEventListener('resize', measure)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [item_count])
+
+  return { container_ref, item_refs, wrap_before }
+}
+
+
 export function ViewToggles() {
   const { view, toggles, set_view } = useViewScope()
+  const { container_ref, item_refs, wrap_before } = use_wrap_separators(toggles.length)
   if (toggles.length <= 1) return null
 
   return (
-    <div className="view-toggles" role="tablist" aria-label="Browse views">
-      {toggles.map(toggle => (
-        <button
-          key={toggle.id}
-          type="button"
-          role="tab"
-          aria-selected={view === toggle.id}
-          className={view === toggle.id ? 'sidebar-toggle is-active' : 'sidebar-toggle'}
-          onClick={() => set_view(toggle.id)}
-        >
-          {toggle.label}
-        </button>
+    <div ref={container_ref} className="view-toggles" role="tablist" aria-label="Browse views">
+      {toggles.map((toggle, index) => (
+        <Fragment key={toggle.id}>
+          {index > 0 ? (
+            <span
+              className={`view-toggle-sep${wrap_before[index] ? ' is-hidden' : ''}`}
+              aria-hidden="true"
+            >
+              |
+            </span>
+          ) : null}
+          <button
+            ref={el => { item_refs.current[index] = el }}
+            type="button"
+            role="tab"
+            aria-selected={view === toggle.id}
+            className={view === toggle.id ? 'sidebar-toggle is-active' : 'sidebar-toggle'}
+            onClick={() => set_view(toggle.id)}
+          >
+            {toggle.label}
+          </button>
+        </Fragment>
       ))}
     </div>
   )

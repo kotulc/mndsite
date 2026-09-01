@@ -795,6 +795,9 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 }
 
 .sidebar-views .view-toggles {
+  width: 100%;
+  justify-content: center;
+  gap: 0.375rem;
   padding: 0 0.25rem;
 }
 
@@ -841,12 +844,57 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.sidebar-toggle:hover,
-.sidebar-toggle.is-active,
-.sidebar-toggle[aria-selected="true"] {
+.contents-toggle.sidebar-toggle:hover,
+.contents-toggle.sidebar-toggle.is-active {
   background: var(--site-primary-100);
   color: var(--site-primary-700);
   border-color: var(--site-primary-100);
+}
+
+/* Pages / group view chips — muted when idle; selected is bright, primary-underlined. */
+.view-toggle-sep {
+  color: var(--site-gray-400);
+  font-size: 0.875rem;
+  line-height: 1;
+  user-select: none;
+}
+
+.view-toggle-sep.is-hidden {
+  display: none;
+}
+
+.view-toggles .sidebar-toggle {
+  height: auto;
+  min-height: var(--crumb-height);
+  padding: 0.125rem 0.25rem;
+  border: none;
+  border-radius: 0;
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--site-gray-400);
+  text-decoration: none;
+  transition: color 0.15s, text-decoration-color 0.15s;
+}
+
+.view-toggles .sidebar-toggle:hover {
+  color: var(--site-gray-500);
+  background: transparent;
+}
+
+.view-toggles .sidebar-toggle.is-active,
+.view-toggles .sidebar-toggle[aria-selected="true"] {
+  color: var(--site-gray-900);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--site-primary-600);
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+  background: transparent;
+}
+
+:is(html[class~="dark"]) .view-toggles .sidebar-toggle.is-active,
+:is(html[class~="dark"]) .view-toggles .sidebar-toggle[aria-selected="true"] {
+  color: #fff;
 }
 
 .sidebar-toggle:focus-visible {

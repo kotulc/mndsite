@@ -11,7 +11,12 @@ jest.mock('react-dom', () => ({
 
 let asPath = '/about?view=Versions&field=version&on=0.2.0'
 jest.mock('next/router', () => ({
-  useRouter: () => ({ query: { view: 'Versions' }, asPath, replace: jest.fn() }),
+  useRouter: () => ({
+    query: { view: 'Versions' },
+    asPath,
+    replace: jest.fn(),
+    events: { on: jest.fn(), off: jest.fn() },
+  }),
 }))
 jest.mock('next/link', () => ({
   __esModule: true,
