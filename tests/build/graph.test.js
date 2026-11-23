@@ -91,10 +91,11 @@ describe('parse helpers', () => {
     expect(build_facets({ status: ['stable'] }, {}, null, '')).toEqual({})
   })
 
-  test('test_inherit_fills_and_normalizes_semver', () => {
-    const versioning = { key: 'version', inherit: true }
-    expect(build_facets({}, null, versioning, '0.4.1')).toEqual({ version: '0.4.1' })
-    expect(build_facets({ version: '0.2' }, null, versioning, '0.4.1')).toEqual({ version: '0.2.0' })
+  test('custom edition labels come only from authored frontmatter', () => {
+    const facets = { edition: { key: ['edition'] } }
+    expect(build_facets({}, facets)).toEqual({})
+    expect(build_facets({ edition: 'spring preview' }, facets)).toEqual({ edition: 'spring preview' })
+    expect(build_facets({ edition: 'v0.2' }, facets)).toEqual({ edition: 'v0.2' })
   })
 
   test('test_parse_desc_null_when_absent', () => {

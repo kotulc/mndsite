@@ -9,6 +9,11 @@ file is the migration record. The one exception is a *renamed* key: a 0.2 block 
 in 0.3 raises a load error naming the key to use instead, rather than silently doing nothing.
 
 
+## Unreleased
+
+- Browse published pages from the navbar or an article label. The listing combines text search with a tag or custom facet filter.
+- Retired sidebar groups, release inference, semantic version normalization, and tagged Git snapshots. Existing edition keys continue to display explicitly authored values as ordinary facets.
+
 ## 0.3.0 — 2026-08-29
 
 Facets describe content; groups browse it; versioning tracks editions. `fields` and the

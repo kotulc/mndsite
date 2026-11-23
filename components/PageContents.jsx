@@ -9,36 +9,11 @@
  * inline — see components/ContentsMenu.jsx.
  */
 import Link from 'next/link'
-import { useRouter } from 'next/router'
 import { useSection, find_page, section_anchor } from './SectionContext'
-import { active_view } from './filters'
-import { clear_mobile_drawer } from './mobileMenu'
 import siteConfig from '../site.config'
 
 
-const FACET_QUERY_KEYS = ['view', 'field', 'on']
-
-
-function without_facet_query(query) {
-  const next = { ...query }
-  for (const key of FACET_QUERY_KEYS) delete next[key]
-  return next
-}
-
-
 function use_contents_navigate(on_close) {
-  const router = useRouter()
-
-  function dismiss() {
-    on_close?.()
-  }
-
-  function clear_facet_view() {
-    if (active_view(router.query) === 'pages') return Promise.resolve()
-    const query = without_facet_query(router.query)
-    return router.replace({ pathname: router.pathname, query }, undefined, { shallow: true, scroll: false })
-  }
-
   function scroll_to_section(id) {
     function try_scroll() {
       const el = document.getElementById(id)
@@ -54,9 +29,8 @@ function use_contents_navigate(on_close) {
 
   function navigate_to_section(e, id) {
     e.preventDefault()
-    dismiss()
-    clear_mobile_drawer()
-    clear_facet_view().then(() => scroll_to_section(id))
+    on_close?.()
+    scroll_to_section(id)
   }
 
   return { navigate_to_section }

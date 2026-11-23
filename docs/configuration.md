@@ -46,14 +46,12 @@ Writing `""` reads the same as the default, so no value in the file ever needs t
 | `theme.navbar` | string | `none` | Navbar background: `primary` (theme tint), `background` (match page), or any CSS color |
 | `theme.footer` | string | `none` | Footer background: `primary` (theme tint), `background` (match page), or any CSS color |
 | `nav_order` | object | `{}` | Explicit nav ordering per directory — see below |
-| `frontmatter` | object | see below | Frontmatter keys mndsite reads, plus the `facets` and `groups` blocks |
-| `versioning` | object | `none` | Optional edition tracking — stamps, inheritance, git-tag history |
+| `frontmatter` | object | see below | Frontmatter keys and facet definitions |
 | `display.crumbs` | bool | `true` | Breadcrumb trail above the page title |
-| `display.sidebar` | list | `[pages, Tags]` | Left-nav views — `pages` plus `frontmatter.groups` names |
 | `display.header` | list | `[date, reading_time, facets]` | Metadata under the title; also accepts facet and frontmatter key names |
 | `display.toc` | list | `[description, sections, related, edit]` | Right sidebar at ≥ xl |
 | `display.contents` | list | *(copy of `toc`)* | Inline Contents panel below the title |
-| `display.navbar` | list | `[theme, feed, github]` | Navbar icons, left to right |
+| `display.navbar` | list | `[browse, theme, feed, github]` | Navbar icons, left to right |
 | `edit` | object | see below | "Edit this page" targets — **only used when `repo_url` is set** |
 | `content` | path | `./docs` | Source markdown directory (resolved relative to this file) |
 | `output` | path | `./dist` | Output directory for the built site (resolved relative to this file) |
@@ -140,7 +138,7 @@ theme:
 ## Frontmatter
 
 `frontmatter` maps mndsite's built-in renderer metadata onto the frontmatter keys that carry
-it, and nests the two blocks that interpret content values: `facets` and `groups`. No key
+it. The nested `facets` block declares labels for Browse and article chips. No key
 means anything unless `frontmatter` names it.
 
 ```yaml
@@ -179,7 +177,6 @@ frontmatter:
 | `key` | *(required)* | Frontmatter key to read; a list folds several keys into one facet |
 | `label` | facet name, title-cased | Chip tooltip and index heading |
 | `color` | next palette entry | `blue`, `violet`, `amber`, `rose`, `green`, `teal`, or a hue `0-359` |
-| `sort` | `alpha` | `alpha`, `semver`, `date` |
 
 `categories`, `tags`, and `status` are always declared — naming one only overrides it.
 Chip colors are generated from each facet's hue in both light and dark themes, so a
@@ -188,61 +185,23 @@ user-defined facet gets a coherent chip without any CSS.
 Values come from frontmatter only, never from paths and never generated. A page missing a
 facet's key simply has no value for it, and keeps its route either way.
 
-Edition behavior — `inherit`, `history`, `default`, `group_by` — belongs to `versioning`,
-not to a facet. So do fixed value lists: setting `values`, `index`, or any of those keys on
-a facet is a load error naming the key to use instead.
+## Browse
 
-## Sidebar groups
+Open **Browse** in the navbar to see published pages. Search titles, paths, descriptions and labels, or select a label from the grouped filter. Article chips link to the same results. Filters and search text are shareable, for example `/browse/?tag=static+site` or `/browse/?facet=status&tag=stable`.
 
-`frontmatter.groups` bundles facets into left-nav browse groups; `display.sidebar` picks
-which groups appear and in what order.
+Declare labels in `frontmatter.facets`. A facet can read several keys. The `tags` facet uses Trendly's spelling normalization. Other facets retain their authored labels. For example:
 
 ```yaml
 frontmatter:
-  groups:
-    Tags: [tags]
-    Topics: [categories, tags]
-    Versions: [status, versioning]   # the literal `versioning` pulls in the version stamp
-display:
-  sidebar: [pages, Topics, Tags, Versions]
+  facets:
+    tags: { key: [tags, keywords], label: Tags }
+    topics: { key: topics, label: Topic, color: teal }
+    edition: { key: edition, label: Edition }
 ```
 
-A group is a non-empty list of facet names, which may include the literal `versioning`, or
-the bare word `versioning` on its own. Chip order within a group follows the facet list.
-Naming an undeclared facet, or `versioning` with no `versioning` block, is a load error.
+If your content already uses `/browse/`, the generated listing uses `/browse-pages/` and its links update automatically. Older sidebar links with a recognized field and value open the corresponding Browse filter. Other former views open the page list.
 
-`pages` is the directory tree and needs no group. With `pages` alone in `display.sidebar`
-no view chips render at all. Selecting a group replaces the tree with its value chips and
-lists matching pages in the body — a view switcher, not a filter. Every page keeps its route.
-
-Selection lives in the URL:
-
-| Param | Effect |
-|---|---|
-| `?view=<group>` | Open a group named in `display.sidebar` — `pages` is the default |
-| `?field=<key>` | Which of the group's fields supplies the chips; defaults to the first |
-| `?on=<value>` | Selected value in that field; `latest` applies to the version stamp only |
-
-## Versioning
-
-`versioning` is optional and off by default. It tracks editions of a page, and wired into a
-group through the `versioning` token it gives them a left-nav index.
-
-```yaml
-versioning:
-  key: version         # frontmatter key holding the stamp
-  label: Versions      # index label
-  color: teal
-  inherit: true        # fill a missing stamp from package.json, then the nearest git tag
-  history: true        # ingest exact vMAJOR.MINOR.PATCH git tags as frozen trees
-  default: latest      # preselected value
-  group_by: status     # another facet, used as headings over the value list
-```
-
-Stamps always sort as semver, normalized to major.minor.patch — `0.2` and `v0.2.0` both
-become `0.2.0`. With `history: true`, tagged trees are ingested under `/_history/<version>/`
-and hidden from the Pages tree, and `latest` means the current tree; without it, `latest`
-means the HEAD pages carrying the highest stamp.
+The sidebar follows the content directory. Existing configurations can remove `frontmatter.groups` and `display.sidebar`. An old `versioning.key` is accepted as an ordinary facet for authored values. Builds no longer infer editions from Git or package metadata or export tagged snapshots. To keep historical pages online, include them in the content tree.
 
 ## Display
 
@@ -251,20 +210,18 @@ means the HEAD pages carrying the highest stamp.
 ```yaml
 display:
   crumbs: true
-  sidebar: [pages, Tags]
   header: [date, reading_time, facets]
   toc: [description, sections, related, edit]
-  navbar: [theme, feed, github]
+  navbar: [browse, theme, feed, github]
 ```
 
 | Zone | Elements | Component |
 |------|----------|-----------|
 | `crumbs` | `true` / `false` | `Breadcrumbs` — trail above the title |
-| `sidebar` | `pages`, plus any `frontmatter.groups` name | `SidebarViews` — left-nav view chips |
 | `header` | `date`, `reading_time`, `facets`, or any facet or frontmatter key name | `PageHeader` + `TagList` |
 | `toc` | `description`, `sections`, `related`, `edit` | `PageContents` in the right sidebar |
 | `contents` | same vocabulary as `toc` | `PageContents` in the inline Contents panel |
-| `navbar` | `theme`, `feed`, `github` | `ThemeToggle`, `FeedLink`, `GitHubLink` |
+| `navbar` | `browse`, `theme`, `feed`, `github` | `ThemeToggle`, `FeedLink`, `GitHubLink` |
 
 `display.contents` defaults to a copy of `display.toc` when omitted. Set it separately only when the inline panel should differ from the sidebar.
 
@@ -274,7 +231,7 @@ Below the `xl` breakpoint Nextra hides the right sidebar. A **Contents** button 
 
 `theme` in `display.navbar` is the only theme toggle — Nextra's sidebar toggle is disabled. Chips and Related entries render as supplied; nothing is truncated.
 
-`header` also accepts any facet name. Listing a facet there places its chips at that position — so `header: [date, version, tags]` shows version chips between the date and tag chips. The generic `facets` element expands to every declared facet not already named.
+`header` also accepts any facet name. Listing a facet there places its chips at that position — so `header: [date, status, tags]` shows status chips between the date and tag chips. The generic `facets` element expands to every declared facet not already named.
 
 ## Edit links
 

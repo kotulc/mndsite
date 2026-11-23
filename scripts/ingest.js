@@ -19,7 +19,6 @@ const yaml = require('js-yaml')
 const { strip_dir } = require('./fix-exif')
 const meta = require('./meta')
 const { feed_entries, write_rss } = require('./rss')
-const { list_semver_tags, files_at_tag, show_file } = require('./git-history')
 
 
 const ROOT = path.join(__dirname, '..')
@@ -249,8 +248,8 @@ function copy_content_assets(src_dir) {
 }
 
 
-function ingest_page(src_entry, dest_dir, rel, slug, base, img_url, extra = {}) {
-  const raw = extra.raw != null ? extra.raw : fs.readFileSync(src_entry, 'utf8').replace(/\r\n?/g, '\n')
+function ingest_page(src_entry, dest_dir, rel, slug, base, img_url) {
+  const raw = fs.readFileSync(src_entry, 'utf8').replace(/\r\n?/g, '\n')
   const fm  = parse_fm(raw)
 
   const config = get_config()
@@ -265,95 +264,17 @@ function ingest_page(src_entry, dest_dir, rel, slug, base, img_url, extra = {}) 
 
   const parts = [...(rel ? rel.split('/') : []), ...(slug === 'index' ? [] : [slug])]
   const url   = '/' + parts.join('/') || '/'
-  if (!extra.snapshot) check_refs(body, url)
-
-  const created = extra.created != null
-    ? extra.created
-    : (src_entry && fs.existsSync(src_entry)
-      ? fs.statSync(src_entry).mtime.toISOString().slice(0, 10)
-      : '')
+  check_refs(body, url)
 
   return meta.build_page({
     slug,
     title,
     url,
     content: body,
-    source:  extra.source || [rel, src_entry ? path.basename(src_entry) : `${slug}.md`].filter(Boolean).join('/'),
-    created,
+    source:  [rel, path.basename(src_entry)].filter(Boolean).join('/'),
+    created: fs.statSync(src_entry).mtime.toISOString().slice(0, 10),
     fm,
-    snapshot: extra.snapshot || '',
   }, config)
-}
-
-
-function hide_nav_entry(dest_dir, slug) {
-  /** Mark a root folder hidden in Nextra's _meta.json so it stays off the Pages tree. */
-  const meta_path = path.join(dest_dir, '_meta.json')
-  let data = {}
-  if (fs.existsSync(meta_path)) {
-    try { data = JSON.parse(fs.readFileSync(meta_path, 'utf8')) } catch { data = {} }
-  }
-  data[slug] = { display: 'hidden', title: slug }
-  const entries = Object.entries(data)
-  write_meta(meta_path, entries)
-}
-
-
-function write_dir_meta(dir) {
-  /** Minimal _meta.json from directory contents, used for hidden snapshot trees. */
-  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return
-  const entries = []
-  for (const name of fs.readdirSync(dir).sort()) {
-    if (name === '_meta.json' || name.startsWith('_app')) continue
-    const p = path.join(dir, name)
-    if (fs.statSync(p).isDirectory()) {
-      entries.push([name, name])
-      write_dir_meta(p)
-    } else if (name.endsWith('.mdx')) {
-      entries.push([name.replace(/\.mdx$/, ''), name.replace(/\.mdx$/, '')])
-    }
-  }
-  if (entries.length) write_meta(path.join(dir, '_meta.json'), entries)
-}
-
-
-function ingest_history(config, excluded) {
-  /** Frozen trees from git tags, written under pages/_history/<version>/. */
-  const versioning = config.versioning
-  if (!versioning || !versioning.history) return []
-
-  const repo = config.dir || ROOT
-  const prefix = path.relative(repo, config.content).split(path.sep).join('/')
-  if (!prefix || prefix.startsWith('..') || path.isAbsolute(prefix)) return []
-
-  const pages = []
-  for (const { tag, version } of list_semver_tags(repo)) {
-    if (version === config.release) continue
-    const files = files_at_tag(repo, tag, prefix).filter(f => /\.mdx?$/.test(f))
-    for (const repo_file of files) {
-      if (excluded.has(path.resolve(repo, repo_file))) continue
-      let raw
-      try { raw = show_file(repo, tag, repo_file).replace(/\r\n?/g, '\n') } catch { continue }
-      const rel_in_content = repo_file.slice(prefix.length).replace(/^\//, '')
-      const dir_part = path.posix.dirname(rel_in_content)
-      const base_file = path.posix.basename(rel_in_content)
-      const is_mdx = base_file.endsWith('.mdx')
-      const base = path.basename(base_file, is_mdx ? '.mdx' : '.md')
-      const slug = (base === 'home' || base === 'index') ? 'index' : base
-      const rel = ['_history', version, dir_part === '.' ? '' : dir_part].filter(Boolean).join('/')
-      const dest_dir = path.join(TARGET.pages, ...rel.split('/'))
-      fs.mkdirSync(dest_dir, { recursive: true })
-      pages.push(ingest_page(base_file, dest_dir, rel, slug, base, '', {
-        raw, snapshot: version, source: rel_in_content, created: '',
-      }))
-    }
-  }
-
-  if (pages.length) {
-    write_dir_meta(path.join(TARGET.pages, '_history'))
-    hide_nav_entry(TARGET.pages, '_history')
-  }
-  return pages
 }
 
 
@@ -468,6 +389,20 @@ async function write_expandable_feed(config, pages) {
 
 }
 
+function write_browse_page() {
+  let slug = 'browse'
+  while (fs.existsSync(path.join(TARGET.pages, slug)) || fs.existsSync(path.join(TARGET.pages, slug + '.mdx'))) {
+    slug += '-pages'
+  }
+  fs.writeFileSync(path.join(TARGET.pages, slug + '.mdx'),
+    "---\ntitle: Browse\n---\n\nimport Browse from '../components/Browse'\n\n# Browse\n\n<Browse />\n")
+  const nav = path.join(TARGET.pages, '_meta.json')
+  const entries = Object.entries(JSON.parse(fs.readFileSync(nav, 'utf8')))
+  entries.push([slug, { display: 'hidden', theme: { sidebar: false, toc: false } }])
+  write_meta(nav, entries)
+  return '/' + slug
+}
+
 async function run(config) {
   _config = config
   _warnings = []
@@ -487,16 +422,13 @@ async function run(config) {
   const workspace = config.dir || ROOT
   const excluded = new Set(['drafts', ...(config.drafts || [])].map(file => path.resolve(workspace, file)))
   const { pages } = ingest_dir(src, TARGET.pages, '', excluded)
-  const history = ingest_history(config, excluded)
-  const all = [...pages, ...history]
-
-  all.sort((a, b) => a.url.localeCompare(b.url))
+  const browse = write_browse_page()
+  pages.sort((a, b) => a.url.localeCompare(b.url))
   fs.mkdirSync(TARGET.public, { recursive: true })
-  fs.writeFileSync(TARGET.meta, JSON.stringify({ pages: all }, null, 2) + '\n')
+  fs.writeFileSync(TARGET.meta, JSON.stringify({ browse, pages }, null, 2) + '\n')
   await write_expandable_feed(config, pages)
   write_rss(TARGET.public, pages, config)
-  console.log(`  Wrote site metadata (${all.length} pages) to public/site-meta.json`)
-  if (history.length) console.log(`  Ingested ${history.length} snapshot page(s) from git tags`)
+  console.log(`  Wrote site metadata (${pages.length} pages) to public/site-meta.json`)
 
   const app_src = path.join(ROOT, '_app.jsx')
   if (fs.existsSync(app_src)) fs.copyFileSync(app_src, path.join(TARGET.pages, '_app.jsx'))

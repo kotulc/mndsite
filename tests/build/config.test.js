@@ -90,7 +90,7 @@ describe('load_config — frontmatter', () => {
     expect(cfg.frontmatter.facets.categories.key).toEqual(['categories'])
     expect(cfg.frontmatter.facets.tags.key).toEqual(['tags'])
     expect(cfg.frontmatter.facets.status.key).toEqual(['status'])
-    expect(cfg.frontmatter.groups).toEqual({ Tags: ['status', 'categories', 'tags'] })
+    expect(cfg.frontmatter.groups).toBeUndefined()
   })
 
   test('test_fields_rename_rejected', () => {
@@ -209,7 +209,7 @@ frontmatter:
 
   test('test_top_level_groups_rejected', () => {
     const p = write_yaml('title: t\ngroups:\n  Tags: [tags]\n')
-    expect(() => load_config(p)).toThrow(/belongs under frontmatter.groups/)
+    expect(() => load_config(p)).toThrow(/use frontmatter.facets/)
   })
 
   test('test_top_level_facets_rejected', () => {
@@ -232,98 +232,18 @@ frontmatter:
 })
 
 
-describe('load_config — sidebar groups', () => {
-  test('test_groups_default', () => {
-    const cfg = load_config(write_yaml('title: t'))
-    expect(cfg.frontmatter.groups).toEqual({ Tags: ['status', 'categories', 'tags'] })
-    expect(cfg.display.sidebar).toEqual(['pages', 'Tags'])
-  })
-
-  test('test_groups_include_versioning_when_configured', () => {
-    const cfg = load_config(write_yaml(`title: t
-versioning:
-  inherit: true
+test('legacy edition field becomes a normal facet and sidebar groups are retired', () => {
+  const cfg = load_config(write_yaml(`title: t
+versioning: { key: edition, inherit: true, history: true }
+display: { sidebar: [pages, Versions], navbar: [feed], header: [edition] }
+frontmatter: { groups: { Versions: versioning } }
 `))
-    expect(cfg.frontmatter.groups).toEqual({
-      Tags: ['status', 'categories', 'tags'],
-      Versions: 'versioning',
-    })
-    expect(cfg.display.sidebar).toEqual(['pages', 'Tags', 'Versions'])
-  })
-
-  test('test_groups_versioning_list_form', () => {
-    const cfg = load_config(write_yaml(`title: t
-versioning:
-  inherit: true
-frontmatter:
-  groups:
-    Versions: [versioning]
-`))
-    expect(cfg.frontmatter.groups.Versions).toBe('versioning')
-  })
-
-  test('test_groups_versioning_mixed_with_facets', () => {
-    const cfg = load_config(write_yaml(`title: t
-versioning:
-  inherit: true
-frontmatter:
-  groups:
-    Versions: [status, versioning]
-`))
-    expect(cfg.frontmatter.groups.Versions).toEqual(['status', 'versioning'])
-  })
-
-  test('test_versioning_group_without_block_throws', () => {
-    const p = write_yaml(`title: t
-frontmatter:
-  groups:
-    Versions: versioning
-`)
-    expect(() => load_config(p)).toThrow(/no versioning block/)
-  })
-
-  test('test_groups_unknown_facet_throws', () => {
-    const p = write_yaml(`title: t
-frontmatter:
-  groups:
-    Mine: [nope]
-`)
-    expect(() => load_config(p)).toThrow(/unknown facet 'nope'/)
-  })
+  expect(cfg.frontmatter.facets.edition.key).toEqual(['edition'])
+  expect(cfg.versioning).toBeUndefined()
+  expect(cfg.display.sidebar).toBeUndefined()
+  expect(cfg.frontmatter.groups).toBeUndefined()
+  expect(cfg.display.navbar).toEqual(['browse', 'feed'])
 })
-
-
-describe('load_config — versioning', () => {
-  test('test_versioning_defaults', () => {
-    const cfg = load_config(write_yaml(`title: t
-versioning:
-  inherit: true
-  history: true
-`))
-    expect(cfg.versioning).toMatchObject({
-      key: 'version', label: 'Versions', sort: 'semver',
-      inherit: true, history: true, default: 'latest', group_by: '',
-    })
-  })
-
-  test('test_versioning_rejects_field', () => {
-    const p = write_yaml(`title: t
-versioning:
-  field: version
-`)
-    expect(() => load_config(p)).toThrow(/versioning\.field is not supported/)
-  })
-
-  test('test_versioning_absent_by_default', () => {
-    expect(load_config(write_yaml('title: t')).versioning).toBeNull()
-  })
-
-  test('test_release_from_package_json', () => {
-    fs.writeFileSync(path.join(tmp, 'package.json'), JSON.stringify({ version: '1.2.3' }))
-    expect(load_config(write_yaml('title: t')).release).toBe('1.2.3')
-  })
-})
-
 
 describe('load_config — display lists', () => {
   test('test_display_defaults_applied', () => {
@@ -377,10 +297,7 @@ display:
     expect(() => load_config(p)).toThrow(/display.toc must be a list/)
   })
 
-  test('test_display_sidebar_unknown_group_throws', () => {
-    const p = write_yaml('title: t\ndisplay:\n  sidebar: [pages, Unknown]\n')
-    expect(() => load_config(p)).toThrow(/unknown display.sidebar element 'Unknown'/)
-  })
+
 })
 
 

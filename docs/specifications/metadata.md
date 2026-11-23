@@ -14,6 +14,7 @@ mndsite does **not** generate semantic tags or embedding-based related links. En
 
 ```json
 {
+  "browse": "/browse",
   "pages": [
     {
       "url": "/configuration",
@@ -27,7 +28,6 @@ mndsite does **not** generate semantic tags or embedding-based related links. En
       "related": [
         { "name": "Getting Started", "url": "/getting-started" }
       ],
-      "identity": "mndmap-0042",
       "source": "configuration.md",
       "facets": {
         "categories": ["guide"],
@@ -47,19 +47,15 @@ mndsite does **not** generate semantic tags or embedding-based related links. En
 
 ## Facets
 
-`facets` holds one entry per declared content dimension, keyed by facet name. There is no
+`facets` holds one entry per declared content dimension, keyed by source frontmatter field. There is no
 fixed vocabulary — `mndsite.yaml` `facets` decides which frontmatter fields are read and what
 each is called. Values keep their supplied shape: a list stays a list, a scalar stays a scalar.
 
 | Rule | Behavior |
 |-------|---------|
 | Undeclared frontmatter field | Ignored — never appears in `facets` |
-| Value outside the facet's `values` list | Dropped |
 | Field absent from a page | Facet omitted for that page |
 | Sections | Carry no facet values (no local section tagging) |
-
-`identity` is the frontmatter id (default key `doc_id`) that groups variants of the same
-document — the basis for version selection and rollup. It is `""` when upstream supplies none.
 
 `source` is the ingested file's path relative to the content root, keeping its original
 extension (`index.md`, not the emitted `index.mdx`). It exists so "Edit this page" can point

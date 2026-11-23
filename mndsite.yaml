@@ -34,8 +34,7 @@ theme:
   navbar: background   # none, primary (theme tint), background (match page), or any CSS color
   footer: none
 
-# Frontmatter keys mndsite reads. `facets` declare content dimensions; `groups` bundle
-# facet names for the sidebar (chip order within each group follows the facet list).
+# Page labels and Browse filters come from these frontmatter fields.
 frontmatter:
   title: title
   description: [description, desc]
@@ -45,43 +44,24 @@ frontmatter:
   facets:
     categories:
       key: categories
-      label: Category
+      label: Topic
       color: blue
-      sort: alpha
     tags:
       key: tags
       label: Tags
       color: violet
-      sort: alpha
     status:
       key: status
       label: Status
       color: amber
-      sort: alpha
-  groups:
-    Tags: [tags]
-    Topics: [categories, tags]
-    Versions: [status, versioning]
 
-# Optional edition tracking — wire into the sidebar via a group value of `versioning`.
-versioning:
-  key: version
-  label: Versions
-  color: teal
-  inherit: true
-  history: true
-  default: latest
-  group_by: status
-
-# Rendered elements, in display order. `sidebar` lists browse groups; `header` also accepts
-# facet names and frontmatter field keys.
+# Rendered elements, in display order.
 display:
   crumbs: true
-  sidebar: [pages, Topics, Tags, Versions]
-  header: [date, reading_time, version, status, facets]
+  header: [date, reading_time, facets]
   toc: [description, sections, related, edit]
   contents: [description, sections, related]
-  navbar: [theme, feed, github]
+  navbar: [browse, theme, feed, github]
 
 # "Edit this page" targets. Used only when repo_url is set.
 edit:

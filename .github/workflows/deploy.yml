@@ -36,7 +36,6 @@ jobs:
         with:
           path: ./dist
 
-  # TODO: ingest vMAJOR.MINOR.PATCH git tags as version snapshots when facets.version.history is true
   publish:
     needs: build
     runs-on: ubuntu-latest

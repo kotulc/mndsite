@@ -1,10 +1,12 @@
 # mndsite configuration surface
 
+## Historical configuration design
+
+This document records the earlier sidebar and edition design. Use [the configuration reference](docs/configuration.md) and [the site configuration](mndsite.yaml) for current browse and tagging behavior.
+
 ## Status
 
-Planned shape of the complete `mndsite.yaml`. Sections marked **built** are in the code
-today; **planned** sections are the target for the search work. This document
-is the reference for what mndsite reads, what a user can turn off, and what gets cut.
+This was the design for the 0.3 sidebar implementation and its proposed search work.
 
 Contract version: **0.3** (= release `0.3.x`). `CHANGELOG.md` is the migration record.
 

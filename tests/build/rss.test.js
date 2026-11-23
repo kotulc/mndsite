@@ -28,6 +28,15 @@ describe('static RSS feed', () => {
     fs.writeFileSync(path.join(root, file), `---\ntitle: "${title}"\n${date ? `date: ${date}\n` : ''}${description ? `description: "${description}"\n` : ''}---\n\nFirst paragraph.\n`)
   }
 
+  test('preserves an authored Browse page and links the generated list at a free route', async () => {
+    post('posts/browse.md', 'Authored Browse')
+    await run(configure())
+    const metadata = JSON.parse(fs.readFileSync(path.join(root, 'public/site-meta.json'), 'utf8'))
+    expect(metadata.browse).toBe('/browse-pages')
+    expect(metadata.pages.map(page => page.url)).toEqual(['/browse'])
+    expect(fs.readFileSync(path.join(root, 'pages/browse-pages.mdx'), 'utf8')).toContain('<Browse />')
+  })
+
   test('exports ordered published summaries and permanent URLs, then removes disabled output', async () => {
     post('posts/updates/new.md', 'New & notable', '2026-10-10', 'A <B> summary')
     post('posts/updates/old.md', 'Old note', '2026-09-08')

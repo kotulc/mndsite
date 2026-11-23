@@ -2,24 +2,18 @@
  * YAML config loader for the mndsite CLI.
  * Reads mndsite.yaml, validates it, applies defaults, and generates site.config.js so
  * Next.js and Nextra can consume the config at build time.
- *
- * `frontmatter.facets` declare content dimensions; `frontmatter.groups` bundle facet names
- * into sidebar browse groups. `versioning` is optional.
  */
 const fs   = require('fs')
 const path = require('path')
-const { execFileSync } = require('child_process')
 const yaml = require('js-yaml')
 const { resolve_theme } = require('./theme')
-const { normalize_semver } = require('./semver')
 
 
 const DISPLAY_ELEMENTS = {
   header:   ['date', 'reading_time', 'facets'],
-  sidebar:  ['pages'],
   toc:      ['description', 'sections', 'related', 'edit'],
   contents: ['description', 'sections', 'related', 'edit'],
-  navbar:   ['theme', 'feed', 'github'],
+  navbar:   ['browse', 'theme', 'feed', 'github'],
 }
 
 const EDIT_TEMPLATES = {
@@ -30,7 +24,7 @@ const EDIT_TEMPLATES = {
 
 const FACET_COLORS = { blue: 210, violet: 265, amber: 35, rose: 340, green: 150, teal: 190 }
 const COLOR_ORDER = Object.keys(FACET_COLORS)
-const FACET_SORTS = ['alpha', 'semver', 'date']
+const FACET_SORTS = ['alpha', 'date']
 
 const UNSET_TOKENS = new Set(['', 'none', 'auto', 'default'])
 
@@ -39,23 +33,6 @@ const FACET_DEFAULTS = {
   tags:       { key: ['tags'],       label: 'Tag',      color: 'violet' },
   status:     { key: ['status'],     label: 'Status',     color: 'amber' },
 }
-
-const SIDEBAR_GROUP_DEFAULTS = {
-  Tags: ['status', 'categories', 'tags'],
-}
-
-
-function default_groups(versioning) {
-  const groups = { ...SIDEBAR_GROUP_DEFAULTS }
-  if (versioning) groups.Versions = 'versioning'
-  return groups
-}
-
-
-function default_sidebar(versioning) {
-  return versioning ? ['pages', 'Tags', 'Versions'] : ['pages', 'Tags']
-}
-
 
 const DEFAULTS = {
   description:    'none',
@@ -68,9 +45,8 @@ const DEFAULTS = {
   display: {
     crumbs: true,
     header: ['date', 'reading_time', 'facets'],
-    sidebar: ['pages', 'Tags'],
     toc:    ['description', 'sections', 'related', 'edit'],
-    navbar: ['theme', 'feed', 'github'],
+    navbar: ['browse', 'theme', 'feed', 'github'],
   },
   edit:           { branch: 'main', path: 'auto', url: 'auto' },
   nav_order:      {},
@@ -82,7 +58,6 @@ const DEFAULTS = {
     related:      'related',
     facets:         FACET_DEFAULTS,
   },
-  versioning:     null,
   content:        './docs',
   output:         './dist',
   components:     'none',
@@ -120,11 +95,6 @@ function label_for(name) {
 }
 
 
-function sidebar_tokens(groups_cfg) {
-  return ['pages', ...Object.keys(groups_cfg || {})]
-}
-
-
 function resolve_hue(name, color, index) {
   if (unset(color)) return FACET_COLORS[COLOR_ORDER[index % COLOR_ORDER.length]]
   if (FACET_COLORS[color] != null) return FACET_COLORS[color]
@@ -143,23 +113,6 @@ function as_bool(name, value, fallback = false) {
 }
 
 
-function resolve_release(config_dir) {
-  try {
-    const pkg = JSON.parse(fs.readFileSync(path.join(config_dir, 'package.json'), 'utf8'))
-    const v = normalize_semver(pkg.version)
-    if (v) return v
-  } catch { /* no package.json beside the YAML */ }
-  try {
-    const tag = execFileSync('git', ['describe', '--tags', '--abbrev=0'], {
-      cwd: config_dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim()
-    return normalize_semver(tag) || ''
-  } catch {
-    return ''
-  }
-}
-
-
 function normalize_key_list(key, path_label) {
   if (key == null || key === '') throw new Error(`mndsite.yaml: ${path_label} requires a 'key'`)
   const list = Array.isArray(key) ? key : [key]
@@ -175,7 +128,7 @@ function resolve_facet(name, spec, index) {
   }
   cfg.key = normalize_key_list(cfg.key, `frontmatter.facets.${name}`)
   cfg.label = cfg.label || label_for(name)
-  cfg.sort  = cfg.sort || 'alpha'
+  cfg.sort  = cfg.sort === 'semver' ? 'alpha' : cfg.sort || 'alpha'
   cfg.hue   = resolve_hue(`frontmatter.facets.${name}`, cfg.color, index)
 
   if (!FACET_SORTS.includes(cfg.sort)) {
@@ -187,7 +140,7 @@ function resolve_facet(name, spec, index) {
     if (legacy === 'field') continue
     if (cfg[legacy] != null && cfg[legacy] !== '') {
       throw new Error(
-        `mndsite.yaml: frontmatter.facets.${name}.${legacy} is not supported — use versioning for edition behavior`
+        `mndsite.yaml: frontmatter.facets.${name}.${legacy} is not supported`
       )
     }
   }
@@ -201,80 +154,9 @@ function resolve_facets(raw) {
 }
 
 
-function resolve_config_groups(raw, facets, versioning) {
-  const facet_names = Object.keys(facets || {})
-  const VERSIONING = 'versioning'
-
-  function require_versioning(name) {
-    if (!versioning) {
-      throw new Error(
-        `mndsite.yaml: frontmatter.groups.${name} is versioning but no versioning block is configured`
-      )
-    }
-  }
-
-  return Object.fromEntries(Object.entries(raw || SIDEBAR_GROUP_DEFAULTS).map(([name, value]) => {
-    if (value === VERSIONING) {
-      require_versioning(name)
-      return [name, VERSIONING]
-    }
-    if (typeof value === 'string') {
-      throw new Error(
-        `mndsite.yaml: frontmatter.groups.${name} must be a facet list or 'versioning'`
-      )
-    }
-    if (!Array.isArray(value) || !value.length) {
-      throw new Error(`mndsite.yaml: frontmatter.groups.${name} must be a non-empty list of facet names`)
-    }
-
-    let uses_versioning = false
-    const ordered = []
-    for (const facet of value) {
-      const key = String(facet).trim()
-      if (key === VERSIONING) {
-        uses_versioning = true
-        if (!ordered.includes(VERSIONING)) ordered.push(VERSIONING)
-        continue
-      }
-      if (!facet_names.includes(key)) {
-        throw new Error(`mndsite.yaml: frontmatter.groups.${name} references unknown facet '${key}'`)
-      }
-      if (!ordered.includes(key)) ordered.push(key)
-    }
-
-    if (uses_versioning) require_versioning(name)
-    // A group that is versioning and nothing else collapses to the bare token.
-    if (uses_versioning && ordered.length === 1) return [name, VERSIONING]
-    return [name, ordered]
-  }))
-}
-
-
-function resolve_versioning(raw) {
-  if (raw == null || unset(raw)) return null
-  if (typeof raw !== 'object' || Array.isArray(raw)) {
-    throw new Error(`mndsite.yaml: versioning must be an object`)
-  }
-  const cfg = { ...raw }
-  cfg.key = unset(cfg.key) ? 'version' : String(cfg.key).trim()
-  if (!unset(cfg.field)) {
-    throw new Error(`mndsite.yaml: versioning.field is not supported — use key`)
-  }
-  cfg.label = cfg.label || 'Versions'
-  cfg.sort  = 'semver'
-  cfg.hue   = resolve_hue('versioning', cfg.color, 0)
-  cfg.inherit = as_bool('versioning.inherit', cfg.inherit)
-  cfg.history = as_bool('versioning.history', cfg.history)
-  cfg.default = unset(cfg.default) ? 'latest' : String(cfg.default).trim()
-  cfg.group_by = unset(cfg.group_by) ? '' : String(cfg.group_by).trim()
-  return cfg
-}
-
-
-function header_field_keys(facets, versioning) {
+function header_field_keys(facets) {
   const keys = []
   const add = key => { if (key && !keys.includes(key)) keys.push(key) }
-  if (versioning) add(versioning.key)
   for (const spec of Object.values(facets || {})) {
     for (const key of spec.key) add(key)
   }
@@ -292,8 +174,9 @@ function resolve_crumbs(value) {
 }
 
 
-function resolve_display(raw, facets, groups_cfg, versioning) {
-  const raw_display = raw || {}
+function resolve_display(raw, facets) {
+  const raw_display = { ...raw }
+  delete raw_display.sidebar
   for (const list of Object.keys(raw_display)) {
     if (list === 'crumbs') continue
     if (!DISPLAY_ELEMENTS[list]) {
@@ -308,8 +191,7 @@ function resolve_display(raw, facets, groups_cfg, versioning) {
   if (!Array.isArray(cfg.toc)) throw new Error(`mndsite.yaml: display.toc must be a list`)
   if (!cfg.contents) cfg.contents = [...cfg.toc]
 
-  const field_keys = header_field_keys(facets, versioning)
-  const sidebar_valid = sidebar_tokens(groups_cfg)
+  const field_keys = header_field_keys(facets)
 
   for (const [list, allowed] of Object.entries(DISPLAY_ELEMENTS)) {
     const items = cfg[list]
@@ -317,9 +199,7 @@ function resolve_display(raw, facets, groups_cfg, versioning) {
 
     const valid = list === 'header'
       ? [...allowed, ...Object.keys(facets), ...field_keys]
-      : list === 'sidebar'
-        ? sidebar_valid
-        : allowed
+      : allowed
     for (const item of items) {
       if (!valid.includes(item)) {
         throw new Error(`mndsite.yaml: unknown display.${list} element '${item}' — use ${valid.join(', ')}`)
@@ -382,7 +262,7 @@ function load_config(yaml_path) {
     throw new Error(`mndsite.yaml: top-level 'facets' belongs under frontmatter.facets`)
   }
   if (raw && raw.groups != null) {
-    throw new Error(`mndsite.yaml: top-level 'groups' belongs under frontmatter.groups`)
+    throw new Error(`mndsite.yaml: 'groups' was retired; use frontmatter.facets`)
   }
 
   for (const key of ['description', 'repo_url', 'feed_url', 'footer', 'components', 'assets']) {
@@ -406,19 +286,19 @@ function load_config(yaml_path) {
   theme.footer = optional(theme.footer)
 
   cfg.theme       = resolve_theme(theme)
-  cfg.versioning  = resolve_versioning(raw.versioning)
-  cfg.frontmatter = resolve_frontmatter(raw.frontmatter)
-  cfg.frontmatter.groups = resolve_config_groups(
-    { ...default_groups(cfg.versioning), ...(raw?.frontmatter?.groups || {}) },
-    cfg.frontmatter.facets,
-    cfg.versioning,
-  )
-  const display_raw = { ...DEFAULTS.display, ...(raw?.display || {}) }
-  if (!raw?.display?.sidebar) display_raw.sidebar = default_sidebar(cfg.versioning)
-  cfg.display = resolve_display(
-    display_raw, cfg.frontmatter.facets, cfg.frontmatter.groups, cfg.versioning,
-  )
-  cfg.release     = resolve_release(dir)
+  // Older sites can keep displaying explicitly authored edition labels as a normal facet.
+  const fm = { ...raw.frontmatter, facets: { ...raw.frontmatter?.facets } }
+  if (raw.versioning && typeof raw.versioning === 'object') {
+    const { label, color } = raw.versioning
+    const key = optional(raw.versioning.key) || 'version'
+    if (!Object.hasOwn(fm.facets, key)) fm.facets[key] = { key, label: label || label_for(key), color }
+  }
+  delete cfg.versioning
+  cfg.frontmatter = resolve_frontmatter(fm)
+  cfg.display = resolve_display(raw.display, cfg.frontmatter.facets)
+  if (raw.display?.navbar && raw.display.sidebar && !cfg.display.navbar.includes('browse')) {
+    cfg.display.navbar = ['browse', ...cfg.display.navbar]
+  }
   cfg.dir         = dir
 
   cfg.content = path.resolve(dir, cfg.content)
@@ -435,7 +315,7 @@ function write_site_config(config, dest_dir) {
   const dir  = dest_dir || path.join(__dirname, '..')
   const keys = [
     'title', 'repo_url', 'feed_url', 'rss', 'description', 'footer',
-    'theme', 'nav_order', 'frontmatter', 'versioning', 'release',
+    'theme', 'nav_order', 'frontmatter',
     'display', 'edit',
   ]
   const values = Object.fromEntries(keys.map(k => [k, config[k]]))
@@ -452,5 +332,5 @@ function write_site_config(config, dest_dir) {
 
 module.exports = {
   load_config, write_site_config, unset, DEFAULTS, FACET_COLORS, FACET_DEFAULTS,
-  SIDEBAR_GROUP_DEFAULTS, header_field_keys, default_groups, default_sidebar,
+  header_field_keys,
 }

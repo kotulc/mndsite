@@ -1,5 +1,4 @@
-import { useRouter } from 'next/router'
-import { useEffect, useRef, useState } from 'react'
+import { single, useListingSearch } from '../useListingSearch'
 import Feed, { entryMediaType } from './Feed'
 import { normalize_tags } from './card-meta.mjs'
 import entries from '../../public/post-feed.json'
@@ -26,29 +25,8 @@ const posts = entries.map(entry => {
 const tags = [...new Set(posts.flatMap(post => post.tags))].sort()
 const mediaTypes = [...new Set(posts.map(post => post.media))].sort()
 
-function single(value) {
-  return typeof value === 'string' ? value : ''
-}
-
 export default function PublishedFeed() {
-  const router = useRouter()
-  const { basePath, query } = router
-  const urlText = single(query.q)
-  const [text, setText] = useState(urlText)
-  const search = useRef(null)
-  useEffect(() => setText(urlText), [urlText])
-  useEffect(() => {
-    function shortcut(event) {
-      if (event.key !== '/' || event.ctrlKey || event.altKey || event.metaKey ||
-          event.target.isContentEditable || event.target.closest?.('input, textarea, select')) return
-      event.preventDefault()
-      event.stopPropagation()
-      search.current?.focus()
-    }
-    window.addEventListener('keydown', shortcut, true)
-    return () => window.removeEventListener('keydown', shortcut, true)
-  }, [])
-
+  const { basePath, query, text, setText, search, update, changeText } = useListingSearch()
   const tag = normalize_tags([single(query.tag)])[0] || ''
   const media = single(query.media)
   const oldest = query.sort === 'oldest'
@@ -57,21 +35,10 @@ export default function PublishedFeed() {
     (!media || post.media === media) && (!term || post.searchable.includes(term)))
   if (oldest) visible.sort((a, b) => a.entry.date.localeCompare(b.entry.date))
 
-  function update(changes, replace = false) {
-    const next = { ...query, q: text, ...changes }
-    for (const key of Object.keys(next)) if (next[key] === '') delete next[key]
-    const target = { pathname: router.pathname, query: next, hash: window.location.hash }
-    router[replace ? 'replace' : 'push'](target, undefined, { shallow: true, scroll: false })
-  }
-
   return <section className="published-feed" aria-label="Published posts">
     <div className="feed-controls" role="group" aria-label="Filter posts">
-      <input type="search" aria-label="Search posts" placeholder="Search posts?" ref={search}
-        value={text} onChange={event => {
-          const value = event.target.value
-          setText(value)
-          update({ q: value }, !!text)
-        }} />
+      <input type="search" aria-label="Search posts" placeholder="Search posts" ref={search}
+        value={text} onChange={event => changeText(event.target.value)} />
       {(tags.length > 0 || tag) && <select aria-label="Filter by tag" value={tag}
         onChange={event => update({ tag: event.target.value })}>
         <option value="">All tags</option>

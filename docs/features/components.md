@@ -31,6 +31,7 @@ and styled in `styles/global.css`. Page-level chrome is driven by `display` in
 |-----------|------|----------------|
 | `Breadcrumbs` | `Breadcrumbs.jsx` | Above page title — `display.crumbs` |
 | `PageHeader` | `PageHeader.jsx` | Under title — date and reading time from `display.header` |
+| `Browse` | `Browse.jsx` | Searchable list of published pages linked from the navbar and article labels |
 | `TagList` | `TagList.jsx` | Under `PageHeader` — facet chips from `display.header` |
 | `PageContents` | `PageContents.jsx` | Right sidebar (`display.toc`) and inline panel (`display.contents`) |
 | `ContentsToggle` / `ContentsPanel` | `ContentsMenu.jsx` | Contents button and inline panel below the title |
@@ -57,7 +58,7 @@ Returns null when neither value is present.
 
 ### TagList
 
-Renders facet values as chips below `PageHeader`. Each chip uses class `chip-{facetName}`
+Links each configured label to matching pages in Browse. Renders facet values as chips below `PageHeader`. Each chip uses class `chip-{facetName}`
 with colors generated from the facet's configured hue. Undeclared facet groups fall back to
 `chip-custom`. Returns null when the chip list is empty.
 

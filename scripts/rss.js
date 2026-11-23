@@ -25,7 +25,7 @@ function feed_entries(pages, section) {
   const root = '/' + (section || '').replace(/^\/+|\/+$/g, '')
   return pages.flatMap(page => {
     const date = published_date(page.published)
-    if (!date || page.snapshot || page.url === root || !page.url.startsWith(root === '/' ? root : root + '/')) return []
+    if (!date || page.url === root || !page.url.startsWith(root === '/' ? root : root + '/')) return []
     return [{ page, date }]
   }).sort((a, b) => b.date - a.date || a.page.url.localeCompare(b.page.url))
 }

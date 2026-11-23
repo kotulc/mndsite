@@ -42,7 +42,7 @@ or browse [Features](docs/features/overview.md) for the full capability overview
 - **Images** — legacy `images/` subtrees copied and path-rewritten; corrupt EXIF stripped
 - **Reading time** — displayed when supplied in frontmatter
 - **Facets** — tags, categories, or any declared frontmatter dimension, rendered as colored chips
-- **Collections and facet views** — named facet presets and left-tree tabs, shareable by URL
+- **Browse** — searchable pages with shareable tag and custom label filters
 - **Related links** — outbound links and frontmatter `related` entries in the ToC sidebar
 - **Nav ordering** — sibling order via `nav_order` from mndmap or YAML
 - **Custom components** — optional consumer React components synced each build
@@ -138,32 +138,18 @@ frontmatter:
   reading_time: reading_time
   related: related
 
-  # Content dimensions — page chips, and value chips when a group opens
+  # Content dimensions — labels on articles and in Browse
   facets:
     categories: { key: categories, label: Category, color: blue }   # blue, violet, amber, rose, green, teal, or 0-359
     tags:       { key: tags,       label: Tags,     color: violet }
 
-  # Left-nav browse groups, bundling facet names
-  groups:
-    Tags: [tags]
-    Topics: [categories, tags]
-
-# Optional — edition tracking; omit the block entirely to turn it off
-# versioning:
-#   key: version             # frontmatter key holding the stamp
-#   inherit: true            # fill a missing stamp from package.json / nearest git tag
-#   history: true            # ingest vMAJOR.MINOR.PATCH git tags as frozen trees
-#   default: latest          # preselected value
-#   group_by: status         # another facet, used as headings over the value list
-
 # Optional — rendered elements, in display order; omit one to turn it off
 display:
   crumbs: true                           # breadcrumb trail above the title
-  sidebar: [pages, Topics, Tags]         # left-nav views: `pages` plus group names
   header: [date, reading_time, facets]   # metadata under the title; accepts facet names
   toc: [description, sections, related, edit]   # right sidebar (≥ xl)
   # contents: [...]                      # inline Contents panel; defaults to toc
-  navbar: [theme, feed, github]          # navbar icons, left to right
+  navbar: [browse, theme, feed, github]          # navbar icons, left to right
 
 # Optional — "Edit this page" targets; used ONLY when repo_url is set
 edit:
@@ -180,37 +166,21 @@ content: ./docs              # source markdown directory
 output: ./dist               # output directory for built site
 ```
 
-### Frontmatter, facets, and groups
+### Browsing pages by label
 
-mndsite reads no frontmatter key by accident. `frontmatter` names the keys behind the
-built-in renderer metadata, and nests the two blocks that interpret content values:
-`facets` declares every content dimension — tags, categories, status, anything else
-upstream stamps into frontmatter — and `groups` bundles facets into left-nav browse views.
+Open **Browse** in the navbar to see published pages. Search titles, paths, descriptions and labels, or select a label from the grouped filter. Article chips link to the same results. Filters and search text are shareable, for example `/browse/?tag=static+site` or `/browse/?facet=status&tag=stable`.
 
-| Facet key | Default | Purpose |
-|---|---|---|
-| `key` | *(required)* | Frontmatter key to read; a list folds several keys into one facet |
-| `label` | facet name, title-cased | Chip tooltip and index heading |
-| `color` | next palette entry | `blue`, `violet`, `amber`, `rose`, `green`, `teal`, or a hue `0-359` |
-| `sort` | `alpha` | `alpha`, `semver`, `date` |
+Declare labels in `frontmatter.facets`. A facet can read several keys. The `tags` facet uses Trendly's spelling normalization. Other facets retain their authored labels. For example:
 
-Chip colors are generated per facet from its hue, in both light and dark themes, so a
-user-defined facet gets a coherent chip without any CSS. A value whose facet is not
-declared falls back to the neutral `chip-custom` style.
+```yaml
+frontmatter:
+  facets:
+    tags: { key: [tags, keywords], label: Tags }
+    topics: { key: topics, label: Topic, color: teal }
+    edition: { key: edition, label: Edition }
+```
 
-Edition behavior is not a facet setting — it lives in the optional `versioning` block
-(`key`, `inherit`, `history`, `default`, `group_by`), which a group opts into by listing
-the literal `versioning`.
-
-Rules worth knowing:
-
-- Facet values come from frontmatter only — never from paths. `versioning.inherit` may fill a missing stamp from `package.json` / the nearest git tag.
-- Semver is major.minor.patch. `0.2` and `v0.2.0` both become `0.2.0`.
-- Pages is the directory tree. Each group in `display.sidebar` adds a chip beside it; with `pages` alone, no chips render.
-- Selecting a group replaces the tree with its value chips and lists matching pages in the body. This does not hide routes.
-- `versioning.history: true` keeps older trees from git tags even after every current file has moved on.
-
-The repo's own [mndsite.yaml](mndsite.yaml) wires up Topics, Tags, and Versions groups. The example above is closer to the default — categories and tags as page chips, with a Tags group in the left nav.
+The sidebar follows the content directory. Existing configurations can remove `frontmatter.groups` and `display.sidebar`. An old `versioning.key` is accepted as an ordinary facet for authored values. Builds no longer infer editions from Git or package metadata or export tagged snapshots. To keep historical pages online, include them in the content tree.
 
 ### Display and disabling features
 
@@ -220,17 +190,16 @@ there is no second switch. Zones and their elements:
 | Zone | Elements | Renders |
 |------|----------|---------|
 | `crumbs` | `true` / `false` | Breadcrumb trail above the title |
-| `sidebar` | `pages`, plus any `frontmatter.groups` name | Left-nav view chips |
 | `header` | `date`, `reading_time`, `facets`, or any facet name | Date, reading time, facet chips |
 | `toc` | `description`, `sections`, `related`, `edit` | Right sidebar at ≥ xl |
 | `contents` | same as `toc` | Inline Contents panel below the title (defaults to `toc`) |
-| `navbar` | `theme`, `feed`, `github` | Navbar icons |
+| `navbar` | `browse`, `theme`, `feed`, `github` | Navbar icons |
 
 `display.header` also accepts facet names directly:
 
 ```yaml
 display:
-  header: [date, version, tags]   # version chips between the date and tag chips
+  header: [date, status, tags]   # status chips between the date and tag chips
 ```
 
 Frontmatter stays on the emitted page for Nextra; the reader sees values only through

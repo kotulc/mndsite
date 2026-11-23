@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import Breadcrumbs from './components/Breadcrumbs'
@@ -9,12 +10,9 @@ import SiteFooter from './components/SiteFooter'
 import GitHubLink from './components/GitHubLink'
 import FeedLink from './components/FeedLink'
 import ThemeToggle from './components/ThemeToggle'
-import { group_chips, header_field_keys } from './components/groups'
-import IndexListing from './components/IndexListing'
-import SidebarViews from './components/SidebarViews'
+import { group_chips, header_field_keys } from './components/facets'
 import PageRail from './components/PageRail'
 import { PageHeading } from './components/PageChrome'
-import { ViewScopeProvider } from './components/ViewScope'
 import siteConfig from './site.config'
 import siteMeta from './public/site-meta.json'
 
@@ -56,12 +54,6 @@ function PageMeta() {
 }
 
 
-function SidebarLabel({ title }) {
-  /** Nextra's per-item label. Indexes replace the tree; they do not hide rows. */
-  return <span>{title}</span>
-}
-
-
 function bg_rules(selector, value) {
   /** Custom navbar/footer colors only — primary/background/none live in global.css. */
   if (!value || value === 'primary' || value === 'background' || value === 'none') return ''
@@ -84,7 +76,7 @@ function chrome_head_script(navbar, footer) {
 }
 
 
-function chip_rules(groups, versioning) {
+function chip_rules(groups) {
   /** One chip color pair per frontmatter field key, from its group or versioning hue. */
   const pair = (name, hue) =>
     `.chip-${name}{background:hsl(${hue} 70% 92%);color:hsl(${hue} 55% 32%)}` +
@@ -92,7 +84,6 @@ function chip_rules(groups, versioning) {
     `{background:hsl(${hue} 35% 22%);color:hsl(${hue} 70% 75%)}`
 
   const rules = []
-  if (versioning) rules.push(pair(versioning.key, versioning.hue))
   for (const spec of Object.values(groups || {})) {
     for (const key of spec.key || []) rules.push(pair(key, spec.hue))
   }
@@ -107,7 +98,7 @@ const THEME_CSS = [
   siteConfig.theme.font_stack && `body{font-family:${siteConfig.theme.font_stack}}`,
   bg_rules('.nextra-nav-container-blur', siteConfig.theme.navbar),
   bg_rules('footer', siteConfig.theme.footer),
-  chip_rules(siteConfig.frontmatter.facets, siteConfig.versioning),
+  chip_rules(siteConfig.frontmatter.facets),
 ].filter(Boolean).join('')
 
 
@@ -145,6 +136,7 @@ export default {
     extraContent: (
       <div className="navbar-icons">
         {siteConfig.display.navbar.map(item => {
+          if (item === 'browse') return <Link key={item} href={siteMeta.browse} className="browse-link">Browse</Link>
           if (item === 'theme') return <ThemeToggle key={item} />
           if (item === 'feed') return <FeedLink key={item} />
           if (item === 'github') return <GitHubLink key={item} />
@@ -179,12 +171,4 @@ export default {
     ? { title: <TocTitle />, extraContent: <TocExtra />, headingComponent: TocHeading }
     : { component: () => <PageContents order={siteConfig.display.toc} /> },
   components: { h1: PageTitle },
-  sidebar: { titleComponent: SidebarLabel },
-  // SidebarViews only portals facet value chips into the left nav.
-  main: ({ children }) => (
-    <ViewScopeProvider>
-      <SidebarViews />
-      <IndexListing>{children}</IndexListing>
-    </ViewScopeProvider>
-  ),
 }

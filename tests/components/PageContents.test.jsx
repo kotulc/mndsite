@@ -148,7 +148,7 @@ test('test_page_contents_related_leaves_panel_open_on_click', () => {
   expect(on_close).not.toHaveBeenCalled()
 })
 
-test('test_page_contents_section_scrolls_after_clearing_facet_view', async () => {
+test('test_page_contents_section_scrolls_after_closing_contents', async () => {
   const scrollIntoView = jest.fn()
   const target = document.createElement('h2')
   target.id = 'fields'

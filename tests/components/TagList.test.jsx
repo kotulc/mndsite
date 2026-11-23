@@ -24,7 +24,7 @@ test('test_tag_list_declared_facet_gets_named_chip_class', () => {
 
 test('test_tag_list_tooltip_uses_facet_label', () => {
   render(<TagList tags={[{ term: 'guide', group: 'categories' }]} />)
-  expect(screen.getByText('guide')).toHaveAttribute('data-tooltip', 'Category: guide')
+  expect(screen.getByText('guide')).toHaveAttribute('data-tooltip', 'Topic: guide')
 })
 
 test('test_tag_list_tooltip_does_not_set_native_title', () => {
@@ -41,4 +41,9 @@ test('test_tag_list_undeclared_facet_falls_back_to_chip_custom', () => {
 test('test_tag_list_returns_null_when_empty', () => {
   const { container } = render(<TagList tags={[]} />)
   expect(container).toBeEmptyDOMElement()
+})
+
+test('article label links to the canonical Browse filter', () => {
+  render(<TagList tags={[{ term: 'STATIC-site', group: 'tags' }]} />)
+  expect(screen.getByRole('link').getAttribute('href')).toMatch(/^\/browse\/?\?tag=static\+site$/)
 })

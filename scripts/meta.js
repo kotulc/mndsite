@@ -5,7 +5,6 @@
  */
 const { word_count, extract_links, section_tree, first_paragraph } = require('./text')
 const { DEFAULTS, FACET_DEFAULTS } = require('./config')
-const { normalize_semver } = require('./semver')
 
 
 function field_value(fm, key) {
@@ -28,35 +27,26 @@ function clean_list(raw) {
 }
 
 
-function read_field_value(fm, field_key, sort, { inherit, release } = {}) {
-  let raw = field_value(fm, field_key)
-  if (raw == null && inherit && release) raw = release
+function read_field_value(fm, field_key) {
+  const raw = field_value(fm, field_key)
   if (raw == null) return null
 
   if (Array.isArray(raw)) {
-    const list = clean_list(raw).map(v => sort === 'semver' ? (normalize_semver(v) || v) : v)
+    const list = clean_list(raw)
     return list.length ? list : null
   }
 
-  let value = String(raw).trim()
-  if (sort === 'semver') value = normalize_semver(value) || value
-  return value
+  return String(raw).trim()
 }
 
 
-function build_facets(fm, facets, versioning, release) {
+function build_facets(fm, facets) {
   /** Facet values keyed by frontmatter field name. */
   const out = {}
   const specs = facets || FACET_DEFAULTS
-  if (versioning) {
-    const value = read_field_value(fm, versioning.key, 'semver', {
-      inherit: versioning.inherit, release,
-    })
-    if (value != null) out[versioning.key] = value
-  }
   for (const spec of Object.values(specs)) {
     for (const field_key of spec.key) {
-      const value = read_field_value(fm, field_key, spec.sort)
+      const value = read_field_value(fm, field_key)
       if (value != null) out[field_key] = value
     }
   }
@@ -106,7 +96,7 @@ function build_sections(section_nodes) {
 }
 
 
-function build_page({ slug, title, url, content, source, created, fm, snapshot }, config) {
+function build_page({ slug, title, url, content, source, created, fm }, config) {
   const frontmatter = (config && config.frontmatter) || DEFAULTS.frontmatter
   const facets = (frontmatter && frontmatter.facets) || FACET_DEFAULTS
   const body = content.replace(/\r\n?/g, '\n').replace(/^\s*#\s+.+\n?/, '')
@@ -131,9 +121,8 @@ function build_page({ slug, title, url, content, source, created, fm, snapshot }
     metrics,
     links:     extract_links(content),
     related:   parse_related(fm, frontmatter),
-    facets:    build_facets(fm, facets, config && config.versioning, config && config.release),
+    facets:    build_facets(fm, facets),
     sections:  build_sections(tree),
-    snapshot:  snapshot || '',
   }
 }
 

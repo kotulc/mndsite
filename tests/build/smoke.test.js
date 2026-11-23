@@ -32,3 +32,16 @@ test('published documentation links to the exported Updates page and current rep
     expect(link.getAttribute('href')).not.toMatch(/(?:nlp-mn?dsite|\/\.\.\.(?:\/|$))/i)
   }
 })
+
+test('Browse is linked from articles and its static list contains only published pages', () => {
+  const meta = JSON.parse(fs.readFileSync(path.join(OUT, 'site-meta.json'), 'utf8'))
+  const parse = file => new DOMParser().parseFromString(fs.readFileSync(path.join(OUT, file), 'utf8'), 'text/html')
+  const article = parse('about/index.html')
+  const link = article.querySelector('.browse-link').getAttribute('href')
+  expect(link).toMatch(/\/browse\/$/)
+  expect(article.querySelector('.tag-list a.chip-tags').getAttribute('href')).toContain(link + '?tag=')
+  const browse = parse(meta.browse.slice(1) + '/index.html')
+  const rows = [...browse.querySelectorAll('.browse-result > a')]
+  expect(rows).toHaveLength(meta.pages.length)
+  expect(rows.some(row => row.textContent === 'Future Plans')).toBe(false)
+})
