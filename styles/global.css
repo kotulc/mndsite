@@ -246,8 +246,8 @@ img {
 }
 
 .contents-panel > summary {
-  display: list-item;
-  list-style: disclosure-closed outside;
+  display: block;
+  list-style: none;
   padding-block: .65rem;
   margin-inline-start: var(--contents-indent);
   cursor: pointer;
@@ -256,7 +256,9 @@ img {
   font-weight: 400;
 }
 
-.contents-panel[open] > summary { list-style-type: disclosure-open; }
+.contents-panel > summary::-webkit-details-marker { display: none; }
+.contents-panel[open] .contents-show,
+.contents-panel:not([open]) .contents-hide { display: none; }
 .contents-panel > summary:focus-visible { outline: 2px solid var(--site-primary-600); }
 .contents-panel[open] { padding-bottom: 1rem; }
 
