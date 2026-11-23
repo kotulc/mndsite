@@ -59,21 +59,6 @@ function bg_rules(selector, value) {
 }
 
 
-function chrome_head_script(navbar, footer) {
-  const lines = []
-  if (navbar) lines.push(`document.documentElement.dataset.chromeNavbar=${JSON.stringify(navbar)}`)
-  if (footer) lines.push(`document.documentElement.dataset.chromeFooter=${JSON.stringify(footer)}`)
-  if (!lines.length) return null
-  return (
-    <script
-      dangerouslySetInnerHTML={{
-        __html: `${lines.join(';')};`,
-      }}
-    />
-  )
-}
-
-
 function chip_rules(groups) {
   /** One chip color pair per frontmatter field key, from its group or versioning hue. */
   const pair = (name, hue) =>
@@ -152,7 +137,6 @@ export default {
   },
   head: (
     <>
-      {chrome_head_script(siteConfig.theme.navbar, siteConfig.theme.footer)}
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       {siteConfig.description && <meta name="description" content={siteConfig.description} />}
       {THEME_CSS && <style dangerouslySetInnerHTML={{ __html: THEME_CSS }} />}

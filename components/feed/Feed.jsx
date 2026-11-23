@@ -1,7 +1,9 @@
-import { createElement, Fragment, useLayoutEffect, useRef, useState } from 'react'
+import { createElement, Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { normalize_tags } from './card-meta.mjs'
+
+const useBrowserLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 const media_labels = { article: 'Article', podcast: 'Podcast', youtube: 'YouTube', vimeo: 'Vimeo', audio: 'Audio', video: 'Video', image: 'Image', link: 'Source' }
 const post_icons = {
@@ -247,7 +249,7 @@ function FacetChip({ facet: { name, label, hue, value } }) {
 export function FeedCard({ title, meta, tags, badge, excerpt, searchExcerpt, open, focusOnOpen, toggle, children }) {
   const summary = useRef(null)
 
-  useLayoutEffect(() => {
+  useBrowserLayoutEffect(() => {
     if (!open) return
     const header = summary.current
     if (focusOnOpen) header.focus({ preventScroll: true })

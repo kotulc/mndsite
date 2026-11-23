@@ -6,25 +6,11 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { browseFilter } from '../components/facets'
 import siteMeta from '../public/site-meta.json'
-import { useEffect, useLayoutEffect } from 'react'
+import { useEffect } from 'react'
 import siteConfig from '../site.config'
 
 
-function set_chrome_dataset(root, name, value) {
-  if (!value) delete root.dataset[name]
-  else root.dataset[name] = value
-}
-
-
-function apply_chrome_datasets() {
-  const root = document.documentElement
-  set_chrome_dataset(root, 'chromeNavbar', siteConfig.theme.navbar)
-  set_chrome_dataset(root, 'chromeFooter', siteConfig.theme.footer)
-}
-
-
 export default function App({ Component, pageProps }) {
-  useLayoutEffect(apply_chrome_datasets, [])
   const router = useRouter()
   useEffect(() => {
     const { view, field, on, q } = router.query

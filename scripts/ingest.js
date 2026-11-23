@@ -501,8 +501,9 @@ async function generate(config) {
   write_rss(TARGET.public, pages, config)
   console.log(`  Wrote site metadata (${pages.length} pages) to public/site-meta.json`)
 
-  const app_src = path.join(ROOT, '_app.jsx')
-  if (fs.existsSync(app_src)) fs.copyFileSync(app_src, path.join(TARGET.pages, '_app.jsx'))
+  for (const name of ['_app.jsx', '_document.jsx']) {
+    fs.copyFileSync(path.join(ROOT, name), path.join(TARGET.pages, name))
+  }
 
   const custom = sync_components(config.components)
   if (custom.length) console.log(`  Synced ${custom.length} custom component(s) into components/custom/`)
