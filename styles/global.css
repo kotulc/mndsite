@@ -240,16 +240,18 @@ img {
 /* The narrow layout keeps its page outline together below the title and tags. */
 .contents-panel {
   --contents-indent: 1.25rem;
-  margin: 1rem 0 1.5rem;
-  border-block: 1px solid var(--site-gray-200);
+  margin-block: 1.5rem 2rem;
   font-size: .875rem;
 }
 
 .contents-panel > summary {
   display: block;
   list-style: none;
-  padding-block: .65rem;
-  margin-inline-start: var(--contents-indent);
+  width: fit-content;
+  max-width: 100%;
+  padding: .65rem calc(var(--contents-indent) - 1px);
+  border: 1px solid var(--site-gray-500);
+  border-radius: .4rem;
   cursor: pointer;
   color: var(--site-gray-600);
   font-size: .8125rem;
@@ -259,8 +261,8 @@ img {
 .contents-panel > summary::-webkit-details-marker { display: none; }
 .contents-panel[open] .contents-show,
 .contents-panel:not([open]) .contents-hide { display: none; }
-.contents-panel > summary:focus-visible { outline: 2px solid var(--site-primary-600); }
-.contents-panel[open] { padding-bottom: 1rem; }
+.contents-panel > summary:hover { background: var(--site-gray-100); }
+.contents-panel > summary:focus-visible { outline: 2px solid var(--site-primary-600); outline-offset: 3px; }
 
 @media (min-width: 1280px) {
   .contents-panel { display: none; }
@@ -271,6 +273,7 @@ img {
    is prose, so it spans the row above them. */
 .contents-panel .page-contents {
   display: grid;
+  margin-block-start: 1.25rem;
   padding-inline-start: var(--contents-indent);
   grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
   align-items: start;
