@@ -17,7 +17,7 @@ test('omits an empty disclosure', () => {
 test('native disclosure starts closed, opens in place and closes on section selection', () => {
   setPage('/guide')
   render(<ContentsMenu />)
-  const summary = screen.getByText('Show table of contents').closest('summary')
+  const summary = screen.getByText('Page Overview')
   expect(summary.parentElement.open).toBe(false)
   fireEvent.click(summary)
   expect(summary.parentElement.open).toBe(true)
@@ -28,7 +28,7 @@ test('native disclosure starts closed, opens in place and closes on section sele
 test('Escape restores focus to the summary and a different page starts collapsed', () => {
   setPage('/guide')
   const { rerender } = render(<ContentsMenu />)
-  const summary = screen.getByText('Show table of contents').closest('summary')
+  const summary = screen.getByText('Page Overview')
   fireEvent.click(summary)
   fireEvent.keyDown(screen.getByRole('link'), { key: 'Escape' })
   expect(summary).toHaveFocus()
@@ -36,5 +36,5 @@ test('Escape restores focus to the summary and a different page starts collapsed
   fireEvent.click(summary)
   setPage('/another')
   rerender(<ContentsMenu />)
-  expect(screen.getByText('Show table of contents').closest('details').open).toBe(false)
+  expect(screen.getByText('Page Overview').closest('details').open).toBe(false)
 })

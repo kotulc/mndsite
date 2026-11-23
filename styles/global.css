@@ -237,48 +237,31 @@ img {
 .page-crumbs a:hover { color: var(--site-primary-600); text-decoration: underline; }
 .page-crumbs a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 
-@media (max-width: 1279.98px) {
-  .page-tools:has(.contents-panel) {
-    display: grid;
-    gap: 1rem;
-    margin-block: 1.5rem 2rem;
-    padding-block: 1rem;
-    border-block: 1px solid var(--site-gray-200);
-  }
-  .page-tools:has(.contents-panel) > .tag-list { margin: 0; }
-}
-
 .contents-panel {
+  margin-block: 1.25rem 2rem;
+  border-block: 1px solid var(--site-gray-200);
   font-size: .875rem;
 }
 
 .contents-panel > summary {
   display: block;
   list-style: none;
-  width: fit-content;
-  max-width: 100%;
-  box-shadow: inset 0 0 0 1px var(--site-gray-500);
+  padding: .75rem .6rem;
   cursor: pointer;
   color: var(--site-gray-600);
+  font-weight: 500;
 }
 
 .contents-panel > summary::-webkit-details-marker { display: none; }
-.contents-panel[open] .contents-show,
-.contents-panel:not([open]) .contents-hide { display: none; }
-.contents-panel > summary:hover { background: var(--site-gray-100); }
-.contents-panel > summary:focus-visible { outline: 2px solid var(--site-primary-600); outline-offset: 3px; }
-
-@media (min-width: 1280px) {
-  .contents-panel { display: none; }
-}
+.contents-panel > summary:hover { text-decoration: underline; }
+.contents-panel > summary:focus-visible { outline: 2px solid var(--site-primary-600); }
 
 /* Panel layout: one column per block, side by side as the width allows, each holding a
    single stacked list — the sidebar's blocks laid out across the page. The description
    is prose, so it spans the row above them. */
 .contents-panel .page-contents {
   display: grid;
-  margin-block-start: 1rem;
-  padding-inline-start: .6rem;
+  padding: .25rem .6rem 1.25rem;
   grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
   align-items: start;
   gap: 1.5rem 1.75rem;
@@ -319,17 +302,13 @@ img {
   margin: 0.75rem 0 1.25rem;
 }
 
-.chip,
-.contents-panel > summary {
+.chip {
+  display: inline-block;
   padding: 0.2rem 0.6rem;
   border-radius: 0.25rem;
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.4;
-}
-
-.chip {
-  display: inline-block;
   text-transform: lowercase;
 }
 

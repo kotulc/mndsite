@@ -73,7 +73,7 @@ dimension upstream supplies.
 **`PageContents`** — Description, sections, Related, and Edit blocks in list order. Used in
 the right sidebar and the inline Contents panel.
 
-**`ContentsMenu`** — below xl, opens the same sidebar body inline.
+**`ContentsMenu`** — opens the Page Overview section inline.
 
 **`SiteFooter`** — copyright, build timestamp, credits.
 

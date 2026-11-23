@@ -41,15 +41,13 @@ function PageMeta() {
 
   return (
     <>
+      <TagList tags={chips} />
       <PageHeader
         date={header.includes('date') ? meta.published : ''}
         reading_time={header.includes('reading_time') ? (meta.metrics || {}).reading_time : null}
         order={header}
       />
-      <div className="page-tools">
-        <TagList tags={chips} />
-        <ContentsMenu />
-      </div>
+      <ContentsMenu />
     </>
   )
 }

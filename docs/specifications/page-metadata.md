@@ -14,7 +14,7 @@ Components render metadata from [site metadata](/specifications/metadata)
 - **`Breadcrumbs`** — `display.crumbs`
 - **`PageHeader`** + **`TagList`** — `display.header`
 - **`PageContents`** — `display.toc` (sidebar) and `display.contents` (inline panel)
-- **`ContentsMenu`** — opens `PageContents` below xl
+- **`ContentsMenu`** — opens `PageContents` under the Page Overview label
 
 `theme.config.jsx` indexes metadata by route for SEO and `PageMeta`; `SectionContext`
 (`_app.jsx`) shares the current page and its flattened section list with the components above.

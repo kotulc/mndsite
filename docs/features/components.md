@@ -73,7 +73,7 @@ At ≥ xl, Nextra may own the section heading list when `sections` is listed in 
 
 ### ContentsMenu
 
-Below xl, **Contents** expands in place beneath the title and metadata. It starts collapsed on each page and appears when `display.contents` has items to show. Select a heading to close it and jump to that section.
+**Page Overview** expands in place beneath the title and metadata. It starts collapsed on each page and appears when `display.contents` has items to show. Select a heading to close it and jump to that section.
 
 ### SiteFooter
 

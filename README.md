@@ -47,7 +47,7 @@ or browse [Features](docs/features/overview.md) for the full capability overview
 - **Nav ordering** — sibling order via `nav_order` from mndmap or YAML
 - **Custom components** — optional consumer React components synced each build
 - **Breadcrumbs** — trail above the title (`display.crumbs`)
-- **Contents panel** — inline sidebar below xl (`display.contents`)
+- **Page Overview** expands below the page header (`display.contents`)
 - **Theme toggle** — light / dark / system toggle in the navbar (`display.navbar`)
 - **GitHub header icon** — circular GitHub repo link, auto-shown from `repo_url`
 - **YAML config** — single file drives the entire build

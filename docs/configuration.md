@@ -227,7 +227,7 @@ display:
 
 When `display.toc` includes `sections`, Nextra owns the heading list and scroll-spy in the sidebar; `PageContents` renders the description above Nextra's label and Related/Edit below. When `sections` is omitted, `PageContents` renders the whole sidebar list.
 
-Below the `xl` breakpoint Nextra hides the right sidebar. A collapsed **Contents** section below the title and metadata expands in place. Its items follow `display.contents`.
+Below the `xl` breakpoint Nextra hides the right sidebar. At every screen width, the **Page Overview** label expands the section below the page header. Its items follow `display.contents`.
 
 `theme` in `display.navbar` is the only theme toggle — Nextra's sidebar toggle is disabled. Chips and Related entries render as supplied; nothing is truncated.
 
