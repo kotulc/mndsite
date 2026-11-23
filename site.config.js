@@ -3,6 +3,7 @@ module.exports = {
   title: "mndsite",
   repo_url: "https://github.com/kotulc/mndsite",
   feed_url: "updates",
+  rss: {"site_url":"https://kotulc.github.io/mndsite/"},
   description: "Static documentation sites from plain markdown",
   footer: "MIT licensed · built with mndsite",
   theme: {"color":"default","typeset":"sans","navbar":"background","footer":"","hue":{"light":212,"dark":204},"saturation":100,"font_stack":""},

@@ -37,16 +37,20 @@ Writing `""` reads the same as the default, so no value in the file ever needs t
 | `description` | string | `none` | SEO meta description added to every page's `<head>` |
 | `repo_url` | string | `none` | GitHub repo link shown as an icon in the header; `none` hides it |
 | `feed_url` | string | `none` | Section slug linked from the navbar feed icon |
+| `expandable_feed` | boolean | `false` | Render dated posts as expandable cards on the `feed_url` page |
+| `rss.site_url` | URL | unset | Absolute deployed site URL, including its base path. Enables RSS at `rss.xml` |
+| `drafts` | list | `[]` | Repository-relative Markdown paths to omit from publication |
 | `footer` | string | `default` | Custom footer credits text; `default` keeps "Powered by mndsite and Nextra" |
 | `theme.color` | string | `"default"` | Named accent palette — see [Theme](#theme) below |
 | `theme.typeset` | string | `"sans"` | Named body font stack — see [Theme](#theme) below |
 | `theme.navbar` | string | `none` | Navbar background: `primary` (theme tint), `background` (match page), or any CSS color |
 | `theme.footer` | string | `none` | Footer background: `primary` (theme tint), `background` (match page), or any CSS color |
 | `nav_order` | object | `{}` | Explicit nav ordering per directory — see below |
-| `fields` | object | see below | Frontmatter keys behind the built-in metadata; frontmatter is inert unless named |
-| `facets` | object | `categories`, `tags` | Content dimensions — page chips and optional left-nav indexes |
-| `display.crumbs` | list | `[home, path]` | Breadcrumb trail above the page title |
-| `display.header` | list | `[date, reading_time, facets]` | Metadata under the title; also accepts facet names |
+| `frontmatter` | object | see below | Frontmatter keys mndsite reads, plus the `facets` and `groups` blocks |
+| `versioning` | object | `none` | Optional edition tracking — stamps, inheritance, git-tag history |
+| `display.crumbs` | bool | `true` | Breadcrumb trail above the page title |
+| `display.sidebar` | list | `[pages, Tags]` | Left-nav views — `pages` plus `frontmatter.groups` names |
+| `display.header` | list | `[date, reading_time, facets]` | Metadata under the title; also accepts facet and frontmatter key names |
 | `display.toc` | list | `[description, sections, related, edit]` | Right sidebar at ≥ xl |
 | `display.contents` | list | *(copy of `toc`)* | Inline Contents panel below the title |
 | `display.navbar` | list | `[theme, feed, github]` | Navbar icons, left to right |
@@ -63,6 +67,11 @@ title: My Site
 description: What my site is about
 repo_url: https://github.com/myuser/my-repo
 feed_url: updates
+expandable_feed: true
+rss:
+  site_url: https://myuser.github.io/my-repo/
+drafts:
+  - docs/updates/work-in-progress.md
 theme:
   color: emerald
   typeset: serif
@@ -84,8 +93,10 @@ top-level key is ignored rather than rejected.
 
 `CHANGELOG.md` is the migration record: what each contract version added, changed, and
 removed, including the 0.1 keys (`meta`, `flatten`, `toc`, `reading_time`, `theme_toggle`,
-`limits`, `display.title_row`, `display.info`) and the 0.2 keys (`collections`, `sidebar.views`,
-`facets.*.ui`).
+`limits`, `display.title_row`, `display.info`) and the 0.2 keys (`collections`,
+`sidebar.views`, `facets.*.ui`). The 0.2 → 0.3 renames are the exception to "unknown keys
+are ignored": `fields`, top-level `facets`, and top-level `groups` are rejected at load
+time with the key to use instead.
 
 mndsite configuration is limited to rendering, content paths, navigation order, theme, and deployment.
 
@@ -126,19 +137,19 @@ theme:
   footer: background
 ```
 
-## Frontmatter fields
+## Frontmatter
 
-`fields` maps mndsite's built-in renderer metadata onto the frontmatter keys that carry it.
-No key means anything unless `fields` or `facets` names it.
+`frontmatter` maps mndsite's built-in renderer metadata onto the frontmatter keys that carry
+it, and nests the two blocks that interpret content values: `facets` and `groups`. No key
+means anything unless `frontmatter` names it.
 
 ```yaml
-fields:
+frontmatter:
   title: title
   description: [description, desc]   # a list tries each key in order
   date: date
   reading_time: reading_time
   related: related
-  identity: doc_id
   # title: none                      # disable: pages fall back to their slug
 ```
 
@@ -152,59 +163,95 @@ navigation label.
 
 ## Facets
 
-Every content dimension mndsite renders is declared in `facets`. `field` is required; `label`,
-`color`, `values`, `sort`, `index`, `inherit`, `history`, `default`, and `group_by` are optional.
-On/off flags are booleans.
+`frontmatter.facets` declares every content dimension mndsite renders. `key` is required;
+`label`, `color`, and `sort` are optional.
 
 ```yaml
-facets:
-  categories: { field: categories, label: Category, color: blue }
-  tags:       { field: tags,       label: Tag,      color: violet, index: true }
-  status:     { field: status,     values: [draft, stable, deprecated], sort: listed }
-  version:
-    field: version
-    sort: semver           # alpha, semver, date, listed
-    default: latest        # latest, or a specific version
-    inherit: true
-    history: true
-    group_by: status
-    index: true
+frontmatter:
+  facets:
+    categories: { key: categories, label: Category, color: blue }
+    tags:       { key: tags,       label: Tags,     color: violet }
+    status:     { key: status,     label: Status,   color: amber, sort: alpha }
 ```
 
-Chip colors are generated from each facet's hue — `blue`, `violet`, `amber`, `rose`, `green`,
-`teal`, or a raw hue `0-359` — in both light and dark themes. Facets without a `color` take
-the next palette entry in declaration order.
+| Key | Default | Purpose |
+|---|---|---|
+| `key` | *(required)* | Frontmatter key to read; a list folds several keys into one facet |
+| `label` | facet name, title-cased | Chip tooltip and index heading |
+| `color` | next palette entry | `blue`, `violet`, `amber`, `rose`, `green`, `teal`, or a hue `0-359` |
+| `sort` | `alpha` | `alpha`, `semver`, `date` |
+
+`categories`, `tags`, and `status` are always declared — naming one only overrides it.
+Chip colors are generated from each facet's hue in both light and dark themes, so a
+user-defined facet gets a coherent chip without any CSS.
 
 Values come from frontmatter only, never from paths and never generated. A page missing a
-facet's field simply has no value for it, and keeps its route either way.
+facet's key simply has no value for it, and keeps its route either way.
 
-### Indexes
+Edition behavior — `inherit`, `history`, `default`, `group_by` — belongs to `versioning`,
+not to a facet. So do fixed value lists: setting `values`, `index`, or any of those keys on
+a facet is a load error naming the key to use instead.
 
-`index: true` adds a chip after **Pages** in the left nav. With no indexed facets, Pages is
-the only view and no chips render. Selecting an index replaces the directory tree with that
-facet's values; the body lists matching pages (title and excerpt). This is a view switcher,
-not a filter — every page keeps its route.
+## Sidebar groups
 
-`default` is the preselected value in that index (`latest` for `sort: semver` or `date`).
-`group_by` names another facet used as headings over the value list. `inherit: true` fills
-a missing stamp from the site release (`package.json`, then the nearest git tag).
-`history: true` ingests exact `vMAJOR.MINOR.PATCH` git tags as frozen trees under
-`/_history/<version>/`, hidden from the Pages tree.
+`frontmatter.groups` bundles facets into left-nav browse groups; `display.sidebar` picks
+which groups appear and in what order.
+
+```yaml
+frontmatter:
+  groups:
+    Tags: [tags]
+    Topics: [categories, tags]
+    Versions: [status, versioning]   # the literal `versioning` pulls in the version stamp
+display:
+  sidebar: [pages, Topics, Tags, Versions]
+```
+
+A group is a non-empty list of facet names, which may include the literal `versioning`, or
+the bare word `versioning` on its own. Chip order within a group follows the facet list.
+Naming an undeclared facet, or `versioning` with no `versioning` block, is a load error.
+
+`pages` is the directory tree and needs no group. With `pages` alone in `display.sidebar`
+no view chips render at all. Selecting a group replaces the tree with its value chips and
+lists matching pages in the body — a view switcher, not a filter. Every page keeps its route.
 
 Selection lives in the URL:
 
 | Param | Effect |
 |---|---|
-| `?view=<name>` | Switch index — `pages` (default) or a facet with `index: true` |
-| `?on=<value>` | Select a value in that index; `latest` is the default for semver |
+| `?view=<group>` | Open a group named in `display.sidebar` — `pages` is the default |
+| `?field=<key>` | Which of the group's fields supplies the chips; defaults to the first |
+| `?on=<value>` | Selected value in that field; `latest` applies to the version stamp only |
+
+## Versioning
+
+`versioning` is optional and off by default. It tracks editions of a page, and wired into a
+group through the `versioning` token it gives them a left-nav index.
+
+```yaml
+versioning:
+  key: version         # frontmatter key holding the stamp
+  label: Versions      # index label
+  color: teal
+  inherit: true        # fill a missing stamp from package.json, then the nearest git tag
+  history: true        # ingest exact vMAJOR.MINOR.PATCH git tags as frozen trees
+  default: latest      # preselected value
+  group_by: status     # another facet, used as headings over the value list
+```
+
+Stamps always sort as semver, normalized to major.minor.patch — `0.2` and `v0.2.0` both
+become `0.2.0`. With `history: true`, tagged trees are ingested under `/_history/<version>/`
+and hidden from the Pages tree, and `latest` means the current tree; without it, `latest`
+means the HEAD pages carrying the highest stamp.
 
 ## Display
 
-`display` lists which elements render in each zone, in order. Omitting an element turns it off — there is no second switch anywhere in the config.
+`display` lists which elements render in each zone, in order. Omitting an element turns it off — there is no second switch anywhere in the config. `crumbs` is the one boolean: the trail is all-or-nothing.
 
 ```yaml
 display:
-  crumbs: [home, path]
+  crumbs: true
+  sidebar: [pages, Tags]
   header: [date, reading_time, facets]
   toc: [description, sections, related, edit]
   navbar: [theme, feed, github]
@@ -212,8 +259,9 @@ display:
 
 | Zone | Elements | Component |
 |------|----------|-----------|
-| `crumbs` | `home`, `path` | `Breadcrumbs` — trail above the title |
-| `header` | `date`, `reading_time`, `facets`, or any facet name | `PageHeader` + `TagList` |
+| `crumbs` | `true` / `false` | `Breadcrumbs` — trail above the title |
+| `sidebar` | `pages`, plus any `frontmatter.groups` name | `SidebarViews` — left-nav view chips |
+| `header` | `date`, `reading_time`, `facets`, or any facet or frontmatter key name | `PageHeader` + `TagList` |
 | `toc` | `description`, `sections`, `related`, `edit` | `PageContents` in the right sidebar |
 | `contents` | same vocabulary as `toc` | `PageContents` in the inline Contents panel |
 | `navbar` | `theme`, `feed`, `github` | `ThemeToggle`, `FeedLink`, `GitHubLink` |
@@ -276,7 +324,7 @@ During ingest it derives `public/site-meta.json` from supplied frontmatter and p
 - `metrics.word_count` computed from body text
 - `metrics.reading_time` from frontmatter when present
 
-Optional page summary: set `desc` or `description` in frontmatter (mapped via `fields.description`) — shown in the sidebar or Contents panel when `description` is listed in `display.toc`.
+Optional page summary: set `desc` or `description` in frontmatter (mapped via `frontmatter.description`) — shown in the sidebar or Contents panel when `description` is listed in `display.toc`.
 
 See the [Metadata Contract](/specifications/metadata) spec for the full schema.
 

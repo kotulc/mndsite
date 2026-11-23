@@ -18,6 +18,7 @@ const path = require('path')
 const yaml = require('js-yaml')
 const { strip_dir } = require('./fix-exif')
 const meta = require('./meta')
+const { feed_entries, write_rss } = require('./rss')
 const { list_semver_tags, files_at_tag, show_file } = require('./git-history')
 
 
@@ -45,6 +46,12 @@ let _warnings = []
 
 let _config = null
 function get_config() { return _config || require('../site.config') }
+
+
+function set_target_root(root) {
+  /** Redirect the generated targets; tests point them at a temp tree. */
+  TARGET = build_targets(root || ROOT)
+}
 
 
 function parse_fm(content) {
@@ -178,7 +185,8 @@ function auto_index(dest_dir, sorted, rel) {
    *  landing page still resolves. AutoRedirect handles BASE_PATH. No-op when one exists. */
   if (fs.existsSync(path.join(dest_dir, 'index.mdx'))) return null
 
-  const first = sorted.find(n => fs.existsSync(path.join(dest_dir, `${n.slug}.mdx`)))
+  const first = sorted.find(n => n.type === 'page')
+    || sorted.find(n => fs.existsSync(path.join(dest_dir, n.slug, 'index.mdx')))
   if (!first) return null
 
   const url = rel ? `/${rel}/${first.slug}/` : `/${first.slug}/`
@@ -186,7 +194,7 @@ function auto_index(dest_dir, sorted, rel) {
 
   fs.writeFileSync(path.join(dest_dir, 'index.mdx'), [
     '---',
-    `title: ${first.name}`,
+    `title: ${JSON.stringify(first.name)}`,
     'auto_redirect: true',
     '---',
     '',
@@ -309,7 +317,7 @@ function write_dir_meta(dir) {
 }
 
 
-function ingest_history(config) {
+function ingest_history(config, excluded) {
   /** Frozen trees from git tags, written under pages/_history/<version>/. */
   const versioning = config.versioning
   if (!versioning || !versioning.history) return []
@@ -323,6 +331,7 @@ function ingest_history(config) {
     if (version === config.release) continue
     const files = files_at_tag(repo, tag, prefix).filter(f => /\.mdx?$/.test(f))
     for (const repo_file of files) {
+      if (excluded.has(path.resolve(repo, repo_file))) continue
       let raw
       try { raw = show_file(repo, tag, repo_file).replace(/\r\n?/g, '\n') } catch { continue }
       const rel_in_content = repo_file.slice(prefix.length).replace(/^\//, '')
@@ -348,7 +357,7 @@ function ingest_history(config) {
 }
 
 
-function ingest_dir(src_dir, dest_dir, rel) {
+function ingest_dir(src_dir, dest_dir, rel, excluded) {
   fs.mkdirSync(dest_dir, { recursive: true })
   const img_url = copy_images(src_dir, rel)
   const nav_nodes = []
@@ -356,12 +365,13 @@ function ingest_dir(src_dir, dest_dir, rel) {
 
   for (const entry of fs.readdirSync(src_dir).sort()) {
     const src_entry = path.join(src_dir, entry)
+    if (excluded.has(src_entry)) continue
     const stat = fs.statSync(src_entry)
     if (entry === 'images' || entry === '_assets') continue
 
     if (stat.isDirectory()) {
       const sub_rel = rel ? `${rel}/${entry}` : entry
-      const sub = ingest_dir(src_entry, path.join(dest_dir, entry), sub_rel)
+      const sub = ingest_dir(src_entry, path.join(dest_dir, entry), sub_rel, excluded)
       pages.push(...sub.pages)
       nav_nodes.push({ slug: entry, name: sub.title, type: 'folder' })
       continue
@@ -382,9 +392,21 @@ function ingest_dir(src_dir, dest_dir, rel) {
   }
 
   const sorted    = sort_entries(nav_nodes, rel)
-  const generated = auto_index(dest_dir, sorted, rel)
-  const index     = sorted.find(n => n.slug === 'index')
-  const title  = index ? index.name : slug_to_title(path.basename(src_dir))
+  const index = sorted.find(n => n.slug === 'index')
+  const title = index ? index.name : slug_to_title(path.basename(src_dir))
+  const feed = _config.expandable_feed && rel === norm_path(_config.feed_url)
+  let generated
+  if (feed) {
+    const landing = path.join(dest_dir, 'index.mdx')
+    if (!index) {
+      fs.writeFileSync(landing, `---\ntitle: ${JSON.stringify(title)}\n---\n\n# ${title}\n`)
+      sorted.unshift({ slug: 'index', name: title })
+    }
+    const root = '../'.repeat(rel.split('/').length + 1)
+    fs.appendFileSync(landing, `\n\nimport PublishedFeed from '${root}components/feed/PublishedFeed'\n\n<PublishedFeed />\n`)
+  } else {
+    generated = auto_index(dest_dir, sorted, rel)
+  }
 
   // A generated index only redirects — hide it so it does not duplicate its target's entry.
   const meta_pairs = sorted.map(n => [n.slug, n.name])
@@ -420,6 +442,31 @@ function sync_assets(assets_dir) {
   return fs.readdirSync(dest)
 }
 
+async function write_expandable_feed(config, pages) {
+  const data_path = path.join(TARGET.public, 'post-feed.json')
+  if (!config.expandable_feed) {
+    fs.rmSync(data_path, { force: true })
+    return
+  }
+  const section = norm_path(config.feed_url)
+  const directory = path.join(TARGET.pages, section)
+  if (!fs.existsSync(path.join(directory, 'index.mdx'))) throw new Error(`Feed section "${section}" was not found in the content tree`)
+  const { card_meta } = await import('../components/feed/card-meta.mjs')
+  const entries = feed_entries(pages, section).map(({ page }) => {
+    const raw = fs.readFileSync(path.join(config.content, page.source), 'utf8')
+    const frontmatter = parse_fm(raw)
+    const sources = Array.isArray(frontmatter.sources) ? frontmatter.sources.filter(source => typeof source?.url === 'string')
+      .map(source => Object.fromEntries(['url', 'kind', 'title', 'publisher', 'description', 'image_url', 'audio_url', 'video_url', 'placement']
+        .filter(key => typeof source[key] === 'string').map(key => [key, source[key]]))) : []
+    return {
+      id: page.url, title: page.name, date: page.published, summary: page.desc || page.excerpt,
+      body: strip_fm(raw).replace(/^\s*#\s+.+\r?\n?/, ''), path: page.source,
+      href: page.url, sources, ...card_meta(frontmatter, config.frontmatter?.facets),
+    }
+  })
+  fs.writeFileSync(data_path, JSON.stringify(entries) + '\n')
+
+}
 
 async function run(config) {
   _config = config
@@ -437,13 +484,17 @@ async function run(config) {
   const assets = copy_content_assets(src)
   if (assets.length) console.log(`  Copied _assets/ (${assets.length} file(s))`)
 
-  const { pages } = ingest_dir(src, TARGET.pages, '')
-  const history = ingest_history(config)
+  const workspace = config.dir || ROOT
+  const excluded = new Set(['drafts', ...(config.drafts || [])].map(file => path.resolve(workspace, file)))
+  const { pages } = ingest_dir(src, TARGET.pages, '', excluded)
+  const history = ingest_history(config, excluded)
   const all = [...pages, ...history]
 
   all.sort((a, b) => a.url.localeCompare(b.url))
   fs.mkdirSync(TARGET.public, { recursive: true })
   fs.writeFileSync(TARGET.meta, JSON.stringify({ pages: all }, null, 2) + '\n')
+  await write_expandable_feed(config, pages)
+  write_rss(TARGET.public, pages, config)
   console.log(`  Wrote site metadata (${all.length} pages) to public/site-meta.json`)
   if (history.length) console.log(`  Ingested ${history.length} snapshot page(s) from git tags`)
 
@@ -471,7 +522,7 @@ async function run(config) {
 
 module.exports = {
   parse_fm, strip_fm, fm_block, set_fm_title, fallback_title, auto_index, sort_entries, extract_content,
-  norm_path, slug_to_title, sync_assets, sync_components, run,
+  norm_path, slug_to_title, sync_assets, sync_components, set_target_root, run,
 }
 
 

@@ -9,6 +9,8 @@ Point it at a directory of content with a YAML config, and it outputs a fully-bu
 
 `mndsite` is a Next.js + Nextra-based static site renderer designed to work at the end of a markdown publishing pipeline. In the typical workflow, **mndmap** organizes source markdown, enriches frontmatter, and emits a destination directory; `mndsite` mirrors that tree, builds navigation, and produces a `dist/` folder. Publishing is left to the caller.
 
+[Trendly](https://github.com/kotulc/trendly) opens the same repository to preview posts, manage draft publication, and read RSS subscriptions. Editors and agents work on the Markdown files. mndsite builds the public pages, expandable feed, and RSS from those files and `mndsite.yaml`.
+
 Raw markdown directories also work when content is already publication-ready — the same YAML config and CLI apply.
 
 The engine is packaged as a Docker image: mount your content and config, get a static site.
@@ -113,36 +115,51 @@ title: My Site
 description: none            # SEO meta description added to every page
 repo_url: none               # shows a GitHub icon in the navbar when set
 feed_url: none               # section slug linked from the navbar feed icon
+expandable_feed: false       # show dated posts inline at the feed_url section
+rss: false                   # opt in with { site_url: https://example.org/site/ }
 footer: default              # custom footer credits; `default` keeps the built-in
 
 # Optional — theme presets (see docs/configuration.md for all values)
 theme:
   color: default             # accent palette: default, slate, blue, emerald, rose, ...
   typeset: sans              # body font stack: sans, serif, humanist, geometric, mono
-  navbar: none               # navbar background: "primary" (theme tint) or any CSS color
-  footer: none               # footer background: "primary" (theme tint) or any CSS color
+  navbar: none               # navbar background: primary, background, or any CSS color
+  footer: none               # footer background: primary, background, or any CSS color
 
 # Optional — navigation
 nav_order: {}                # map of section slug → ordered list of page slugs
 
 # Optional — frontmatter keys mndsite reads (frontmatter is inert unless named here).
 # `none` disables a mapping; pages then fall back to their slug for the title.
-fields:
+frontmatter:
   title: title
   description: [description, desc]
   date: date
   reading_time: reading_time
   related: related
-  identity: doc_id           # stable id grouping variants of one document (from mndmap)
 
-# Optional — content dimensions. `index: true` adds a left-nav chip after Pages.
-facets:
-  categories: { field: categories, label: Category, color: blue }   # blue, violet, amber, rose, green, teal, or 0-359
-  tags:       { field: tags,       label: Tag,      color: violet }
+  # Content dimensions — page chips, and value chips when a group opens
+  facets:
+    categories: { key: categories, label: Category, color: blue }   # blue, violet, amber, rose, green, teal, or 0-359
+    tags:       { key: tags,       label: Tags,     color: violet }
+
+  # Left-nav browse groups, bundling facet names
+  groups:
+    Tags: [tags]
+    Topics: [categories, tags]
+
+# Optional — edition tracking; omit the block entirely to turn it off
+# versioning:
+#   key: version             # frontmatter key holding the stamp
+#   inherit: true            # fill a missing stamp from package.json / nearest git tag
+#   history: true            # ingest vMAJOR.MINOR.PATCH git tags as frozen trees
+#   default: latest          # preselected value
+#   group_by: status         # another facet, used as headings over the value list
 
 # Optional — rendered elements, in display order; omit one to turn it off
 display:
-  crumbs: [home, path]                   # breadcrumb trail above the title
+  crumbs: true                           # breadcrumb trail above the title
+  sidebar: [pages, Topics, Tags]         # left-nav views: `pages` plus group names
   header: [date, reading_time, facets]   # metadata under the title; accepts facet names
   toc: [description, sections, related, edit]   # right sidebar (≥ xl)
   # contents: [...]                      # inline Contents panel; defaults to toc
@@ -163,38 +180,37 @@ content: ./docs              # source markdown directory
 output: ./dist               # output directory for built site
 ```
 
-### Fields and facets
+### Frontmatter, facets, and groups
 
-mndsite reads no frontmatter key by accident. `fields` names the keys behind the built-in
-renderer metadata, and `facets` declares every content dimension — tags, categories,
-version, status, applicability, anything else upstream stamps into frontmatter.
+mndsite reads no frontmatter key by accident. `frontmatter` names the keys behind the
+built-in renderer metadata, and nests the two blocks that interpret content values:
+`facets` declares every content dimension — tags, categories, status, anything else
+upstream stamps into frontmatter — and `groups` bundles facets into left-nav browse views.
 
 | Facet key | Default | Purpose |
 |---|---|---|
-| `field` | *(required)* | Frontmatter key to read |
-| `label` | facet name, title-cased | Chip tooltip and index label |
+| `key` | *(required)* | Frontmatter key to read; a list folds several keys into one facet |
+| `label` | facet name, title-cased | Chip tooltip and index heading |
 | `color` | next palette entry | `blue`, `violet`, `amber`, `rose`, `green`, `teal`, or a hue `0-359` |
-| `values` | any value allowed | Allowed values; anything else is dropped |
-| `sort` | `alpha` | `alpha`, `semver`, `date`, `listed` |
-| `index` | `false` | Left-nav chip after Pages; body lists matching pages |
-| `inherit` | `false` | Fill a missing stamp from the site release |
-| `history` | `false` | Ingest `vMAJOR.MINOR.PATCH` git tags as frozen trees |
-| `default` | first value (`latest` when sort is semver or date) | Selected index value |
-| `group_by` | *(none)* | Another facet, used as headings in this index |
+| `sort` | `alpha` | `alpha`, `semver`, `date` |
 
 Chip colors are generated per facet from its hue, in both light and dark themes, so a
 user-defined facet gets a coherent chip without any CSS. A value whose facet is not
 declared falls back to the neutral `chip-custom` style.
 
+Edition behavior is not a facet setting — it lives in the optional `versioning` block
+(`key`, `inherit`, `history`, `default`, `group_by`), which a group opts into by listing
+the literal `versioning`.
+
 Rules worth knowing:
 
-- Facet values come from frontmatter only — never from paths. `inherit` may fill a missing stamp from `package.json` / the nearest git tag.
+- Facet values come from frontmatter only — never from paths. `versioning.inherit` may fill a missing stamp from `package.json` / the nearest git tag.
 - Semver is major.minor.patch. `0.2` and `v0.2.0` both become `0.2.0`.
-- Pages is the directory tree. `index: true` adds a chip; with no indexes, no chips render.
-- Selecting an index replaces the tree with that facet's values and lists matching pages in the body. This does not hide routes.
-- `history: true` keeps older trees from git tags even after every current file has moved on.
+- Pages is the directory tree. Each group in `display.sidebar` adds a chip beside it; with `pages` alone, no chips render.
+- Selecting a group replaces the tree with its value chips and lists matching pages in the body. This does not hide routes.
+- `versioning.history: true` keeps older trees from git tags even after every current file has moved on.
 
-The repo's own [mndsite.yaml](mndsite.yaml) opts into version and tags indexes. The example above is the default — categories and tags as page chips, no indexes.
+The repo's own [mndsite.yaml](mndsite.yaml) wires up Topics, Tags, and Versions groups. The example above is closer to the default — categories and tags as page chips, with a Tags group in the left nav.
 
 ### Display and disabling features
 
@@ -203,7 +219,8 @@ there is no second switch. Zones and their elements:
 
 | Zone | Elements | Renders |
 |------|----------|---------|
-| `crumbs` | `home`, `path` | Breadcrumb trail above the title |
+| `crumbs` | `true` / `false` | Breadcrumb trail above the title |
+| `sidebar` | `pages`, plus any `frontmatter.groups` name | Left-nav view chips |
 | `header` | `date`, `reading_time`, `facets`, or any facet name | Date, reading time, facet chips |
 | `toc` | `description`, `sections`, `related`, `edit` | Right sidebar at ≥ xl |
 | `contents` | same as `toc` | Inline Contents panel below the title (defaults to `toc`) |
@@ -217,7 +234,7 @@ display:
 ```
 
 Frontmatter stays on the emitted page for Nextra; the reader sees values only through
-`fields` and `facets` mappings into `site-meta.json` and the display zones above.
+`frontmatter` mappings into `site-meta.json` and the display zones above.
 
 ### Edit links
 
@@ -236,6 +253,35 @@ rejection of retired keys; pre-1.0, an unknown top-level key is simply ignored.
 
 [CHANGELOG.md](CHANGELOG.md) is the migration record — it lists what each contract version
 added, changed, and removed, including the 0.1 → 0.2 key replacements.
+
+### RSS subscriptions
+
+Set the public site URL to enable a build-time RSS 2.0 feed.
+
+```yaml
+feed_url: updates
+rss:
+  site_url: https://example.org/my-site/
+```
+
+mndsite writes `rss.xml`, adds RSS autodiscovery to the site, and exposes a subscribe icon in the navbar's `feed` slot. The HTML feed link still points to the configured section. RSS contains dated posts beneath that section, newest first, with summaries and links to the full posts. Leave `feed_url` unset to include dated posts from across the site.
+
+List repository-relative Markdown paths under `drafts` in `mndsite.yaml` to keep those files out of generated pages, navigation, and feeds. Remove a path from the list to publish it again at the same URL. You can also keep draft files and draft-only assets outside the published content directory.
+
+```yaml
+drafts:
+  - docs/updates/working-note.md
+```
+
+Use the complete public site URL, including any GitHub Pages subpath. Keep the existing `BASE_PATH` setting for the build. Feed item IDs use the permanent post URL, so revisions at the same URL retain their IDs.
+
+### Expandable post feed
+
+Set `expandable_feed: true` and point `feed_url` at a section inside the content directory. The section page lists the same dated posts used for RSS when both are enabled. Each row expands to show the Markdown body, source cards, and a permanent link. Write a `description` in frontmatter or let mndsite generate an excerpt. The optional `sources` list supports an HTTP(S) `url` and optional `title`, `publisher`, `description`, `image_url`, `kind`, `audio_url`, `video_url`, and `placement`.
+
+The card shows a media-type icon based on the first source, the post title, a source label, and the publication date. Use `site` to set the source label. Expanded cards show values from `frontmatter.facets`. Give a YouTube or direct audio link the Markdown title `"embed"` for a click-to-load player inside the expanded post. Set `placement: inline` on its source entry to show the player only in the body.
+
+For a local preview, run `npm run watch -- --config <path>` and `npm run dev` in separate terminals. The watcher rebuilds the feed when the config or files in the content, assets, or components directories change.
 
 ### BASE_PATH environment variable
 

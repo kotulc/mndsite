@@ -4,7 +4,7 @@
 jest.mock('../../site.config', () => ({
   release: '0.3.0',
   display: {
-    sidebar: ['pages', 'Tags', 'Versions'],
+    sidebar: ['pages', 'Tags', 'Versions', 'Editions'],
     header: ['date', 'reading_time', 'version', 'status', 'facets'],
   },
   versioning: {
@@ -21,6 +21,7 @@ jest.mock('../../site.config', () => ({
     groups: {
       Tags: ['tags'],
       Versions: 'versioning',
+      Editions: ['status', 'versioning'],
     },
     facets: {
       tags: {
@@ -29,9 +30,15 @@ jest.mock('../../site.config', () => ({
         sort: 'alpha',
         hue: 265,
       },
+      status: {
+        key: ['status'],
+        label: 'Status',
+        sort: 'alpha',
+        hue: 35,
+      },
     },
   },
-}), { virtual: true })
+}))
 
 jest.mock('../../public/site-meta.json', () => ({
   pages: [
@@ -39,7 +46,7 @@ jest.mock('../../public/site-meta.json', () => ({
     { url: '/b',     name: 'B',     snapshot: '',      facets: { version: '0.2.0', status: 'stable' } },
     { url: '/g/c',   name: 'C',     snapshot: '',      facets: { version: '0.3.0', status: 'draft' } },
     { url: '/g/d',   name: 'D',     snapshot: '',      facets: { version: '0.2.0', status: 'stable' } },
-    { url: '/plain', name: 'Plain', snapshot: '',      facets: {} },
+    { url: '/plain', name: 'Plain', snapshot: '',      facets: { tags: ['guide', 'intro'] } },
     { url: '/_history/0.1.0/a', name: 'A (old)', snapshot: '0.1.0', facets: { version: '0.1.0', status: 'stable' } },
   ],
 }), { virtual: true })
@@ -58,6 +65,7 @@ describe('sidebar_groups', () => {
     expect(sidebar_groups()).toEqual([
       { id: 'Tags', label: 'Tags', fields: ['tags'] },
       { id: 'Versions', label: 'Versions', fields: ['version'], versioning: true },
+      { id: 'Editions', label: 'Editions', fields: ['status', 'version'], versioning: true },
     ])
   })
 })
@@ -97,6 +105,24 @@ describe('active_view and selected_value', () => {
 
   test('test_active_field_from_query', () => {
     expect(active_field({ field: 'tags' }, 'Tags')).toBe('tags')
+  })
+
+  // 'latest' is a value of the versioning stamp only. Anywhere else it must be a real
+  // domain value, or the listing renders a "Latest" heading over zero pages.
+  test('test_selected_latest_rejected_on_non_versioning_group', () => {
+    expect(selected_value({ on: 'latest' }, 'Tags')).toBe('guide')
+  })
+
+  test('test_selected_latest_rejected_on_non_versioning_field', () => {
+    expect(selected_value({ on: 'latest' }, 'Editions')).toBe('deprecated')
+  })
+
+  test('test_selected_latest_kept_on_versioning_field', () => {
+    expect(selected_value({ field: 'version', on: 'latest' }, 'Editions')).toBe('latest')
+  })
+
+  test('test_selected_unknown_value_falls_back_to_default', () => {
+    expect(selected_value({ on: 'nope' }, 'Tags')).toBe('guide')
   })
 })
 

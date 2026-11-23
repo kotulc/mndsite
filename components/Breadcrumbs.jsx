@@ -30,9 +30,9 @@ function path_trail(route) {
 
 
 export default function Breadcrumbs() {
+  const { route } = useRouter()
   if (!siteConfig.display.crumbs) return null
 
-  const { route } = useRouter()
   const items = [{ href: '/', name: 'Home' }, ...path_trail(route)]
   if (!items.length) return null
 

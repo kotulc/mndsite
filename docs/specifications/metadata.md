@@ -73,7 +73,7 @@ Frontmatter:
 ```yaml
 title: My Page
 date: 2026-01-15
-desc: Optional summary for Page intelligence
+desc: Summary shown in Contents and feed previews
 reading_time: 4
 tags: [yaml, markdown]
 categories: [guide]

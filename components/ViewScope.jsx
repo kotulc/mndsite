@@ -95,6 +95,12 @@ export function useViewScope() {
 }
 
 
+function toggle_on_new_row(prev, curr) {
+  if (!prev || !curr) return false
+  return curr.getBoundingClientRect().top - prev.getBoundingClientRect().top > 3
+}
+
+
 function use_wrap_separators(item_count) {
   const container_ref = useRef(null)
   const item_refs = useRef([])
@@ -102,14 +108,14 @@ function use_wrap_separators(item_count) {
 
   useEffect(() => {
     item_refs.current = item_refs.current.slice(0, item_count)
+    const container = container_ref.current
+    if (!item_count || !container) return undefined
 
     function measure() {
       const items = item_refs.current
       const hidden = Array(item_count).fill(false)
       for (let i = 1; i < items.length; i++) {
-        const prev = items[i - 1]
-        const curr = items[i]
-        if (prev && curr && curr.offsetTop > prev.offsetTop) hidden[i] = true
+        if (toggle_on_new_row(items[i - 1], items[i])) hidden[i] = true
       }
       set_wrap_before(prev => (
         prev.length === hidden.length && prev.every((v, i) => v === hidden[i])
@@ -118,12 +124,12 @@ function use_wrap_separators(item_count) {
       ))
     }
 
-    const id = requestAnimationFrame(measure)
-    window.addEventListener('resize', measure)
-    return () => {
-      cancelAnimationFrame(id)
-      window.removeEventListener('resize', measure)
-    }
+    // One trigger covers every case the row rewraps: first layout, window resize, font
+    // settle, and the sidebar changing width when the mobile drawer opens. Hiding a
+    // separator only flips `visibility`, so a measure can never resize us back.
+    const observer = new ResizeObserver(measure)
+    observer.observe(container)
+    return () => observer.disconnect()
   }, [item_count])
 
   return { container_ref, item_refs, wrap_before }

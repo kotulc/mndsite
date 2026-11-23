@@ -7,6 +7,12 @@ title: mndsite
 description: Static documentation sites from plain markdown
 repo_url: https://github.com/kotulc/mndsite
 feed_url: updates
+expandable_feed: true
+rss:
+  site_url: https://kotulc.github.io/mndsite/
+drafts:
+  - docs/updates/plans.md
+  - docs/updates/roadmap.md
 footer: MIT licensed · built with mndsite
 
 content: ./docs

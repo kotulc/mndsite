@@ -61,6 +61,8 @@ const DEFAULTS = {
   description:    'none',
   repo_url:       'none',
   feed_url:       'none',
+  rss:            false,
+  expandable_feed: false,
   footer:         'default',
   theme:          { color: 'default', typeset: 'sans', navbar: 'none', footer: 'none' },
   display: {
@@ -95,6 +97,21 @@ function unset(value) {
 
 function optional(value) {
   return unset(value) ? '' : String(value).trim()
+}
+
+
+function resolve_rss(raw) {
+  if (raw == null || raw === false) return null
+  try {
+    const url = new URL(raw.site_url)
+    if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
+      throw new Error()
+    }
+    url.pathname = url.pathname.replace(/\/+$/, '') + '/'
+    return { site_url: url.href }
+  } catch {
+    throw new Error("mndsite.yaml: 'rss.site_url' must be the absolute public HTTP(S) site URL")
+  }
 }
 
 
@@ -226,8 +243,8 @@ function resolve_config_groups(raw, facets, versioning) {
     }
 
     if (uses_versioning) require_versioning(name)
+    // A group that is versioning and nothing else collapses to the bare token.
     if (uses_versioning && ordered.length === 1) return [name, VERSIONING]
-    if (uses_versioning) return [name, ordered]
     return [name, ordered]
   }))
 }
@@ -371,6 +388,18 @@ function load_config(yaml_path) {
   for (const key of ['description', 'repo_url', 'feed_url', 'footer', 'components', 'assets']) {
     cfg[key] = optional(cfg[key])
   }
+  cfg.rss = resolve_rss(raw.rss)
+  cfg.drafts = raw.drafts ?? []
+  if (!Array.isArray(cfg.drafts) || cfg.drafts.some(file => typeof file !== 'string' || /[\\:\0]/.test(file) ||
+    file.split('/').some(part => !part || part === '.' || part === '..') || !/\.mdx?$/i.test(file))) {
+    throw new Error("mndsite.yaml: 'drafts' must be a list of repository-relative Markdown paths")
+  }
+  if (cfg.expandable_feed !== true && cfg.expandable_feed !== false) {
+    throw new Error("mndsite.yaml: 'expandable_feed' must be true or false")
+  }
+  if (cfg.expandable_feed && !/^\/?[\w-]+(?:\/[\w-]+)*\/?$/.test(cfg.feed_url)) {
+    throw new Error("mndsite.yaml: 'expandable_feed' requires a 'feed_url' section")
+  }
 
   const theme = { ...DEFAULTS.theme, ...(raw.theme || {}) }
   theme.navbar = optional(theme.navbar)
@@ -405,7 +434,7 @@ function load_config(yaml_path) {
 function write_site_config(config, dest_dir) {
   const dir  = dest_dir || path.join(__dirname, '..')
   const keys = [
-    'title', 'repo_url', 'feed_url', 'description', 'footer',
+    'title', 'repo_url', 'feed_url', 'rss', 'description', 'footer',
     'theme', 'nav_order', 'frontmatter', 'versioning', 'release',
     'display', 'edit',
   ]

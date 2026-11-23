@@ -35,9 +35,15 @@ function facet_spec_for_field(field_key) {
 }
 
 
-function field_sort(group, field_key) {
+function versioned_field(group, field_key) {
+  /** True when this field carries the versioning stamp — only there is 'latest' a value. */
   const versioning = siteConfig.versioning
-  if (group.versioning && versioning && field_key === versioning.key) return 'semver'
+  return !!(group.versioning && versioning && field_key === versioning.key)
+}
+
+
+function field_sort(group, field_key) {
+  if (versioned_field(group, field_key)) return 'semver'
   return (facet_spec_for_field(field_key) || {}).sort || 'alpha'
 }
 
@@ -78,11 +84,7 @@ export function field_domain(field_key, { head, sort } = {}) {
 
 
 function ordered_default(group, field_key, domain) {
-  const versioning = siteConfig.versioning
-  if (group.versioning && versioning && field_key === versioning.key) {
-    if (versioning.default) return versioning.default
-    return 'latest'
-  }
+  if (versioned_field(group, field_key)) return siteConfig.versioning.default || 'latest'
   const sort = field_sort(group, field_key)
   if (sort === 'semver' || sort === 'date') return domain[domain.length - 1] || ''
   return domain[0] || ''
@@ -93,13 +95,11 @@ export function selected_value(query, group_id) {
   const group = sidebar_group(group_id)
   if (!group) return ''
   const field_key = active_field(query, group_id)
-  const sort = field_sort(group, field_key)
-  const domain = field_domain(field_key, { sort })
+  const domain = field_domain(field_key, { sort: field_sort(group, field_key) })
   const requested = (query || {}).on
-  const fallback = ordered_default(group, field_key, domain)
-  if (requested === 'latest' || requested === fallback) return requested || fallback
-  if (requested && (domain.includes(requested) || requested === 'latest')) return requested
-  return fallback
+  if (requested === 'latest' && versioned_field(group, field_key)) return requested
+  if (requested && domain.includes(requested)) return requested
+  return ordered_default(group, field_key, domain)
 }
 
 
@@ -110,14 +110,12 @@ export function index_entries(group_id, field_key) {
   const sort = field_sort(group, field_key)
   const domain = field_domain(field_key, { sort })
   const ordered = sort === 'semver' || sort === 'date' ? [...domain].reverse() : domain
+  const versioned = versioned_field(group, field_key)
+  const group_by = versioned ? siteConfig.versioning.group_by : ''
   const rows = []
-  const versioning = siteConfig.versioning
-  const group_by = group.versioning && versioning && field_key === versioning.key
-    ? versioning.group_by
-    : ''
 
   for (const value of ordered) {
-    if (group.versioning && versioning && field_key === versioning.key && value === 'latest') continue
+    if (versioned && value === 'latest') continue
     if (group_by) {
       const groups = new Set()
       for (const page of listed_pages(group_id, field_key, value)) {
@@ -139,10 +137,9 @@ export function listed_pages(group_id, field_key, value) {
   const group = sidebar_group(group_id)
   if (!group) return []
 
-  const versioning = siteConfig.versioning
-  if (group.versioning && versioning && field_key === versioning.key) {
+  if (versioned_field(group, field_key)) {
     if (value === 'latest') {
-      if (versioning.history) return PAGES.filter(page => !page.snapshot)
+      if (siteConfig.versioning.history) return PAGES.filter(page => !page.snapshot)
       const domain = field_domain(field_key, { head: true, sort: 'semver' })
       const max = domain[domain.length - 1]
       if (!max) return PAGES.filter(page => !page.snapshot)

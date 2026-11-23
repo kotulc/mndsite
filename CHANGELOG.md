@@ -4,34 +4,74 @@ Releases and the `mndsite.yaml` config contract move together: the release versi
 `MAJOR.MINOR` **is** the contract version. `0.3.x` releases all read the 0.3 contract.
 
 Pre-1.0, breaking config changes land in a minor bump and are listed here. There is no
-in-file `contract:` key and no load-time rejection of retired keys — an unknown top-level
-key is ignored, and this file is the migration record.
+in-file `contract:` key, and an unknown top-level key is ignored rather than rejected — this
+file is the migration record. The one exception is a *renamed* key: a 0.2 block that moved
+in 0.3 raises a load error naming the key to use instead, rather than silently doing nothing.
 
 
 ## 0.3.0 — 2026-08-29
 
-Indexes replace collections. The left nav is the directory tree (Pages) or a facet's
-values; the body lists matching pages. Version stamps inherit the site release and
-optional git-tag snapshots keep older trees.
+Facets describe content; groups browse it; versioning tracks editions. `fields` and the
+top-level `facets` block fold into one `frontmatter` block, the per-facet index flags move
+out to a dedicated `versioning` block, and the left nav is driven by `display.sidebar`
+instead of a flag on each facet.
 
 ### Added
 
-- `facets.*.index` — boolean. Puts a chip after Pages; chips hide when no facet is an index.
-- `facets.*.inherit` — boolean. Missing stamps take the site release (`package.json`, then git tag).
-- `facets.*.history` — boolean. Ingest exact `vMAJOR.MINOR.PATCH` git tags as frozen trees.
-- `facets.*.group_by` — another facet, used as headings in that index.
-- `facets.*.default` — selected index value (`latest`, or a specific value).
+- `frontmatter` — the block that owns every frontmatter key mndsite reads, with `facets`
+  and `groups` nested inside it.
+- `frontmatter.groups` — named bundles of facet names, or the bare word `versioning`.
+  A group's chip order follows its facet list.
+- `display.sidebar` — left-nav views in order: `pages` (the directory tree) plus group
+  names. `[pages]` alone renders no view chips.
+- `versioning` — optional edition tracking: `key`, `label`, `color`, `inherit`, `history`,
+  `default`, `group_by`. Omitting the block turns it off. Stamps always sort as semver.
+- `?field=<key>` — selects which of an open group's fields supplies the value chips.
 - Semver values normalize to major.minor.patch (`0.2` → `0.2.0`; `v0.4.1` → `0.4.1`).
+- A facet's `key` accepts a list, folding several frontmatter keys into one facet.
 
 ### Changed
 
 - `sort: semver` compares major.minor.patch. Two-part stamps pad with `.0`.
+- `display.crumbs` is a boolean. The trail is all-or-nothing, so a list said nothing a
+  boolean does not.
+- `theme.navbar` / `theme.footer` accept `background` to match the page background.
+- `latest` is a value of the versioning stamp only. On any other field it is validated
+  against the field's domain like any other value.
 
 ### Removed
 
-- `collections` — named filter presets. Indexes select a value; they do not hide the tree.
-- `sidebar.views` — replaced by `index: true` plus built-in Pages.
-- `facets.*.ui` — page chips follow `display.header`. Index chips are the view switcher.
+- `collections` — named filter presets. Groups select a value; they do not hide the tree.
+- `sidebar.views` — replaced by `display.sidebar`.
+- `facets.*.ui` — page chips follow `display.header`; group chips are the view switcher.
+- `facets.*.values` and `sort: listed` — facet values are open. Config declares dimensions,
+  not vocabularies.
+- `fields.identity` — never read by the renderer.
+
+### Migration from 0.2
+
+These renames are rejected at load time with the key to use instead:
+
+| 0.2 | 0.3 |
+|---|---|
+| `fields:` | `frontmatter:` |
+| top-level `facets:` | `frontmatter.facets:` |
+| top-level `groups:` | `frontmatter.groups:` |
+| `facets.<name>.field` | `facets.<name>.key` |
+| `versioning.field` | `versioning.key` |
+| `display.crumbs: [home, path]` | `display.crumbs: true` |
+
+And these move out of a facet into the `versioning` block, which a group opts into by
+listing the literal `versioning`:
+
+| 0.2 | 0.3 |
+|---|---|
+| `facets.<name>.index: true` | add the group to `frontmatter.groups` and `display.sidebar` |
+| `facets.<name>.inherit` | `versioning.inherit` |
+| `facets.<name>.history` | `versioning.history` |
+| `facets.<name>.default` | `versioning.default` |
+| `facets.<name>.group_by` | `versioning.group_by` |
+| `facets.<name>.values` | Removed — any frontmatter value renders |
 
 
 ## 0.2.0 — 2026-08-28

@@ -125,7 +125,6 @@ from `site-meta.json` in `theme.config.jsx`.
 | Component | Purpose |
 |-----------|---------|
 | `SemanticSearch` | Full-text and semantic search (index supplied by upstream pipeline) |
-| Facet sidebar indexes | Left-nav chips from `facets.*.index`; Pages is built-in |
 
-Site-wide colors, fonts, and chip hues are already configurable via `theme` and `facets` in
-`mndsite.yaml` — see [Configuration](/configuration).
+Site-wide colors, fonts, and chip hues are already configurable via `theme` and
+`frontmatter.facets` in `mndsite.yaml` — see [Configuration](/configuration).

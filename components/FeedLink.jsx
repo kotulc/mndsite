@@ -1,8 +1,8 @@
 /**
- * RSS icon button in the navbar. Links to siteConfig.feed_url.
- * Hidden if feed_url is not set.
+ * Navbar links for the site's post listing and optional RSS subscription.
  */
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import siteConfig from '../site.config'
 
 
@@ -15,11 +15,21 @@ const RSS_ICON = (
 
 
 export default function FeedLink() {
-  if (!siteConfig.feed_url) return null
-  const href = `/${siteConfig.feed_url.replace(/^\/+|\/+$/g, '')}`
+  const { basePath } = useRouter()
+  const section = siteConfig.feed_url && `/${siteConfig.feed_url.replace(/^\/+|\/+$/g, '')}`
+  if (!siteConfig.rss && !section) return null
   return (
-    <Link href={href} className="icon-link" aria-label="Feed">
-      {RSS_ICON}
-    </Link>
+    <>
+      {section && (
+        <Link href={section} className="icon-link" aria-label="Feed">
+          {siteConfig.rss ? 'Feed' : RSS_ICON}
+        </Link>
+      )}
+      {siteConfig.rss && (
+        <a href={`${basePath}/rss.xml`} className="icon-link" aria-label="Subscribe to RSS" title="Subscribe to RSS">
+          {RSS_ICON}
+        </a>
+      )}
+    </>
   )
 }

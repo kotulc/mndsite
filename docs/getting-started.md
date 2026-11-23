@@ -68,14 +68,17 @@ content: ./docs
 output: ./dist
 nav_order:
   "": [about, getting-started]
-fields:
+frontmatter:
   title: title
   description: [description, desc]
   date: date
-facets:
-  categories: { field: categories, label: Category, color: blue }
-  tags:       { field: tags,       label: Tag,      color: violet }
+  facets:
+    categories: { key: categories, label: Category, color: blue }
+    tags:       { key: tags,       label: Tags,     color: violet }
+  groups:
+    Topics: [categories, tags]
 display:
+  sidebar: [pages, Topics]
   header: [date, reading_time, facets]
   toc: [description, sections, related, edit]
 ```
@@ -152,12 +155,11 @@ related:
 
 | Field | Required | Notes |
 |-------|----------|-------|
-| `title` | recommended | From `fields.title`; else filename stem (or directory name for index pages) |
+| `title` | recommended | From `frontmatter.title`; else filename stem (or directory name for index pages) |
 | `date` | optional | Shown when `date` is listed in `display.header` |
 | `desc` / `description` | optional | Shown when `description` is listed in `display.toc` |
-| `categories`, `tags` | optional | Rendered when declared in `facets` and listed in `display.header` |
+| `categories`, `tags` | optional | Rendered when declared in `frontmatter.facets` and listed in `display.header` |
 | `reading_time` | optional | Shown when listed in `display.header` |
 | `related` | optional | `{ title, url }` entries in the Related block |
-| `doc_id` | optional | Stable identity for variant grouping (default `fields.identity` key) |
 
 Page headings are not read for titles or navigation labels — frontmatter and filenames only.

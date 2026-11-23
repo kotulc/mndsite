@@ -48,7 +48,7 @@ One-paragraph description of purpose.
 - [Navtree Naming](navtree-naming) — how page and directory labels are derived for navigation
 - [Page Metadata](page-metadata) — date, reading time, category and tag chips
 - [Site Configuration](site-configuration) — all `mndsite.yaml` fields and their effects
-- [Directory Feed](pipeline/dir-feed) — removed; organization moved to mndmap
+- [Directory Feed](pipeline/dir-feed) — expandable posts and RSS
 
 ## Pipeline context
 

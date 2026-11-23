@@ -1,5 +1,7 @@
 /** Next.js custom App wrapper — imports global styles and any providers. */
 import '../styles/global.css'
+import '../components/feed/feed.css'
+import Head from 'next/head'
 import { useLayoutEffect } from 'react'
 import { SectionProvider } from '../components/SectionContext'
 import siteConfig from '../site.config'
@@ -23,6 +25,12 @@ export default function App({ Component, pageProps }) {
 
   return (
     <SectionProvider>
+      {siteConfig.rss && (
+        <Head>
+          <link rel="alternate" type="application/rss+xml" title={siteConfig.title}
+            href={new URL('rss.xml', siteConfig.rss.site_url).href} />
+        </Head>
+      )}
       <Component {...pageProps} />
     </SectionProvider>
   )

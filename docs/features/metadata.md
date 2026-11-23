@@ -34,7 +34,7 @@ reach the UI only through configured `fields`, `facets`, and `display` lists.
 | Breadcrumbs | `display.crumbs` | Route + page names from `site-meta.json` |
 | Date / reading time | `display.header` | `published`, `metrics.reading_time` |
 | Facet chips | `display.header` (`facets` or facet names) | `page.facets` |
-| Description | `display.toc` / `display.contents` | `desc` via `fields.description` |
+| Description | `display.toc` / `display.contents` | `desc` via `frontmatter.description` |
 | Section list | `display.toc` / `display.contents` | `page.sections` heading tree |
 | Related | `display.toc` / `display.contents` | `links`, `related` |
 | Edit link | `display.toc` / `display.contents` | `repo_url`, `edit`, `page.source` |

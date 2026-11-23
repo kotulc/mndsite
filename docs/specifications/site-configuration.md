@@ -20,9 +20,12 @@ At build time the CLI generates `site.config.js` from the YAML; both the ingest 
 | `description` | string | `''` | SEO meta description; per-page frontmatter overrides it |
 | `repo_url` | string | `''` | GitHub repo URL; shows GitHub icon and "Edit this page" link when non-empty |
 | `feed_url` | string | `''` | Section slug linked from the navbar feed icon |
+| `expandable_feed` | boolean | `false` | Show dated posts as expandable cards in the feed section |
+| `rss.site_url` | URL | unset | Public site URL used for RSS discovery and post permalinks |
+| `drafts` | list | `[]` | Repository-relative Markdown paths excluded from the build |
 | `footer` | string | `''` | Custom footer credits text |
 | `display` | object | see [Configuration](/configuration#display) | Which elements render, in which order |
-| `fields` / `facets` | object | see [Configuration](/configuration#facets) | Frontmatter keys read, dimensions chipped, optional indexes |
+| `frontmatter` | object | see [Configuration](/configuration#facets) | Frontmatter keys read, dimensions chipped, optional indexes |
 | `edit` | object | `branch: main` | "Edit this page" targets; used only when `repo_url` is set |
 | `theme` | object | see [Configuration](/configuration#theme) | Color palette, typeset, navbar/footer backgrounds |
 | `nav_order` | object | `{}` | Slug array to pin specific pages first; remaining pages sort alphabetically |

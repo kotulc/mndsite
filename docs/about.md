@@ -31,6 +31,10 @@ Raw markdown directories also work when content is already publication-ready —
 The engine is packaged as a Docker image: mount your content and config, get a static site.
 
 
+## Publishing with Trendly
+
+Open the content repository in Trendly to preview its posts and choose which drafts to publish. Editors and agents can edit the same Markdown files. mndsite reads the saved files and publication settings during the next build. The [Updates feed](/updates) shows the published cards. Subscribe to this site's RSS using the navbar, or add its URL to Trendly's external subscriptions.
+
 ## Pipeline split
 
 ```text
