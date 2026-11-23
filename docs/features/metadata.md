@@ -35,7 +35,7 @@ reach the UI only through configured `fields`, `facets`, and `display` lists.
 | Date / reading time | `display.header` | `published`, `metrics.reading_time` |
 | Facet chips | `display.header` (`facets` or facet names) | `page.facets` |
 | Description | `display.toc` / `display.contents` | `desc` via `frontmatter.description` |
-| Section list | `display.toc` / `display.contents` | `page.sections` heading tree |
+| Section list | `display.toc` / `display.contents` | Compiled MDX headings and their anchor IDs |
 | Related | `display.toc` / `display.contents` | `links`, `related` |
 | Edit link | `display.toc` / `display.contents` | `repo_url`, `edit`, `page.source` |
 
@@ -73,7 +73,7 @@ dimension upstream supplies.
 **`PageContents`** — Description, sections, Related, and Edit blocks in list order. Used in
 the right sidebar and the inline Contents panel.
 
-**`ContentsToggle` / `ContentsPanel`** — below xl, opens the same sidebar body inline.
+**`ContentsMenu`** — below xl, opens the same sidebar body inline.
 
 **`SiteFooter`** — copyright, build timestamp, credits.
 

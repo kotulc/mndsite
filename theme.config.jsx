@@ -1,11 +1,10 @@
 import Link from 'next/link'
-import { useState, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import Breadcrumbs from './components/Breadcrumbs'
 import PageHeader from './components/PageHeader'
 import TagList from './components/TagList'
 import PageContents, { TocTitle, TocExtra, TocHeading } from './components/PageContents'
-import { ContentsToggle, ContentsPanel, close_contents_panel } from './components/ContentsMenu'
+import ContentsMenu from './components/ContentsMenu'
 import SiteFooter from './components/SiteFooter'
 import GitHubLink from './components/GitHubLink'
 import FeedLink, { FeedSubscription } from './components/FeedLink'
@@ -103,28 +102,15 @@ const THEME_CSS = [
 
 
 function PageTitle({ children }) {
-  /** Custom h1 override: the breadcrumb row and the Contents action that shares it, the
-   *  heading, page metadata, then the panel that action opens — the same sidebar body,
-   *  inline, at widths where Nextra hides the sidebar. */
-  const [open, set_open] = useState(false)
-  const dismiss = useCallback(() => set_open(false), [])
-  const close_panel = useCallback(
-    () => close_contents_panel(dismiss),
-    [dismiss],
-  )
-
   return (
     <>
       <PageRail
         trail={<Breadcrumbs heading={children} />}
-        actions={<>
-          <FeedSubscription />
-          <ContentsToggle open={open} on_toggle={() => set_open(v => !v)} />
-        </>}
+        actions={<FeedSubscription />}
       />
       <PageHeading>{children}</PageHeading>
       <PageMeta />
-      <ContentsPanel open={open} on_close={close_panel} on_route_close={dismiss} />
+      <ContentsMenu />
     </>
   )
 }
@@ -139,7 +125,16 @@ export default {
     extraContent: (
       <div className="navbar-icons">
         {siteConfig.display.navbar.map(item => {
-          if (item === 'browse') return <Link key={item} href={siteMeta.browse} className="browse-link">Browse</Link>
+          if (item === 'browse') return (
+            <Link key={item} href={siteMeta.browse} className="icon-link browse-link" aria-label="Browse pages" title="Browse pages">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7" rx="1.25" />
+                <rect x="14" y="3" width="7" height="7" rx="1.25" />
+                <rect x="3" y="14" width="7" height="7" rx="1.25" />
+                <rect x="14" y="14" width="7" height="7" rx="1.25" />
+              </svg>
+            </Link>
+          )
           if (item === 'theme') return <ThemeToggle key={item} />
           if (item === 'feed') return <FeedLink key={item} />
           if (item === 'github') return <GitHubLink key={item} />

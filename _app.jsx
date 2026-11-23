@@ -1,4 +1,5 @@
 /** Next.js custom App wrapper — imports global styles and any providers. */
+import 'nextra-theme-docs/style.css'
 import '../styles/global.css'
 import '../components/feed/feed.css'
 import Head from 'next/head'
@@ -6,7 +7,6 @@ import { useRouter } from 'next/router'
 import { browseFilter } from '../components/facets'
 import siteMeta from '../public/site-meta.json'
 import { useEffect, useLayoutEffect } from 'react'
-import { SectionProvider } from '../components/SectionContext'
 import siteConfig from '../site.config'
 
 
@@ -39,7 +39,7 @@ export default function App({ Component, pageProps }) {
 
 
   return (
-    <SectionProvider>
+    <>
       {siteConfig.rss && (
         <Head>
           <link rel="alternate" type="application/rss+xml" title={siteConfig.title}
@@ -47,6 +47,6 @@ export default function App({ Component, pageProps }) {
         </Head>
       )}
       <Component {...pageProps} />
-    </SectionProvider>
+    </>
   )
 }

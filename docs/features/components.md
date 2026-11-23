@@ -34,7 +34,7 @@ and styled in `styles/global.css`. Page-level chrome is driven by `display` in
 | `Browse` | `Browse.jsx` | Searchable list of published pages linked from the navbar and article labels |
 | `TagList` | `TagList.jsx` | Under `PageHeader` — facet chips from `display.header` |
 | `PageContents` | `PageContents.jsx` | Right sidebar (`display.toc`) and inline panel (`display.contents`) |
-| `ContentsToggle` / `ContentsPanel` | `ContentsMenu.jsx` | Contents button and inline panel below the title |
+| `ContentsMenu` | `ContentsMenu.jsx` | Collapsible section below the title and metadata |
 | `Chip` | `Chip.jsx` | Used by `TagList` — class `chip-{facetName}` |
 | `SiteFooter` | `SiteFooter.jsx` | Site-wide footer |
 | `GitHubLink` | `GitHubLink.jsx` | Navbar — `display.navbar` includes `github` |
@@ -73,9 +73,7 @@ At ≥ xl, Nextra may own the section heading list when `sections` is listed in 
 
 ### ContentsMenu
 
-Below xl, Nextra hides the right sidebar. `ContentsToggle` opens `ContentsPanel`, which
-renders the same `PageContents` body inline using `display.contents`. The toggle hides
-itself when there is nothing to list. Escape and route changes dismiss the panel.
+Below xl, **Contents** expands in place beneath the title and metadata. It starts collapsed on each page and appears when `display.contents` has items to show. Select a heading to close it and jump to that section.
 
 ### SiteFooter
 

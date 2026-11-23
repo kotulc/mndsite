@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react'
 import { useRouter } from 'next/router'
-import { SectionProvider, useSection, find_page, flatten_sections } from '../../components/SectionContext'
+import { SectionProvider, useSection, find_page } from '../../components/SectionContext'
 
 jest.mock('next/router', () => ({ useRouter: jest.fn() }))
 jest.mock('../../public/site-meta.json', () => ({
@@ -36,19 +36,11 @@ describe('find_page', () => {
 })
 
 
-describe('flatten_sections', () => {
-  test('test_flatten_sections_depth_first_document_order', () => {
-    const page = find_page('/features/overview')
-    expect(flatten_sections(page).map(s => s.name)).toEqual(['Intro', 'Nested', 'Details'])
-  })
-})
-
-
 function Probe() {
   const { page, sections } = useSection()
   return (
     <div data-testid="probe">
-      {page ? page.name : 'none'}:{sections.map(s => s.name).join(',')}
+      {page ? page.name : 'none'}:{sections.map(s => s.id).join(',')}
     </div>
   )
 }
@@ -56,10 +48,14 @@ function Probe() {
 
 test('test_section_provider_exposes_page_and_sections_for_route', () => {
   useRouter.mockReturnValue({ route: '/features/overview' })
-  const { getByTestId, rerender } = render(<SectionProvider><Probe /></SectionProvider>)
-  expect(getByTestId('probe').textContent).toBe('Overview:Intro,Nested,Details')
+  const { getByTestId, rerender } = render(<SectionProvider headings={[
+    { id: 'intro', value: 'Intro', depth: 2 },
+    { id: 'intro-1', value: 'Intro', depth: 3 },
+    { id: 'detail', value: 'Detail', depth: 4 },
+  ]}><Probe /></SectionProvider>)
+  expect(getByTestId('probe').textContent).toBe('Overview:intro,intro-1')
 
   useRouter.mockReturnValue({ route: '/about' })
-  rerender(<SectionProvider><Probe /></SectionProvider>)
+  rerender(<SectionProvider headings={[]}><Probe /></SectionProvider>)
   expect(getByTestId('probe').textContent).toBe('About:')
 })

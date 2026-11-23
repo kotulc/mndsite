@@ -1,5 +1,5 @@
 /**
- * Breadcrumbs and page actions (Contents) in the content column above the title.
+ * Breadcrumbs and page actions in the content column above the title.
  */
 export default function PageRail({ trail, actions }) {
   const has_trail = !!trail

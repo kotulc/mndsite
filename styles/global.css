@@ -9,7 +9,7 @@
   --site-primary-700: hsl(var(--site-hs) 39%);
   --site-gray-100: #f3f4f6;
   --site-gray-200: #e5e7eb;
-  --crumb-height: 1.5rem;   /* breadcrumb row height, shared with the Contents toggle */
+  --crumb-height: 1.5rem;   /* breadcrumb row height */
   --site-gray-400: #9ca3af;
   --site-gray-500: #6b7280;
   --site-gray-600: #4b5563;
@@ -200,7 +200,7 @@ img {
   border-radius: 4px;
 }
 
-/* Content-column rail — breadcrumbs and Contents above the title. */
+/* Content-column rail — breadcrumbs and page actions above the title. */
 .page-rail {
   display: flex;
   align-items: center;
@@ -249,34 +249,28 @@ img {
 .page-crumbs a:hover { color: var(--site-primary-600); text-decoration: underline; }
 .page-crumbs a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 
-/* Contents button — shown only below xl, where Nextra hides .nextra-toc. */
-.contents-toggle {
-  display: none;
-}
-
-@media (max-width: 1279px) {
-  .contents-toggle { display: inline-flex; }
-}
-
-.contents-count {
-  margin-left: 0.25rem;
-  opacity: 0.65;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Inline Contents panel — dividers above/below, no card chrome */
+/* The narrow layout keeps its page outline together below the title and tags. */
 .contents-panel {
-  margin: 1.25rem 0 1.5rem;
-  padding: 1.25rem 0;
-  border-top: 1px solid #e5e7eb;
-  border-bottom: 1px solid #e5e7eb;
-  font-size: 0.875rem;
-  overflow-anchor: none;
+  margin: 1rem 0 1.5rem;
+  border-block: 1px solid var(--site-gray-200);
+  font-size: .875rem;
 }
 
-:is(html[class~="dark"]) .contents-panel {
-  border-top-color: #262626;
-  border-bottom-color: #262626;
+.contents-panel > summary {
+  display: list-item;
+  list-style: disclosure-closed inside;
+  padding: .65rem .25rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.contents-panel[open] > summary { list-style-type: disclosure-open; }
+.contents-panel > summary::marker { color: var(--site-gray-600); }
+.contents-panel > summary:focus-visible { outline: 2px solid var(--site-primary-600); }
+.contents-panel[open] { padding-bottom: 1rem; }
+
+@media (min-width: 1280px) {
+  .contents-panel { display: none; }
 }
 
 /* Panel layout: one column per block, side by side as the width allows, each holding a
@@ -694,10 +688,9 @@ body:has(.published-feed) article h1 {
   }
 }
 
-.browse-link { font-size: .875rem; font-weight: 600; }
 .browse-results { display: grid; margin-top: 1rem; }
 .browse-result { border-bottom: 1px solid var(--site-gray-200); padding: .85rem 0; }
 .browse-result > a { color: var(--site-primary-600); font-weight: 600; }
 .browse-result p { font-size: .9rem; color: var(--site-gray-600); margin: .3rem 0; }
 .browse-result .tag-list { margin-top: .5rem; }
-.tag-list a:focus-visible, .browse-link:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.tag-list a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }

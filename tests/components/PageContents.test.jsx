@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import PageContents, { cap_name, contents_items, edit_href } from '../../components/PageContents'
 import { useSection, find_page } from '../../components/SectionContext'
 import site_config from '../../site.config'
@@ -6,7 +6,6 @@ import site_config from '../../site.config'
 jest.mock('../../components/SectionContext', () => ({
   useSection: jest.fn(),
   find_page: jest.fn(),
-  section_anchor: (name) => name.toLowerCase().replace(/\s+/g, '-'),
 }))
 jest.mock('../../site.config', () => ({
   repo_url: 'https://github.com/x/y',
@@ -63,7 +62,7 @@ test('test_page_contents_returns_null_when_nothing_to_list', () => {
 
 test('test_page_contents_renders_labeled_description_first', () => {
   /** The description leads the list, under its own label, when supplied. */
-  mock_page({ desc: 'A page about things.' }, [{ name: 'Fields', level: 2 }])
+  mock_page({ desc: 'A page about things.' }, [{ name: 'Fields', id: 'fields', level: 2 }])
   const { container } = render(<PageContents order={ORDER} />)
   const first = container.querySelector('.page-contents').firstElementChild
   expect(first.querySelector('.panel-label')).toHaveTextContent('Description')
@@ -72,7 +71,7 @@ test('test_page_contents_renders_labeled_description_first', () => {
 
 test('test_page_contents_lists_sections_with_anchors', () => {
   /** Section names link to their heading anchors; level 3+ headings indent. */
-  mock_page({}, [{ name: 'Fields', level: 2 }, { name: 'Nested', level: 3 }])
+  mock_page({}, [{ name: 'Fields', id: 'fields', level: 2 }, { name: 'Nested', id: 'nested', level: 3 }])
   const { container } = render(<PageContents order={ORDER} />)
   expect(screen.getByRole('link', { name: 'Fields' })).toHaveAttribute('href', '#fields')
   expect(container.querySelector('.page-contents-sub')).toHaveTextContent('Nested')
@@ -133,7 +132,7 @@ test('test_page_contents_links_and_related_share_one_section', () => {
 
 test('test_page_contents_follows_the_supplied_order', () => {
   /** Omitting an element drops it; the list order is the render order. */
-  mock_page({ desc: 'Summary.' }, [{ name: 'Fields', level: 2 }])
+  mock_page({ desc: 'Summary.' }, [{ name: 'Fields', id: 'fields', level: 2 }])
   render(<PageContents order={['sections']} />)
   expect(screen.queryByText('Summary.')).not.toBeInTheDocument()
   expect(screen.getByText('On This Page')).toBeInTheDocument()
@@ -148,24 +147,15 @@ test('test_page_contents_related_leaves_panel_open_on_click', () => {
   expect(on_close).not.toHaveBeenCalled()
 })
 
-test('test_page_contents_section_scrolls_after_closing_contents', async () => {
-  const scrollIntoView = jest.fn()
-  const target = document.createElement('h2')
-  target.id = 'fields'
-  target.scrollIntoView = scrollIntoView
-  document.body.appendChild(target)
-
-  mock_page({}, [{ name: 'Fields', level: 2 }])
+test('section links retain their native fragment destination when dismissing Contents', () => {
+  mock_page({}, [{ name: 'Fields', id: 'fields', level: 2 }])
   const on_close = jest.fn()
   render(<PageContents order={['sections']} on_navigate={on_close} />)
-  fireEvent.click(screen.getByRole('link', { name: 'Fields' }))
-
+  const link = screen.getByRole('link', { name: 'Fields' })
+  expect(link).toHaveAttribute('href', '#fields')
+  fireEvent.click(link)
   expect(on_close).toHaveBeenCalled()
-  await waitFor(() => expect(scrollIntoView).toHaveBeenCalled())
-
-  target.remove()
 })
-
 
 describe('cap_name', () => {
   const long = 'A section heading long enough to need eliding in a column'

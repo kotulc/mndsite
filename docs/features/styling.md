@@ -105,9 +105,9 @@ The custom h1 (`PageTitle` in `theme.config.jsx`) wraps the page chrome:
 Nextra layout
 ├── Left nav (Nextra)
 ├── main
-│   ├── Breadcrumbs + Contents toggle     (display.crumbs, display.contents)
+│   ├── Breadcrumbs + feed subscription   (display.crumbs, rss)
 │   ├── h1 + PageMeta                     (display.header)
-│   ├── ContentsPanel (inline, < xl)      (display.contents)
+│   ├── ContentsMenu (inline, < xl)      (display.contents)
 │   └── page MDX body
 └── Right TOC column (Nextra, ≥ xl)
     ├── Description (TocTitle) + Nextra heading list (when sections listed)

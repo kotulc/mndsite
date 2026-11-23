@@ -9,32 +9,9 @@
  * inline — see components/ContentsMenu.jsx.
  */
 import Link from 'next/link'
-import { useSection, find_page, section_anchor } from './SectionContext'
+import { useSection, find_page } from './SectionContext'
 import siteConfig from '../site.config'
 
-
-function use_contents_navigate(on_close) {
-  function scroll_to_section(id) {
-    function try_scroll() {
-      const el = document.getElementById(id)
-      if (!el) return false
-      el.scrollIntoView({ behavior: 'smooth' })
-      return true
-    }
-    if (try_scroll()) return
-    requestAnimationFrame(() => {
-      if (!try_scroll()) setTimeout(() => try_scroll(), 50)
-    })
-  }
-
-  function navigate_to_section(e, id) {
-    e.preventDefault()
-    on_close?.()
-    scroll_to_section(id)
-  }
-
-  return { navigate_to_section }
-}
 
 // Longest entry name rendered in full; past this, Sections and Related elide. Sized to
 // one line of a panel column (12rem) so a capped name never wraps.
@@ -134,19 +111,19 @@ function Description({ page }) {
 }
 
 
-function Sections({ sections, navigate_to_section }) {
+function Sections({ sections, on_navigate }) {
   return (
     <div className="page-contents-block">
       <Label>On This Page</Label>
       <ul className="page-contents-list">
         {sections.map((section, i) => {
-          const id = section_anchor(section.name)
+          const id = section.id
           return (
             <li key={`${section.name}-${i}`} className={section.level >= 3 ? 'page-contents-sub' : undefined}>
               <a
                 href={`#${id}`}
                 title={section.name}
-                onClick={(e) => navigate_to_section(e, id)}
+                onClick={on_navigate}
               >
                 {cap_name(section.name)}
               </a>
@@ -189,11 +166,8 @@ function EditLink({ page }) {
 }
 
 
-export default function PageContents({ order, on_navigate, page: page_override, sections: sections_override }) {
-  const ctx = useSection()
-  const page = page_override ?? ctx.page
-  const sections = sections_override ?? ctx.sections
-  const { navigate_to_section } = use_contents_navigate(on_navigate)
+export default function PageContents({ order, on_navigate }) {
+  const { page, sections } = useSection()
   const items = contents_items(order, page, sections)
   if (!items.length) return null
 
@@ -201,7 +175,7 @@ export default function PageContents({ order, on_navigate, page: page_override, 
     <div className="page-contents">
       {items.map(item => {
         if (item === 'description') return <Description key={item} page={page} />
-        if (item === 'sections') return <Sections key={item} sections={sections} navigate_to_section={navigate_to_section} />
+        if (item === 'sections') return <Sections key={item} sections={sections} on_navigate={on_navigate} />
         if (item === 'related') return <Related key={item} page={page} />
         return <EditLink key={item} page={page} />
       })}
