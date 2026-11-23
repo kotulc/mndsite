@@ -4,7 +4,7 @@
 
 Planned shape of the complete `mndsite.yaml`. Sections marked **built** are in the code
 today; **planned** sections are the target for the search work. This document
-is the reference for what mdsite reads, what a user can turn off, and what gets cut.
+is the reference for what mndsite reads, what a user can turn off, and what gets cut.
 
 Contract version: **0.3** (= release `0.3.x`). `CHANGELOG.md` is the migration record.
 
@@ -21,7 +21,7 @@ Companion documents: `docs/updates/simplification.md` (pipeline split), `README.
 | Order is data, not code | `display` lists set order; there is no hidden precedence |
 | On/off flags are booleans | Enums are used only when more than one value is valid |
 | Groups switch the left nav and body | They do not hide routes; Pages is always the full tree |
-| mdsite renders, mndmap organizes | Facet values come from frontmatter; `versioning` may fill or snapshot |
+| mndsite renders, mndmap organizes | Facet values come from frontmatter; `versioning` may fill or snapshot |
 
 ## Full file
 

@@ -28,6 +28,10 @@ jobs:
         env:
           BASE_PATH: ${{ vars.BASE_PATH }}
 
+      - name: Verify documentation export
+        if: ${{ !vars.CONTENT_SOURCE || vars.CONTENT_SOURCE == 'docs' || vars.CONTENT_SOURCE == './docs' }}
+        run: npm test -- --runInBand tests/build/smoke.test.js
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist

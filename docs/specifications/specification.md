@@ -38,7 +38,7 @@ Agent-callable interfaces should be non-interactive and driven entirely by `site
 
 ## Project Structure
 ```
-mdsite/
+mndsite/
 ├── content/          # MDX source files (copied in by mdpub)
 ├── pages/            # Next.js pages (minimal — mostly delegated to Nextra)
 ├── components/       # Custom components (pageIndex, search, theme)
@@ -104,7 +104,7 @@ The footer appears on every page and contains three elements:
 1. **Copyright** — `© <year> <site title>` from `site.config.js`
 2. **Last updated** — build timestamp injected at compile time via `NEXT_PUBLIC_BUILD_TIME`
    (formatted as `Month D, YYYY at H:MM AM/PM UTC`); absent if the env var is not set
-3. **Credits** — "Powered by [mdsite](...) and [Nextra](...)" with links
+3. **Credits** — "Powered by [mndsite](https://github.com/kotulc/mndsite) and [Nextra](https://nextra.site)" with links
 
 **Implementation**: `NEXT_PUBLIC_BUILD_TIME` is set in `next.config.js` as
 `new Date().toISOString()` evaluated at build time. The `SiteFooter` component in
@@ -144,7 +144,7 @@ page-scoped semantic search, consuming the pre-computed index.
 
 
 ## Logo Generation
-Logo generation is a build-time utility within `mdsite`. It produces a static SVG written
+Logo generation is a build-time utility within `mndsite`. It produces a static SVG written
 to `public/` (used as both the site logo and favicon).
 
 **Inputs** (from `site.config.js`):
@@ -180,7 +180,7 @@ relative-link resolution on static hosts.
 
 
 ## mdpub Integration Points
-| mdpub command     | Effect on mdsite                                      |
+| mdpub command     | Effect on mndsite                                      |
 |-------------------|-----------------------------------------------------------|
 | `mdpub init`      | Installs deps, writes `site.config.js`, copies template   |
 | `mdpub build`     | Populates `content/`, runs `next build`                   |
