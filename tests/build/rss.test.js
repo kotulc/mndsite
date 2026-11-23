@@ -96,6 +96,16 @@ describe('static RSS feed', () => {
     expect(read('rss.xml')).toContain('<guid isPermaLink="true">https://example.org/project/updates/new/</guid>')
   })
 
+  test('a non-expandable RSS section with no index gets a readable landing page', async () => {
+    post('posts/updates/public.md', 'Public update', '2026-10-10')
+    post('posts/updates/draft.md', 'Draft update', '2026-10-11')
+    await run(configure('rss:\n  site_url: https://example.org/\ndrafts: [posts/updates/draft.md]\n'))
+    const landing = fs.readFileSync(path.join(root, 'pages', 'updates', 'index.mdx'), 'utf8')
+    expect(landing).toContain('# Updates')
+    expect(landing).toContain('/updates/public')
+    expect(landing).not.toMatch(/AutoRedirect|PublishedFeed|Draft update/)
+  })
+
   test('uses the RSS selection in the section index and preserves an authored introduction', async () => {
     post('posts/updates/new.md', 'Published update', '2026-10-10')
     post('drafts/secret.md', 'Private draft', '2026-10-14')

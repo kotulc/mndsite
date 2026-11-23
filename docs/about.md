@@ -33,7 +33,7 @@ The engine is packaged as a Docker image: mount your content and config, get a s
 
 ## Publishing with Trendly
 
-Open the content repository in Trendly to preview its posts and choose which drafts to publish. Editors and agents can edit the same Markdown files. mndsite reads the saved files and publication settings during the next build. The [Updates feed](/updates) shows the published cards. Subscribe to this site's RSS using the navbar, or add its URL to Trendly's external subscriptions.
+Open the content repository in Trendly to preview its posts and choose which drafts to publish. Editors and agents can edit the same Markdown files. mndsite reads the saved files and publication settings during the next build. The [Updates feed](/updates) shows the published cards. On Updates, use **Subscribe via RSS** to open the feed or copy its address into Trendly's external subscriptions.
 
 ## Pipeline split
 

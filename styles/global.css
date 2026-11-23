@@ -184,6 +184,13 @@ html[data-chrome-footer="background"] footer {
 button.icon-link { border: none; background: transparent; cursor: pointer; }
 
 
+.feed-subscribe {
+  color: var(--site-primary-600);
+  font-size: .8125rem;
+  text-decoration: underline;
+  text-underline-offset: .15em;
+}
+
 /* Responsive images */
 img {
   max-width: 100%;

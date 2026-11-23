@@ -1,5 +1,5 @@
 /**
- * Navbar links for the site's post listing and optional RSS subscription.
+ * Feed navigation and the subscription link shown on the feed page.
  */
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -14,22 +14,25 @@ const RSS_ICON = (
 )
 
 
+const section = siteConfig.feed_url && '/' + siteConfig.feed_url.replace(/^\/+|\/+$/g, '')
+const rssUrl = siteConfig.rss && new URL('rss.xml', siteConfig.rss.site_url).href
+
 export default function FeedLink() {
-  const { basePath } = useRouter()
-  const section = siteConfig.feed_url && `/${siteConfig.feed_url.replace(/^\/+|\/+$/g, '')}`
-  if (!siteConfig.rss && !section) return null
-  return (
-    <>
-      {section && (
-        <Link href={section} className="icon-link" aria-label="Feed">
-          {siteConfig.rss ? 'Feed' : RSS_ICON}
-        </Link>
-      )}
-      {siteConfig.rss && (
-        <a href={`${basePath}/rss.xml`} className="icon-link" aria-label="Subscribe to RSS" title="Subscribe to RSS">
-          {RSS_ICON}
-        </a>
-      )}
-    </>
+  if (section) return (
+    <Link href={section} className="icon-link" aria-label="Feed" title="Open site feed">
+      {RSS_ICON}
+    </Link>
   )
+  if (!rssUrl) return null
+  return (
+    <a href={rssUrl} className="icon-link" type="application/rss+xml" aria-label="Subscribe to RSS" title="Subscribe to RSS">
+      {RSS_ICON}
+    </a>
+  )
+}
+
+export function FeedSubscription() {
+  const { pathname } = useRouter()
+  if (!rssUrl || pathname !== section) return null
+  return <a className="feed-subscribe" href={rssUrl} type="application/rss+xml">Subscribe via RSS</a>
 }

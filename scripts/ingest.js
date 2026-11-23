@@ -315,16 +315,22 @@ function ingest_dir(src_dir, dest_dir, rel, excluded) {
   const sorted    = sort_entries(nav_nodes, rel)
   const index = sorted.find(n => n.slug === 'index')
   const title = index ? index.name : slug_to_title(path.basename(src_dir))
-  const feed = _config.expandable_feed && rel === norm_path(_config.feed_url)
+  const feed = !!_config.feed_url && rel === norm_path(_config.feed_url)
   let generated
-  if (feed) {
+  if (feed && (_config.expandable_feed || _config.rss)) {
     const landing = path.join(dest_dir, 'index.mdx')
     if (!index) {
       fs.writeFileSync(landing, `---\ntitle: ${JSON.stringify(title)}\n---\n\n# ${title}\n`)
       sorted.unshift({ slug: 'index', name: title })
     }
-    const root = '../'.repeat(rel.split('/').length + 1)
-    fs.appendFileSync(landing, `\n\nimport PublishedFeed from '${root}components/feed/PublishedFeed'\n\n<PublishedFeed />\n`)
+    if (_config.expandable_feed) {
+      const root = '../'.repeat(rel.split('/').length + 1)
+      fs.appendFileSync(landing, `\n\nimport PublishedFeed from '${root}components/feed/PublishedFeed'\n\n<PublishedFeed />\n`)
+    } else if (!index) {
+      const links = feed_entries(pages, rel).map(({ page }) =>
+        `- <Link href={${JSON.stringify(page.url)}}>{${JSON.stringify(page.name)}}</Link>`)
+      fs.appendFileSync(landing, "\nimport Link from 'next/link'\n\n" + links.join('\n') + '\n')
+    }
   } else {
     generated = auto_index(dest_dir, sorted, rel)
   }

@@ -8,7 +8,7 @@ import PageContents, { TocTitle, TocExtra, TocHeading } from './components/PageC
 import { ContentsToggle, ContentsPanel, close_contents_panel } from './components/ContentsMenu'
 import SiteFooter from './components/SiteFooter'
 import GitHubLink from './components/GitHubLink'
-import FeedLink from './components/FeedLink'
+import FeedLink, { FeedSubscription } from './components/FeedLink'
 import ThemeToggle from './components/ThemeToggle'
 import { group_chips, header_field_keys } from './components/facets'
 import PageRail from './components/PageRail'
@@ -117,7 +117,10 @@ function PageTitle({ children }) {
     <>
       <PageRail
         trail={<Breadcrumbs heading={children} />}
-        actions={<ContentsToggle open={open} on_toggle={() => set_open(v => !v)} />}
+        actions={<>
+          <FeedSubscription />
+          <ContentsToggle open={open} on_toggle={() => set_open(v => !v)} />
+        </>}
       />
       <PageHeading>{children}</PageHeading>
       <PageMeta />
