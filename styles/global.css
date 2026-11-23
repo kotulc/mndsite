@@ -237,11 +237,29 @@ img {
 .page-crumbs a:hover { color: var(--site-primary-600); text-decoration: underline; }
 .page-crumbs a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 
-/* The narrow layout keeps its page outline together below the title and tags. */
+@media (max-width: 1279.98px) {
+  .page-tools:has(.contents-panel) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem .375rem;
+    margin-block: 1.5rem 2rem;
+    padding-block: 1rem;
+    border-block: 1px solid var(--site-gray-200);
+  }
+  .page-tools:has(.contents-panel) > .tag-list { display: contents; }
+  .page-tools > .tag-list + .contents-panel > summary { margin-inline-start: 1.125rem; }
+}
+
 .contents-panel {
   --contents-indent: 1.25rem;
-  margin-block: 1.5rem 2rem;
   font-size: .875rem;
+}
+
+@supports selector(::details-content) {
+  .contents-panel { display: contents; }
+  .contents-panel::details-content { flex-basis: 100%; min-width: 0; }
+  .contents-panel:not([open])::details-content { display: none; }
 }
 
 .contents-panel > summary {
@@ -273,7 +291,6 @@ img {
    is prose, so it spans the row above them. */
 .contents-panel .page-contents {
   display: grid;
-  margin-block-start: 1.25rem;
   padding-inline-start: var(--contents-indent);
   grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
   align-items: start;

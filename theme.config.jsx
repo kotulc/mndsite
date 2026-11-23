@@ -46,7 +46,10 @@ function PageMeta() {
         reading_time={header.includes('reading_time') ? (meta.metrics || {}).reading_time : null}
         order={header}
       />
-      <TagList tags={chips} />
+      <div className="page-tools">
+        <TagList tags={chips} />
+        <ContentsMenu />
+      </div>
     </>
   )
 }
@@ -94,7 +97,6 @@ function PageTitle({ children }) {
         <FeedSubscription />
       </div>
       <PageMeta />
-      <ContentsMenu />
     </>
   )
 }
