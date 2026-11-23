@@ -10,6 +10,8 @@ const flag = args.indexOf('--config')
 const config_path = flag >= 0 && args[flag + 1] ? path.resolve(args[flag + 1]) : path.join(ROOT, 'mndsite.yaml')
 const override = flag < 0 && args[0] ? path.resolve(args[0]) : undefined
 let watchers = []
+let running = false
+let pending = false
 let timer
 let watched_paths = ''
 
@@ -19,6 +21,11 @@ function schedule() {
 }
 
 async function rebuild() {
+  if (running) {
+    pending = true
+    return
+  }
+  running = true
   try {
     const config = load_config(config_path)
     if (override) config.content = override
@@ -38,6 +45,12 @@ async function rebuild() {
     await run(config)
   } catch (error) {
     console.error(`[watch] ${error.message}`)
+  } finally {
+    running = false
+    if (pending) {
+      pending = false
+      schedule()
+    }
   }
 }
 

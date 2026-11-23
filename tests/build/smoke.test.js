@@ -29,6 +29,12 @@ test('published documentation links to the exported Updates page and current rep
   expect(feed.textContent.trim()).toBe('')
   expect(home.querySelector('nav a[type="application/rss+xml"]')).toBeNull()
   const rss = updates.querySelector('article a[type="application/rss+xml"]')
+  expect(rss.previousElementSibling).toBe(updates.querySelector('main h1'))
+  expect(updates.querySelector('main .nx-border-t a[title]')).toBeNull()
+  expect(read('updates/welcome/index.html').querySelector('main .nx-border-t a[title]')).toBeNull()
+  expect(read('about/index.html').querySelector('main .nx-border-t a[title]')).not.toBeNull()
+  expect([...updates.querySelectorAll('.nextra-sidebar-container a[href*="/updates/"]')].map(a => a.textContent))
+    .toEqual(['Publishing with Trendly', 'Welcome'])
   expect(rss.textContent).toBe('Subscribe via RSS')
   expect(rss.getAttribute('href')).toBe('https://kotulc.github.io/mndsite/rss.xml')
   expect(fs.existsSync(path.join(OUT, 'rss.xml'))).toBe(true)
@@ -52,7 +58,8 @@ test('Browse is linked from articles and its static list contains only published
   expect(link).toMatch(/\/browse\/$/)
   expect(article.querySelector('.tag-list a.chip-tags').getAttribute('href')).toContain(link + '?tag=')
   const browse = parse(meta.browse.slice(1) + '/index.html')
-  const rows = [...browse.querySelectorAll('.browse-result > a')]
+  expect(browse.querySelector('.nextra-sidebar-container a[href$="/about/"]')).not.toBeNull()
+  const rows = [...browse.querySelectorAll('main .browse-result > a')]
   expect(rows).toHaveLength(meta.pages.length)
   expect(rows.some(row => row.textContent === 'Future Plans')).toBe(false)
 })

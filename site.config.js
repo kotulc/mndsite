@@ -7,7 +7,7 @@ module.exports = {
   description: "Static documentation sites from plain markdown",
   footer: "MIT licensed · built with mndsite",
   theme: {"color":"default","typeset":"sans","navbar":"background","footer":"","hue":{"light":212,"dark":204},"saturation":100,"font_stack":""},
-  nav_order: {"":["about","getting-started","configuration"],"features":["overview","components"],"specifications":["format"],"updates":["welcome"]},
+  nav_order: {"":["about","getting-started","configuration"],"features":["overview","components"],"specifications":["format"]},
   frontmatter: {"title":"title","description":["description","desc"],"date":"date","reading_time":"reading_time","related":"related","facets":{"categories":{"key":["categories"],"label":"Topic","color":"blue","sort":"alpha","hue":210},"tags":{"key":["tags"],"label":"Tags","color":"violet","sort":"alpha","hue":265},"status":{"key":["status"],"label":"Status","color":"amber","sort":"alpha","hue":35}}},
   display: {"crumbs":true,"header":["date","reading_time","facets"],"toc":["description","sections","related","edit"],"navbar":["browse","theme","feed","github"],"contents":["description","sections","related"]},
   edit: {"branch":"main","path":"docs","url":"{repo_url}/edit/{branch}/{file}"},

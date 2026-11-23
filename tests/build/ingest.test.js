@@ -104,6 +104,16 @@ beforeAll(async () => {
 afterAll(() => fs.rmSync(root, { recursive: true, force: true }))
 
 describe('pages output ordering', () => {
+  test('repeat ingestion preserves unchanged routes and removes obsolete output', async () => {
+    const article = path.join(pages_dir(), 'about.mdx')
+    const stale = path.join(pages_dir(), 'obsolete.mdx')
+    fs.utimesSync(article, 100, 100)
+    fs.writeFileSync(stale, '# Obsolete')
+    await ingest.run({ ...load_config(ROOT_CFG), root })
+    expect(fs.statSync(article).mtimeMs).toBe(100000)
+    expect(fs.existsSync(stale)).toBe(false)
+  })
+
   test('test_pages_features_meta_follows_nav_order', () => {
     const expected = siteConfig.nav_order['features']
     const meta = JSON.parse(fs.readFileSync(path.join(pages_dir(), 'features', '_meta.json'), 'utf8'))
@@ -111,9 +121,13 @@ describe('pages output ordering', () => {
     expect(keys.slice(0, expected.length)).toEqual(expected)
   })
 
-  test('test_pages_updates_meta_follows_nav_order', () => {
+  test('feed navigation lists the same posts in the same order as the cards', () => {
     const meta = JSON.parse(fs.readFileSync(path.join(pages_dir(), 'updates', '_meta.json'), 'utf8'))
-    expect(Object.keys(meta).filter(k => k !== 'index')[0]).toBe('welcome')
+    const cards = JSON.parse(fs.readFileSync(path.join(root, 'public', 'post-feed.json'), 'utf8'))
+    expect(Object.entries(meta).filter(([, value]) => !value.display).map(([slug]) => '/updates/' + slug))
+      .toEqual(cards.map(card => card.href))
+    const nav = JSON.parse(fs.readFileSync(path.join(pages_dir(), '_meta.json'), 'utf8'))
+    expect(nav.updates.theme.pagination).toBe(false)
   })
 
   test('root redirect is hidden and its About target is listed once', () => {

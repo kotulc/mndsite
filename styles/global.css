@@ -200,27 +200,15 @@ img {
   border-radius: 4px;
 }
 
-/* Content-column rail — breadcrumbs and page actions above the title. */
-.page-rail {
+.page-title-row {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  min-height: var(--crumb-height);
-  margin-top: 0.375rem;
-  font-size: 0.875rem;
-  color: var(--site-gray-500);
-}
-
-.page-rail-actions {
-  margin-left: auto;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: .875rem;
 }
 
 .page-crumbs {
-  flex: 1;
+  margin-top: .375rem;
   min-width: 0;
   color: var(--site-gray-600);
   font-size: .8125rem;

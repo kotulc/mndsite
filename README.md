@@ -233,7 +233,7 @@ rss:
   site_url: https://example.org/my-site/
 ```
 
-mndsite writes `rss.xml`, adds RSS autodiscovery to the site, and shows **Subscribe via RSS** on the feed page. The RSS icon in the navbar opens that page. For sites that publish RSS without a `feed_url`, the icon opens the XML feed directly. RSS contains dated posts beneath that section, newest first, with summaries and links to the full posts. Leave `feed_url` unset to include dated posts from across the site.
+mndsite writes `rss.xml`, adds RSS autodiscovery to the site, and shows **Subscribe via RSS** beside the feed title. On card feeds, the sidebar lists the same dated posts as the cards, newest first within each folder. Undated articles remain available in Browse and at their own URLs. The RSS icon in the navbar opens that page. For sites that publish RSS without a `feed_url`, the icon opens the XML feed directly. RSS contains dated posts beneath that section, newest first, with summaries and links to the full posts. Leave `feed_url` unset to include dated posts from across the site.
 
 List repository-relative Markdown paths under `drafts` in `mndsite.yaml` to keep those files out of generated pages, navigation, and feeds. Remove a path from the list to publish it again at the same URL. You can also keep draft files and draft-only assets outside the published content directory.
 

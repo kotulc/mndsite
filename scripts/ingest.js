@@ -15,6 +15,8 @@
  */
 const fs = require('fs')
 const path = require('path')
+const os = require('os')
+const { randomUUID } = require('crypto')
 const yaml = require('js-yaml')
 const { strip_dir } = require('./fix-exif')
 const meta = require('./meta')
@@ -336,7 +338,26 @@ function ingest_dir(src_dir, dest_dir, rel, excluded) {
   }
 
   // A generated index only redirects — hide it so it does not duplicate its target's entry.
-  const meta_pairs = sorted.map(n => [n.slug, n.name])
+  const section = norm_path(_config.feed_url || '')
+  const in_feed = _config.expandable_feed && (rel === section || rel.startsWith(section + '/'))
+  let meta_pairs = sorted.map(node => {
+    const feed_root = _config.expandable_feed && node.type === 'folder' &&
+      (rel ? rel + '/' + node.slug : node.slug) === section
+    return [node.slug, feed_root ? { title: node.name, theme: { pagination: false } } : node.name]
+  })
+  if (in_feed) {
+    // Group nested posts by their first path segment, preserving newest-first order.
+    const prefix = rel ? '/' + rel + '/' : '/'
+    const posts = feed_entries(pages, section)
+    const order = new Set(posts.map(({ page }) => page.url === '/' + rel
+      ? 'index' : page.url.slice(prefix.length).split('/')[0]))
+    const nodes = new Map(sorted.map(node => [node.slug, node]))
+    const visible = [...order].filter(slug => nodes.has(slug)).map(slug => [slug, nodes.get(slug).name])
+    const hidden = sorted.filter(node => !order.has(node.slug)).map(node => [node.slug, {
+      title: node.name, display: node.type === 'folder' ? 'children' : 'hidden',
+    }])
+    meta_pairs = [...visible, ...hidden]
+  }
   if (generated) meta_pairs.unshift(['index', { display: 'hidden' }])
   write_meta(path.join(dest_dir, '_meta.json'), meta_pairs)
 
@@ -404,23 +425,67 @@ function write_browse_page() {
     "---\ntitle: Browse\n---\n\nimport Browse from '../components/Browse'\n\n# Browse\n\n<Browse />\n")
   const nav = path.join(TARGET.pages, '_meta.json')
   const entries = Object.entries(JSON.parse(fs.readFileSync(nav, 'utf8')))
-  entries.push([slug, { display: 'hidden', theme: { sidebar: false, toc: false } }])
+  entries.push([slug, { display: 'hidden', theme: { toc: false, pagination: false } }])
   write_meta(nav, entries)
   return '/' + slug
 }
 
-async function run(config) {
-  _config = config
-  _warnings = []
-  TARGET = build_targets(config.root || ROOT)
+// Media assets can be large. Compare them a block at a time before notifying Next.
+function same_contents(source, dest, size) {
+  if (size <= 65536) return fs.readFileSync(source).equals(fs.readFileSync(dest))
+  const left = Buffer.allocUnsafe(65536)
+  const right = Buffer.allocUnsafe(left.length)
+  const src = fs.openSync(source, 'r')
+  try {
+    const dst = fs.openSync(dest, 'r')
+    try {
+      for (let offset = 0; offset < size; offset += left.length) {
+        const length = Math.min(left.length, size - offset)
+        if (fs.readSync(src, left, 0, length, offset) !== length ||
+            fs.readSync(dst, right, 0, length, offset) !== length ||
+            !left.subarray(0, length).equals(right.subarray(0, length))) return false
+      }
+      return true
+    } finally {
+      fs.closeSync(dst)
+    }
+  } finally {
+    fs.closeSync(src)
+  }
+}
+
+// Publish completed files into the live tree. Unchanged routes retain their mtimes
+// so Next's watcher keeps their compiled modules across content edits.
+function sync_output(source, dest) {
+  const current = fs.lstatSync(dest, { throwIfNoEntry: false })
+  const incoming = fs.statSync(source, { throwIfNoEntry: false })
+  if (current && (!incoming || current.isDirectory() !== incoming.isDirectory())) {
+    fs.rmSync(dest, { recursive: true, force: true })
+  }
+  if (!incoming) return
+  if (incoming.isDirectory()) {
+    fs.mkdirSync(dest, { recursive: true })
+    const names = new Set(fs.readdirSync(source))
+    for (const name of names) sync_output(path.join(source, name), path.join(dest, name))
+    for (const name of fs.readdirSync(dest)) {
+      if (!names.has(name)) fs.rmSync(path.join(dest, name), { recursive: true, force: true })
+    }
+    return
+  }
+  if (current?.isFile() && current.size === incoming.size &&
+      same_contents(source, dest, incoming.size)) return
+  const temp = dest + '.' + randomUUID() + '.tmp'
+  try {
+    fs.copyFileSync(source, temp)
+    fs.renameSync(temp, dest)
+  } finally {
+    fs.rmSync(temp, { force: true })
+  }
+}
+
+async function generate(config) {
   const src = config.content
-
   console.log(`\nIngesting from: ${src}`)
-
-  fs.rmSync(TARGET.pages,  { recursive: true, force: true })
-  fs.rmSync(TARGET.images, { recursive: true, force: true })
-  fs.rmSync(TARGET.assets, { recursive: true, force: true })
-  fs.rmSync(TARGET.meta,   { force: true })
 
   const assets = copy_content_assets(src)
   if (assets.length) console.log(`  Copied _assets/ (${assets.length} file(s))`)
@@ -453,8 +518,30 @@ async function run(config) {
   console.log(`  Mirrored source tree into pages/`)
   console.log('Done.\n')
 
-  TARGET = build_targets(ROOT)
-  _config = null
+}
+
+async function run(config) {
+  const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'mndsite-stage-'))
+  const live = build_targets(config.root || ROOT)
+  TARGET = build_targets(staging)
+  _config = config
+  _warnings = []
+  try {
+    await generate(config)
+    fs.mkdirSync(live.public, { recursive: true })
+    fs.mkdirSync(path.dirname(live.custom), { recursive: true })
+    for (const key of ['images', 'assets', 'custom', 'meta']) sync_output(TARGET[key], live[key])
+    for (const name of ['assets', 'post-feed.json']) {
+      sync_output(path.join(TARGET.public, name), path.join(live.public, name))
+    }
+    if (config.rss) sync_output(path.join(TARGET.public, 'rss.xml'), path.join(live.public, 'rss.xml'))
+    else write_rss(live.public, [], config)
+    sync_output(TARGET.pages, live.pages)
+  } finally {
+    TARGET = build_targets(ROOT)
+    _config = null
+    fs.rmSync(staging, { recursive: true, force: true })
+  }
 }
 
 

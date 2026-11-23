@@ -26,7 +26,6 @@ nav_order:
   "": [about, getting-started, configuration]
   features: [overview, components]
   specifications: [format]
-  updates: [welcome]
 
 theme:
   color: default       # default, slate, gray, blue, indigo, violet, rose, orange, ...

@@ -10,7 +10,6 @@ import GitHubLink from './components/GitHubLink'
 import FeedLink, { FeedSubscription } from './components/FeedLink'
 import ThemeToggle from './components/ThemeToggle'
 import { group_chips, header_field_keys } from './components/facets'
-import PageRail from './components/PageRail'
 import { PageHeading } from './components/PageChrome'
 import siteConfig from './site.config'
 import siteMeta from './public/site-meta.json'
@@ -104,11 +103,11 @@ const THEME_CSS = [
 function PageTitle({ children }) {
   return (
     <>
-      <PageRail
-        trail={<Breadcrumbs heading={children} />}
-        actions={<FeedSubscription />}
-      />
-      <PageHeading>{children}</PageHeading>
+      <Breadcrumbs heading={children} />
+      <div className="page-title-row">
+        <PageHeading>{children}</PageHeading>
+        <FeedSubscription />
+      </div>
       <PageMeta />
       <ContentsMenu />
     </>
