@@ -23,8 +23,8 @@ export default function ContentsMenu() {
   return (
     <details key={page.url} ref={details} className="contents-panel" onKeyDown={onKeyDown}>
       <summary>
-        <span className="contents-show">Show contents</span>
-        <span className="contents-hide">Hide contents</span>
+        <span className="contents-show">Show table of contents</span>
+        <span className="contents-hide">Hide table of contents</span>
       </summary>
       <PageContents order={order} on_navigate={close} />
     </details>
