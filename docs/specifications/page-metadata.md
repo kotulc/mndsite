@@ -33,7 +33,7 @@ Components render metadata from [site metadata](/specifications/metadata)
 10. REQ-10: Related merges resolved internal `links`, external http(s) links, and frontmatter `related`
 11. REQ-11: Edit link renders last when `edit` is listed; requires `repo_url` and uses `page.source` + `edit` template
 12. REQ-12: `ContentsToggle` hides when `contents_items` is empty; `ContentsPanel` dismisses on Escape and route change
-13. REQ-13: `Breadcrumbs` follows `display.crumbs`; empty list renders nothing
+13. REQ-13: `Breadcrumbs` follows `display.crumbs`; `false` hides the trail
 14. REQ-14: `SectionContext` exposes the current page and a depth-first flattened section list
 
 ## Test Cases

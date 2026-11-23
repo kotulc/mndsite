@@ -47,9 +47,7 @@ and styled in `styles/global.css`. Page-level chrome is driven by `display` in
 
 ### Breadcrumbs
 
-Renders a linked trail above the page title. `home` roots at `/`; `path` adds ancestor
-directories. The current page is the heading below — the trail never repeats it.
-Returns null when `display.crumbs` is empty.
+The trail starts with the configured site title and ends with the current page label. On a nested page it reads, for example, **mndsite / Features / Metadata Display**. The site and ancestor sections are links. Set `display.crumbs: false` to hide the trail.
 
 ### PageHeader
 

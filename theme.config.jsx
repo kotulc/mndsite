@@ -116,7 +116,7 @@ function PageTitle({ children }) {
   return (
     <>
       <PageRail
-        trail={<Breadcrumbs />}
+        trail={<Breadcrumbs heading={children} />}
         actions={<ContentsToggle open={open} on_toggle={() => set_open(v => !v)} />}
       />
       <PageHeading>{children}</PageHeading>
