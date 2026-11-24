@@ -5,7 +5,7 @@ import Link from 'next/link'
  * Used by TagList and consumer components; variant selects the chip-<variant> style in
  * styles/global.css.
  */
-export default function Chip({ label, variant = 'tag', tooltip, href }) {
+export default function Chip({ label, variant = 'tag', tooltip, href, children }) {
   const Element = href ? Link : 'span'
   return (
     <Element href={href}
@@ -13,7 +13,7 @@ export default function Chip({ label, variant = 'tag', tooltip, href }) {
       data-tooltip={tooltip || undefined}
       aria-label={tooltip ? `${label}. ${tooltip}` : undefined}
     >
-      {label}
+      {children ?? label}
     </Element>
   )
 }

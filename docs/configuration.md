@@ -34,6 +34,7 @@ Writing `""` reads the same as the default, so no value in the file ever needs t
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `title` | string | *(required)* | Site name — shown in the logo, footer, and page titles |
+| `icon` | string | `none` | Site-relative image path for the navbar mark and browser favicon, such as `/assets/mnd.svg` |
 | `description` | string | `none` | SEO meta description added to every page's `<head>` |
 | `repo_url` | string | `none` | GitHub repo link shown as an icon in the header; `none` hides it |
 | `feed_url` | string | `none` | Section slug linked from the navbar feed icon |
@@ -49,9 +50,8 @@ Writing `""` reads the same as the default, so no value in the file ever needs t
 | `frontmatter` | object | see below | Frontmatter keys and facet definitions |
 | `display.crumbs` | bool | `true` | Breadcrumb trail above the page title |
 | `display.header` | list | `[date, reading_time, facets]` | Metadata under the title; also accepts facet and frontmatter key names |
-| `display.toc` | list | `[description, sections, related, edit]` | Right sidebar at ≥ xl |
-| `display.contents` | list | *(copy of `toc`)* | Inline Contents panel below the title |
-| `display.navbar` | list | `[browse, theme, feed, github]` | Navbar icons, left to right |
+| `display.toc` | list | `[description, sections, related, edit]` | Right sidebar |
+| `display.navbar` | list | `[browse, feed, github, theme]` | Navbar icons, left to right |
 | `edit` | object | see below | "Edit this page" targets — **only used when `repo_url` is set** |
 | `content` | path | `./docs` | Source markdown directory (resolved relative to this file) |
 | `output` | path | `./dist` | Output directory for the built site (resolved relative to this file) |
@@ -138,7 +138,7 @@ theme:
 ## Frontmatter
 
 `frontmatter` maps mndsite's built-in renderer metadata onto the frontmatter keys that carry
-it. The nested `facets` block declares labels for Browse and article chips. No key
+it. The nested `facets` block declares labels for Search and article chips. No key
 means anything unless `frontmatter` names it.
 
 ```yaml
@@ -155,9 +155,9 @@ Setting a mapping to `none` disables it. With `title: none` no frontmatter key n
 page title, and every page falls back to a title derived from its filename — the nav label
 and the browser `<title>` stay in step either way, so nothing goes unnamed in the tree.
 
-Remapping `title` to another key relabels the page everywhere: ingest stamps the resolved
-title back onto the emitted frontmatter, so Nextra's `<title>` and search index match the
-navigation label.
+Remapping `title` to another key relabels the page everywhere. Ingest writes the resolved
+title to the emitted frontmatter and page metadata so the browser title, search results,
+and navigation label agree.
 
 ## Facets
 
@@ -185,9 +185,9 @@ user-defined facet gets a coherent chip without any CSS.
 Values come from frontmatter only, never from paths and never generated. A page missing a
 facet's key simply has no value for it, and keeps its route either way.
 
-## Browse
+## Pages
 
-Open **Browse** in the navbar to see published pages. Search titles, paths, descriptions and labels, or select a label from the grouped filter. Article chips link to the same results. Filters and search text are shareable, for example `/browse/?tag=static+site` or `/browse/?facet=status&tag=stable`.
+Type in the navbar search to open live results on the **Pages** view, or open it directly (**Browse pages** in the navbar) to see all published pages. Match titles, paths, descriptions, labels, and page text. Use the grouped filter to narrow results by label. Article chips link to the same results. Query text and filters are shareable, for example `/browse/?q=deployment` or `/browse/?facet=status&tag=stable`.
 
 Declare labels in `frontmatter.facets`. A facet can read several keys. The `tags` facet uses Trendly's spelling normalization. Other facets retain their authored labels. For example:
 
@@ -199,7 +199,7 @@ frontmatter:
     edition: { key: edition, label: Edition }
 ```
 
-If your content already uses `/browse/`, the generated listing uses `/browse-pages/` and its links update automatically. Older sidebar links with a recognized field and value open the corresponding Browse filter. Other former views open the page list.
+If your content already uses `/browse/`, the generated listing uses `/browse-pages/` and its links update automatically. Older sidebar links with a recognized field and value open Pages with the corresponding label filter. Other former views open the page list.
 
 The sidebar follows the content directory. Existing configurations can remove `frontmatter.groups` and `display.sidebar`. An old `versioning.key` is accepted as an ordinary facet for authored values. Builds no longer infer editions from Git or package metadata or export tagged snapshots. To keep historical pages online, include them in the content tree.
 
@@ -212,7 +212,7 @@ display:
   crumbs: true
   header: [date, reading_time, facets]
   toc: [description, sections, related, edit]
-  navbar: [browse, theme, feed, github]
+  navbar: [browse, feed, github, theme]
 ```
 
 | Zone | Elements | Component |
@@ -220,14 +220,9 @@ display:
 | `crumbs` | `true` / `false` | `Breadcrumbs` — trail above the title |
 | `header` | `date`, `reading_time`, `facets`, or any facet or frontmatter key name | `PageHeader` + `TagList` |
 | `toc` | `description`, `sections`, `related`, `edit` | `PageContents` in the right sidebar |
-| `contents` | same vocabulary as `toc` | `PageContents` in the inline Contents panel |
 | `navbar` | `browse`, `theme`, `feed`, `github` | `ThemeToggle`, `FeedLink`, `GitHubLink` |
 
-`display.contents` defaults to a copy of `display.toc` when omitted. Set it separately only when the inline panel should differ from the sidebar.
-
 When `display.toc` includes `sections`, Nextra owns the heading list and scroll-spy in the sidebar; `PageContents` renders the description above Nextra's label and Related/Edit below. When `sections` is omitted, `PageContents` renders the whole sidebar list.
-
-Below the `xl` breakpoint Nextra hides the right sidebar. At every screen width, the **Page Overview** label expands the section below the page header. Its items follow `display.contents`.
 
 `theme` in `display.navbar` is the only theme toggle — Nextra's sidebar toggle is disabled. Chips and Related entries render as supplied; nothing is truncated.
 

@@ -251,14 +251,9 @@ describe('load_config — display lists', () => {
     expect(cfg.display).toMatchObject(DEFAULTS.display)
   })
 
-  test('test_contents_mirrors_toc_by_default', () => {
-    const cfg = load_config(write_yaml('title: t\ndisplay:\n  toc: [description, related]\n'))
-    expect(cfg.display.contents).toEqual(['description', 'related'])
-  })
-
-  test('test_contents_overrides_toc_when_given', () => {
-    const p = write_yaml('title: t\ndisplay:\n  toc: [description, related]\n  contents: [description]\n')
-    expect(load_config(p).display.contents).toEqual(['description'])
+  test('test_contents_list_is_rejected', () => {
+    expect(() => load_config(write_yaml('title: t\ndisplay:\n  contents: [description]\n')))
+      .toThrow(/display\.contents is no longer supported/)
   })
 
   test('test_crumbs_disabled', () => {
@@ -320,10 +315,11 @@ describe('resolve_theme — preset tables', () => {
 
 describe('write_site_config — generated keys', () => {
   test('test_write_site_config_includes_theme_keys', () => {
-    const cfg = load_config(write_yaml('title: t\ndescription: d\nfooter: f\ntheme:\n  color: emerald'))
+    const cfg = load_config(write_yaml('title: t\nicon: assets/mark.svg\ndescription: d\nfooter: f\ntheme:\n  color: emerald'))
     write_site_config(cfg, tmp)
     const out = require(path.join(tmp, 'site.config.js'))
     expect(out.description).toBe('d')
+    expect(out.icon).toBe('/assets/mark.svg')
     expect(out.footer).toBe('f')
     expect(out.theme).toEqual({
       color: 'emerald', typeset: 'sans', navbar: '', footer: '',
@@ -334,6 +330,7 @@ describe('write_site_config — generated keys', () => {
   test('test_write_site_config_omits_removed_keys', () => {
     write_site_config(load_config(write_yaml('title: t')), tmp)
     const out = require(path.join(tmp, 'site.config.js'))
+    expect(out.icon).toBe('')
     expect(out).not.toHaveProperty('collections')
     expect(out).not.toHaveProperty('sidebar')
     expect(out).not.toHaveProperty('content_style')

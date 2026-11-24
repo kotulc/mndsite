@@ -107,7 +107,6 @@ Nextra layout
 ├── main
 │   ├── Breadcrumbs + feed subscription   (display.crumbs, rss)
 │   ├── h1 + PageMeta                     (display.header)
-│   ├── ContentsMenu (inline, < xl)      (display.contents)
 │   └── page MDX body
 └── Right TOC column (Nextra, ≥ xl)
     ├── Description (TocTitle) + Nextra heading list (when sections listed)

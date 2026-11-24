@@ -20,9 +20,9 @@ beforeEach(() => {
 
 test('generated views use the site name and the rendered view heading', () => {
   mock_route = '/browse-pages'
-  render(<Breadcrumbs heading="Browse" />)
+  render(<Breadcrumbs heading="Pages" />)
   expect(screen.getByRole('link', { name: 'Field Notes' })).toHaveAttribute('href', '/')
-  expect(screen.getByText('Browse')).toHaveAttribute('aria-current', 'page')
+  expect(screen.getByText('Pages')).toHaveAttribute('aria-current', 'page')
   expect(screen.getAllByRole('link')).toHaveLength(1)
 })
 

@@ -1,6 +1,7 @@
 const withNextra = require('nextra')({
   theme: './components/DocsLayout.jsx',
   themeConfig: './theme.config.jsx',
+  flexsearch: false,
 })
 
 const basePath = process.env.NODE_ENV === 'production' ? (process.env.BASE_PATH || '') : ''

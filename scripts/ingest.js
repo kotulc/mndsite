@@ -20,6 +20,7 @@ const { randomUUID } = require('crypto')
 const yaml = require('js-yaml')
 const { strip_dir } = require('./fix-exif')
 const meta = require('./meta')
+const { plain_text } = require('./text')
 const { feed_entries, write_rss } = require('./rss')
 
 
@@ -422,7 +423,7 @@ function write_browse_page() {
     slug += '-pages'
   }
   fs.writeFileSync(path.join(TARGET.pages, slug + '.mdx'),
-    "---\ntitle: Browse\n---\n\nimport Browse from '../components/Browse'\n\n# Browse\n\n<Browse />\n")
+    "---\ntitle: Pages\n---\n\nimport Browse from '../components/Browse'\n\n# Pages\n\n<Browse />\n")
   const nav = path.join(TARGET.pages, '_meta.json')
   const entries = Object.entries(JSON.parse(fs.readFileSync(nav, 'utf8')))
   entries.push([slug, { display: 'hidden', theme: { toc: false, pagination: false } }])
@@ -497,6 +498,13 @@ async function generate(config) {
   pages.sort((a, b) => a.url.localeCompare(b.url))
   fs.mkdirSync(TARGET.public, { recursive: true })
   fs.writeFileSync(TARGET.meta, JSON.stringify({ browse, pages }, null, 2) + '\n')
+  const search = Object.fromEntries(pages.map(page => [
+    page.url,
+    plain_text(extract_content(fs.readFileSync(path.join(src, page.source), 'utf8'))
+      .replace(/^\s*(?:```|~~~).*$/gm, ' ')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')),
+  ]))
+  fs.writeFileSync(path.join(TARGET.public, 'search-index.json'), JSON.stringify(search) + '\n')
   await write_expandable_feed(config, pages)
   write_rss(TARGET.public, pages, config)
   console.log(`  Wrote site metadata (${pages.length} pages) to public/site-meta.json`)
@@ -532,7 +540,7 @@ async function run(config) {
     fs.mkdirSync(live.public, { recursive: true })
     fs.mkdirSync(path.dirname(live.custom), { recursive: true })
     for (const key of ['images', 'assets', 'custom', 'meta']) sync_output(TARGET[key], live[key])
-    for (const name of ['assets', 'post-feed.json']) {
+    for (const name of ['assets', 'post-feed.json', 'search-index.json']) {
       sync_output(path.join(TARGET.public, name), path.join(live.public, name))
     }
     if (config.rss) sync_output(path.join(TARGET.public, 'rss.xml'), path.join(live.public, 'rss.xml'))

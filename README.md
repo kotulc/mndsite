@@ -1,4 +1,4 @@
-# mndsite
+# MndSite
 
 A portable static site renderer for publication-ready Markdown and MDX — drop it into any CI/CD pipeline as a build step.
 
@@ -42,12 +42,12 @@ or browse [Features](docs/features/overview.md) for the full capability overview
 - **Images** — legacy `images/` subtrees copied and path-rewritten; corrupt EXIF stripped
 - **Reading time** — displayed when supplied in frontmatter
 - **Facets** — tags, categories, or any declared frontmatter dimension, rendered as colored chips
-- **Browse** — searchable pages with shareable tag and custom label filters
+- **Pages** — browse and filter published pages with shareable URLs
 - **Related links** — outbound links and frontmatter `related` entries in the ToC sidebar
 - **Nav ordering** — sibling order via `nav_order` from mndmap or YAML
 - **Custom components** — optional consumer React components synced each build
 - **Breadcrumbs** — trail above the title (`display.crumbs`)
-- **Page Overview** expands below the page header (`display.contents`)
+- **Right sidebar** description, sections, related, and edit link (`display.toc`)
 - **Theme toggle** — light / dark / system toggle in the navbar (`display.navbar`)
 - **GitHub header icon** — circular GitHub repo link, auto-shown from `repo_url`
 - **YAML config** — single file drives the entire build
@@ -138,7 +138,7 @@ frontmatter:
   reading_time: reading_time
   related: related
 
-  # Content dimensions — labels on articles and in Browse
+  # Content dimensions — labels on articles and in Search
   facets:
     categories: { key: categories, label: Category, color: blue }   # blue, violet, amber, rose, green, teal, or 0-359
     tags:       { key: tags,       label: Tags,     color: violet }
@@ -148,7 +148,6 @@ display:
   crumbs: true                           # breadcrumb trail above the title
   header: [date, reading_time, facets]   # metadata under the title; accepts facet names
   toc: [description, sections, related, edit]   # right sidebar (≥ xl)
-  # contents: [...]                      # inline Contents panel; defaults to toc
   navbar: [browse, theme, feed, github]          # navbar icons, left to right
 
 # Optional — "Edit this page" targets; used ONLY when repo_url is set
@@ -168,7 +167,7 @@ output: ./dist               # output directory for built site
 
 ### Browsing pages by label
 
-Open **Browse** in the navbar to see published pages. Search titles, paths, descriptions and labels, or select a label from the grouped filter. Article chips link to the same results. Filters and search text are shareable, for example `/browse/?tag=static+site` or `/browse/?facet=status&tag=stable`.
+Type in the navbar search to open live results on the **Pages** view, or open it directly (grid icon, **Browse pages**) to see all published pages. Match titles, paths, descriptions, labels, and page text. Use the grouped filter to narrow results by label. Article chips link to the same results. Query text and filters are shareable, for example `/browse/?q=deployment` or `/browse/?facet=status&tag=stable`.
 
 Declare labels in `frontmatter.facets`. A facet can read several keys. The `tags` facet uses Trendly's spelling normalization. Other facets retain their authored labels. For example:
 
@@ -233,7 +232,7 @@ rss:
   site_url: https://example.org/my-site/
 ```
 
-mndsite writes `rss.xml`, adds RSS autodiscovery to the site, and shows **Subscribe via RSS** beside the feed title. On card feeds, the sidebar lists the same dated posts as the cards, newest first within each folder. Undated articles remain available in Browse and at their own URLs. The RSS icon in the navbar opens that page. For sites that publish RSS without a `feed_url`, the icon opens the XML feed directly. RSS contains dated posts beneath that section, newest first, with summaries and links to the full posts. Leave `feed_url` unset to include dated posts from across the site.
+mndsite writes `rss.xml`, adds RSS autodiscovery to the site, and shows **Subscribe via RSS** beside the feed title. On card feeds, the sidebar lists the same dated posts as the cards, newest first within each folder. Undated articles remain available through Search and at their own URLs. The RSS icon in the navbar opens that page. For sites that publish RSS without a `feed_url`, the icon opens the XML feed directly. RSS contains dated posts beneath that section, newest first, with summaries and links to the full posts. Leave `feed_url` unset to include dated posts from across the site.
 
 List repository-relative Markdown paths under `drafts` in `mndsite.yaml` to keep those files out of generated pages, navigation, and feeds. Remove a path from the list to publish it again at the same URL. You can also keep draft files and draft-only assets outside the published content directory.
 

@@ -12,21 +12,24 @@ function chip_variant(field_key) {
 }
 
 
-export default function TagList({ tags = [] }) {
+export default function TagList({ tags = [], renderLabel }) {
   const list = Array.isArray(tags) ? tags.filter(t => t && t.term) : []
   if (!list.length) return null
   return (
     <div className="tag-list">
       {list.map(t => {
         const filter = browseFilter(t.group, t.term, t.facet)
+        const label = filter?.tag || t.term
         return (
           <Chip
             key={JSON.stringify([t.facet || t.group, t.term])}
             href={filter ? { pathname: siteMeta.browse, query: filter } : undefined}
-            label={filter?.tag || t.term}
+            label={label}
             variant={chip_variant(t.group)}
             tooltip={`${field_label(t.group)}: ${t.term}`}
-          />
+          >
+            {renderLabel?.(label)}
+          </Chip>
         )
       })}
     </div>

@@ -29,12 +29,17 @@ describe('static RSS feed', () => {
   }
 
   test('preserves an authored Browse page and links the generated list at a free route', async () => {
-    post('posts/browse.md', 'Authored Browse')
+    fs.writeFileSync(path.join(root, 'posts/browse.md'),
+      '---\ntitle: Authored Browse\n---\n\nFirst paragraph.\n\n## Details\n\nCase-sensitive identifier.\n')
+    post('drafts/hidden.md', 'Hidden keyword')
     await run(configure())
     const metadata = JSON.parse(fs.readFileSync(path.join(root, 'public/site-meta.json'), 'utf8'))
+    const index = JSON.parse(fs.readFileSync(path.join(root, 'public/search-index.json'), 'utf8'))
     expect(metadata.browse).toBe('/browse-pages')
     expect(metadata.pages.map(page => page.url)).toEqual(['/browse'])
     expect(fs.readFileSync(path.join(root, 'pages/browse-pages.mdx'), 'utf8')).toContain('<Browse />')
+    expect(Object.keys(index)).toEqual(['/browse'])
+    expect(index['/browse']).toContain('Case-sensitive identifier')
   })
 
   test('exports ordered published summaries and permanent URLs, then removes disabled output', async () => {

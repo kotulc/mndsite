@@ -12,8 +12,7 @@ const { resolve_theme } = require('./theme')
 const DISPLAY_ELEMENTS = {
   header:   ['date', 'reading_time', 'facets'],
   toc:      ['description', 'sections', 'related', 'edit'],
-  contents: ['description', 'sections', 'related', 'edit'],
-  navbar:   ['browse', 'theme', 'feed', 'github'],
+  navbar:   ['browse', 'feed', 'github', 'theme'],
 }
 
 const EDIT_TEMPLATES = {
@@ -35,6 +34,7 @@ const FACET_DEFAULTS = {
 }
 
 const DEFAULTS = {
+  icon:           'none',
   description:    'none',
   repo_url:       'none',
   feed_url:       'none',
@@ -46,7 +46,7 @@ const DEFAULTS = {
     crumbs: true,
     header: ['date', 'reading_time', 'facets'],
     toc:    ['description', 'sections', 'related', 'edit'],
-    navbar: ['browse', 'theme', 'feed', 'github'],
+    navbar: ['browse', 'feed', 'github', 'theme'],
   },
   edit:           { branch: 'main', path: 'auto', url: 'auto' },
   nav_order:      {},
@@ -177,6 +177,11 @@ function resolve_crumbs(value) {
 function resolve_display(raw, facets) {
   const raw_display = { ...raw }
   delete raw_display.sidebar
+  if (raw_display.contents != null) {
+    throw new Error(
+      "mndsite.yaml: display.contents is no longer supported — configure the right sidebar with display.toc only"
+    )
+  }
   for (const list of Object.keys(raw_display)) {
     if (list === 'crumbs') continue
     if (!DISPLAY_ELEMENTS[list]) {
@@ -189,7 +194,6 @@ function resolve_display(raw, facets) {
   const cfg = { ...DEFAULTS.display, ...raw_display }
   cfg.crumbs = resolve_crumbs(raw_display.crumbs)
   if (!Array.isArray(cfg.toc)) throw new Error(`mndsite.yaml: display.toc must be a list`)
-  if (!cfg.contents) cfg.contents = [...cfg.toc]
 
   const field_keys = header_field_keys(facets)
 
@@ -268,6 +272,8 @@ function load_config(yaml_path) {
   for (const key of ['description', 'repo_url', 'feed_url', 'footer', 'components', 'assets']) {
     cfg[key] = optional(cfg[key])
   }
+  const icon = optional(cfg.icon)
+  cfg.icon = icon ? '/' + icon.replace(/^\/+/, '') : ''
   cfg.rss = resolve_rss(raw.rss)
   cfg.drafts = raw.drafts ?? []
   if (!Array.isArray(cfg.drafts) || cfg.drafts.some(file => typeof file !== 'string' || /[\\:\0]/.test(file) ||
@@ -314,7 +320,7 @@ function load_config(yaml_path) {
 function write_site_config(config, dest_dir) {
   const dir  = dest_dir || path.join(__dirname, '..')
   const keys = [
-    'title', 'repo_url', 'feed_url', 'rss', 'description', 'footer',
+    'title', 'icon', 'repo_url', 'feed_url', 'rss', 'description', 'footer',
     'theme', 'nav_order', 'frontmatter',
     'display', 'edit',
   ]

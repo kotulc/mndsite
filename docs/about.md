@@ -77,7 +77,7 @@ or browse the [Features](/features) section for the full capability overview.
 - **Images** — legacy `images/` subtrees copied and path-rewritten; corrupt EXIF stripped
 - **Reading time** — displayed when supplied in frontmatter
 - **Facets** — any declared frontmatter dimension rendered as colored chips and (future) sidebar filters
-- **Breadcrumbs and Contents panel** — configurable via `display.crumbs` and `display.contents`
+- **Breadcrumbs and sidebar contents** — configurable via `display.crumbs` and `display.toc`
 - **Related links** — outbound links and frontmatter `related` entries in the ToC sidebar
 - **Nav ordering** — sibling order via `nav_order` from mndmap or YAML
 - **Custom components** — optional consumer React components synced each build

@@ -4,11 +4,11 @@ import Breadcrumbs from './components/Breadcrumbs'
 import PageHeader from './components/PageHeader'
 import TagList from './components/TagList'
 import PageContents, { TocTitle, TocExtra, TocHeading } from './components/PageContents'
-import ContentsMenu from './components/ContentsMenu'
 import SiteFooter from './components/SiteFooter'
 import GitHubLink from './components/GitHubLink'
 import FeedLink, { FeedSubscription } from './components/FeedLink'
 import ThemeToggle from './components/ThemeToggle'
+import NavbarSearch from './components/BrowseSearch'
 import { group_chips, header_field_keys } from './components/facets'
 import { PageHeading } from './components/PageChrome'
 import siteConfig from './site.config'
@@ -47,7 +47,6 @@ function PageMeta() {
         reading_time={header.includes('reading_time') ? (meta.metrics || {}).reading_time : null}
         order={header}
       />
-      <ContentsMenu />
     </>
   )
 }
@@ -101,10 +100,18 @@ function PageTitle({ children }) {
 
 
 export default {
-  logo: <span style={{ fontWeight: 600 }}>{siteConfig.title}</span>,
+  logo: (
+    <span className="site-logo">
+      {siteConfig.icon && (
+        <img src={(process.env.NEXT_PUBLIC_BASE_PATH || '') + siteConfig.icon} width="28" height="28" alt="" />
+      )}
+      <span>{siteConfig.title}</span>
+    </span>
+  ),
   primaryHue: siteConfig.theme.hue,
   primarySaturation: siteConfig.theme.saturation,
   darkMode: false,   // the navbar toggle is ours; Nextra's sidebar copy is never used
+  search: { component: NavbarSearch },
   navbar: {
     extraContent: (
       <div className="navbar-icons">

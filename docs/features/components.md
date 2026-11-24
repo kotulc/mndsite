@@ -31,10 +31,9 @@ and styled in `styles/global.css`. Page-level chrome is driven by `display` in
 |-----------|------|----------------|
 | `Breadcrumbs` | `Breadcrumbs.jsx` | Above page title — `display.crumbs` |
 | `PageHeader` | `PageHeader.jsx` | Under title — date and reading time from `display.header` |
-| `Browse` | `Browse.jsx` | Searchable list of published pages linked from the navbar and article labels |
+| `Browse` | `Browse.jsx` | Pages listing for published pages linked from the navbar and article labels |
 | `TagList` | `TagList.jsx` | Under `PageHeader` — facet chips from `display.header` |
-| `PageContents` | `PageContents.jsx` | Right sidebar (`display.toc`) and inline panel (`display.contents`) |
-| `ContentsMenu` | `ContentsMenu.jsx` | Collapsible section below the title and metadata |
+| `PageContents` | `PageContents.jsx` | Right sidebar (`display.toc`) |
 | `Chip` | `Chip.jsx` | Used by `TagList` — class `chip-{facetName}` |
 | `SiteFooter` | `SiteFooter.jsx` | Site-wide footer |
 | `GitHubLink` | `GitHubLink.jsx` | Navbar — `display.navbar` includes `github` |
@@ -56,7 +55,7 @@ Returns null when neither value is present.
 
 ### TagList
 
-Links each configured label to matching pages in Browse. Renders facet values as chips below `PageHeader`. Each chip uses class `chip-{facetName}`
+Links each configured label to matching pages in the Pages listing. Renders facet values as chips below `PageHeader`. Each chip uses class `chip-{facetName}`
 with colors generated from the facet's configured hue. Undeclared facet groups fall back to
 `chip-custom`. Returns null when the chip list is empty.
 
@@ -70,10 +69,6 @@ file in the repository (`page.source` + `edit` config).
 
 At ≥ xl, Nextra may own the section heading list when `sections` is listed in `display.toc`;
 `TocTitle`, `TocExtra`, and `TocHeading` in `theme.config.jsx` adapt to that split.
-
-### ContentsMenu
-
-**Page Overview** expands in place beneath the title and metadata. It starts collapsed on each page and appears when `display.contents` has items to show. Select a heading to close it and jump to that section.
 
 ### SiteFooter
 

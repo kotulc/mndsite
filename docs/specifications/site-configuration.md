@@ -41,7 +41,7 @@ At build time the CLI generates `site.config.js` from the YAML; both the ingest 
 | `toc`, `reading_time` | Rejected — use `display.toc` / `display.header` |
 | `theme_toggle` | Rejected — use `display.navbar`; the sidebar toggle is gone |
 | `limits` | Rejected — content renders as supplied |
-| `display.title_row`, `display.info` | Rejected — use `display.contents` and `display.toc` |
+| `display.title_row`, `display.info`, `display.contents` | Rejected — use `display.toc` for the right sidebar |
 
 Site sub-path deployment uses the `BASE_PATH` environment variable at build time
 (handled by Next.js `basePath`), not a YAML field.

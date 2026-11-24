@@ -23,6 +23,11 @@ test('published documentation links to the exported Updates page and current rep
   const home = read('index.html')
   const updates = read('updates/index.html')
   const base = JSON.parse(home.getElementById('__NEXT_DATA__').textContent).assetPrefix || ''
+  const logo = home.querySelector('nav .site-logo')
+  expect(logo.textContent).toBe('MndSite')
+  expect(logo.querySelector('img').getAttribute('src')).toBe(base + '/assets/mnd.svg')
+  expect(home.querySelector('head link[rel="icon"]').getAttribute('href')).toBe(base + '/assets/mnd.svg')
+  expect(fs.existsSync(path.join(OUT, 'assets/mnd.svg'))).toBe(true)
   const feed = home.querySelector('nav a[aria-label="Feed"]')
   expect(feed.getAttribute('href')).toBe(base + '/updates/')
   expect(feed.querySelector('svg')).not.toBeNull()
@@ -47,7 +52,7 @@ test('published documentation links to the exported Updates page and current rep
   }
 })
 
-test('Browse is linked from articles and its static list contains only published pages', () => {
+test('Pages is linked from articles and lists published pages under the navbar search', () => {
   const meta = JSON.parse(fs.readFileSync(path.join(OUT, 'site-meta.json'), 'utf8'))
   const parse = file => new DOMParser().parseFromString(fs.readFileSync(path.join(OUT, file), 'utf8'), 'text/html')
   const article = parse('about/index.html')
@@ -58,6 +63,10 @@ test('Browse is linked from articles and its static list contains only published
   expect(link).toMatch(/\/browse\/$/)
   expect(article.querySelector('.tag-list a.chip-tags').getAttribute('href')).toContain(link + '?tag=')
   const browse = parse(meta.browse.slice(1) + '/index.html')
+  expect(browse.querySelector('main h1').textContent).toBe('Pages')
+  expect(browse.title).toMatch(/^Pages/)
+  expect(browse.querySelectorAll('input[type="search"]')).toHaveLength(1)
+  expect(browse.querySelector('.nextra-nav-container input[type="search"]')).not.toBeNull()
   expect(browse.querySelector('.nextra-sidebar-container a[href$="/about/"]')).not.toBeNull()
   const rows = [...browse.querySelectorAll('main .browse-result > a')]
   expect(rows).toHaveLength(meta.pages.length)
@@ -67,9 +76,9 @@ test('Browse is linked from articles and its static list contains only published
 test('exported Contents links resolve to the rendered headings', () => {
   const html = fs.readFileSync(path.join(OUT, 'archive/index.html'), 'utf8')
   const page = new DOMParser().parseFromString(html, 'text/html')
-  const contents = page.querySelector('details.contents-panel')
-  expect(contents.hasAttribute('open')).toBe(false)
-  const links = contents.querySelectorAll('a[href^="#"]')
+  const toc = page.querySelector('.nextra-toc')
+  expect(toc).not.toBeNull()
+  const links = toc.querySelectorAll('a[href^="#"]')
   expect(links.length).toBeGreaterThan(0)
   for (const link of links) expect(page.getElementById(link.hash.slice(1))).not.toBeNull()
 })

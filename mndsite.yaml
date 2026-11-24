@@ -3,7 +3,8 @@
 # `none` (feature off), `auto` (derive it), `default` (built-in) — so nothing here is "".
 # On/off flags are booleans; comments list allowed values only when more than one exists.
 
-title: mndsite
+title: MndSite
+icon: /assets/mnd.svg
 description: Static documentation sites from plain markdown
 repo_url: https://github.com/kotulc/mndsite
 feed_url: updates
@@ -13,7 +14,7 @@ rss:
 drafts:
   - docs/updates/plans.md
   - docs/updates/roadmap.md
-footer: MIT licensed · built with mndsite
+footer: MIT licensed · built with MndSite
 
 content: ./docs
 output: ./dist
@@ -31,7 +32,7 @@ theme:
   color: default       # default, slate, gray, blue, indigo, violet, rose, orange, ...
   typeset: sans        # sans, serif, humanist, geometric, mono
   navbar: background   # none, primary (theme tint), background (match page), or any CSS color
-  footer: none
+  footer: background   # pair with navbar for matching chrome
 
 # Page labels and Browse filters come from these frontmatter fields.
 frontmatter:
@@ -59,8 +60,7 @@ display:
   crumbs: true
   header: [date, reading_time, facets]
   toc: [description, sections, related, edit]
-  contents: [description, sections, related]
-  navbar: [browse, theme, feed, github]
+  navbar: [browse, feed, github, theme]
 
 # "Edit this page" targets. Used only when repo_url is set.
 edit:

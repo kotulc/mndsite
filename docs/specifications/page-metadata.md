@@ -13,8 +13,7 @@ Components render metadata from [site metadata](/specifications/metadata)
 
 - **`Breadcrumbs`** — `display.crumbs`
 - **`PageHeader`** + **`TagList`** — `display.header`
-- **`PageContents`** — `display.toc` (sidebar) and `display.contents` (inline panel)
-- **`ContentsMenu`** — opens `PageContents` under the Page Overview label
+- **`PageContents`** — `display.toc` (right sidebar)
 
 `theme.config.jsx` indexes metadata by route for SEO and `PageMeta`; `SectionContext`
 (`_app.jsx`) shares the current page and its flattened section list with the components above.
@@ -32,15 +31,13 @@ Components render metadata from [site metadata](/specifications/metadata)
 9. REQ-9: `metrics.word_count` is always computed at ingest; `metrics.reading_time` only when present in frontmatter
 10. REQ-10: Related merges resolved internal `links`, external http(s) links, and frontmatter `related`
 11. REQ-11: Edit link renders last when `edit` is listed; requires `repo_url` and uses `page.source` + `edit` template
-12. REQ-12: `ContentsMenu` is omitted when `contents_items` is empty and starts collapsed on each page
-13. REQ-13: `Breadcrumbs` follows `display.crumbs`; `false` hides the trail
-14. REQ-14: `SectionContext` exposes the current page and a depth-first flattened section list
+12. REQ-12: `Breadcrumbs` follows `display.crumbs`; `false` hides the trail
+13. REQ-13: `SectionContext` exposes the current page and a depth-first flattened section list
 
 ## Test Cases
 
 - `tests/components/PageHeader.test.jsx` — REQ-1 – REQ-4
 - `tests/components/TagList.test.jsx` — REQ-5, REQ-6
 - `tests/components/PageContents.test.jsx` — REQ-8 – REQ-11
-- `tests/components/ContentsMenu.test.jsx` — REQ-12
-- `tests/components/Breadcrumbs.test.jsx` — REQ-13
-- `tests/components/SectionContext.test.jsx` — REQ-14
+- `tests/components/Breadcrumbs.test.jsx` — REQ-12
+- `tests/components/SectionContext.test.jsx` — REQ-13

@@ -91,7 +91,6 @@ display:
   sidebar: [pages, Topics, Tags, Versions]      # left-nav views; `pages` is the tree
   header: [date, reading_time, facets]          # metadata line under the title
   toc: [description, sections, related, edit]   # right sidebar, top to bottom
-  contents: [description, sections, related]    # inline panel; defaults to a copy of toc
   navbar: [theme, feed, github]                 # navbar icons; "search" joins at stage 5
                                                 # "theme" is the only theme-toggle switch
 
@@ -129,7 +128,6 @@ One mechanism: omit the element from its `display` list. No feature has a second
 | One facet's header chips | drop that name from `display.header` (and from the `facets` catch-all) |
 | Breadcrumb trail | `display.crumbs: false` |
 | Description in the sidebar | `description` from `display.toc` |
-| Inline Contents panel | empty `display.contents` |
 | Right sidebar entirely | empty `display.toc` |
 | Related list | `related` from `display.toc` |
 | Edit-this-page link | `edit` from `display.toc`, or clear `repo_url` (which disables edit links entirely) |

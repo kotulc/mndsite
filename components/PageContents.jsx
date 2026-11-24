@@ -1,12 +1,10 @@
 /**
- * The right sidebar's body, reused verbatim by the inline Contents panel: page
- * description, in-page sections, Related links, and "Edit this page", rendered in the
- * order of the display list handed to it (`display.toc` or `display.contents`).
+ * The right sidebar's body: page description, in-page sections, Related links, and
+ * "Edit this page", rendered in the order of the display list handed to it (`display.toc`).
  *
  * Above the xl breakpoint Nextra owns the sidebar's heading list and its scroll-spy, so
  * the sidebar slots are adapters: TocTitle puts the description above Nextra's "On This
- * Page" label, TocExtra renders whatever Nextra did not. Below xl the whole list renders
- * inline — see components/ContentsMenu.jsx.
+ * Page" label, TocExtra renders whatever Nextra did not.
  */
 import Link from 'next/link'
 import { useSection, find_page } from './SectionContext'

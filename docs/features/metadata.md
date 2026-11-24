@@ -34,10 +34,10 @@ reach the UI only through configured `fields`, `facets`, and `display` lists.
 | Breadcrumbs | `display.crumbs` | Route + page names from `site-meta.json` |
 | Date / reading time | `display.header` | `published`, `metrics.reading_time` |
 | Facet chips | `display.header` (`facets` or facet names) | `page.facets` |
-| Description | `display.toc` / `display.contents` | `desc` via `frontmatter.description` |
-| Section list | `display.toc` / `display.contents` | Compiled MDX headings and their anchor IDs |
-| Related | `display.toc` / `display.contents` | `links`, `related` |
-| Edit link | `display.toc` / `display.contents` | `repo_url`, `edit`, `page.source` |
+| Description | `display.toc` | `desc` via `frontmatter.description` |
+| Section list | `display.toc` | Compiled MDX headings and their anchor IDs |
+| Related | `display.toc` | `links`, `related` |
+| Edit link | `display.toc` | `repo_url`, `edit`, `page.source` |
 
 Omitting an element from its display list turns it off — there is no separate boolean switch.
 
@@ -73,7 +73,6 @@ dimension upstream supplies.
 **`PageContents`** — Description, sections, Related, and Edit blocks in list order. Used in
 the right sidebar and the inline Contents panel.
 
-**`ContentsMenu`** — opens the Page Overview section inline.
 
 **`SiteFooter`** — copyright, build timestamp, credits.
 
