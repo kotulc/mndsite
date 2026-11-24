@@ -2,18 +2,16 @@
 title: Directory Feed
 categories:
   - spec
+version: 0.2
+status: stable
 ---
 
-# Directory Feed *(removed)*
+# Directory feed
 
-The `flatten` config field and inline directory feed behavior were **removed from mndsite** as part of the mndmap/mndsite simplification.
+Set `feed_url` to a content directory and enable `expandable_feed` to show dated posts on its landing page. An authored index can introduce the feed. Entries share Trendly's card layout and expand to show the Markdown body and cited media.
 
-Directory organization — including rendering a folder as a single scrolling feed — belongs upstream in **mndmap**. mndsite config files containing `flatten` are rejected at load time.
+Search the published posts with `/` or the search box. Choose a tag to narrow the results, or change the date order. Feeds with multiple media types also offer a media filter. Copy the URL to share the current selection.
 
-The `DirFeed` component remains in the codebase for potential future upstream integration but is not wired by the current ingest pipeline.
+Set `rss.site_url` to the deployed site's absolute URL to publish the same selection at `rss.xml`. Trendly can subscribe to this URL. Both outputs omit paths listed under `drafts` in the repository configuration. Each published post keeps its own page URL.
 
-## Historical behavior
-
-Previously, `flatten` in `mndsite.yaml` caused a directory to render via `<DirFeed />` with a generated `public/dir-feeds/<name>.json` file. That responsibility now lives in mndmap's organization model.
-
-See [Content Pipeline](/features/content-pipeline) for the current ingest contract.
+See [Configuration](/configuration) for the publishing settings.

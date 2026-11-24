@@ -1,7 +1,7 @@
 /**
  * Three-way light/dark/system theme toggle for the site navbar.
  * Cycles through system → light → dark on each click.
- * Only rendered when site.config.js sets theme_toggle: 'navbar'.
+ * Rendered when display.navbar lists 'theme'.
  */
 import { useTheme } from 'next-themes'
 import { useState, useEffect } from 'react'

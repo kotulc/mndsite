@@ -1,5 +1,5 @@
 /**
- * Site footer: copyright, build timestamp, and credits.
+ * Site footer: icon, credits, and build timestamp.
  * Edit this file to customize the footer that appears on every page.
  */
 import siteConfig from '../site.config'
@@ -15,18 +15,22 @@ export default function SiteFooter() {
     : null
   return (
     <div className="site-footer">
-      <span>© {new Date().getFullYear()} {siteConfig.title}</span>
-      {formatted && <><span className="site-footer-sep">·</span><span>Updated {formatted}</span></>}
-      <span className="site-footer-sep">·</span>
-      {siteConfig.footer ? (
-        <span>{siteConfig.footer}</span>
-      ) : (
-        <span>
-          Powered by{' '}
-          <a href="https://github.com/kotulc/mndsite" target="_blank" rel="noopener noreferrer">mndsite</a>
-          {' '}and{' '}
-          <a href="https://nextra.site" target="_blank" rel="noopener noreferrer">Nextra</a>
-        </span>
+      {siteConfig.icon && (
+        <img className="site-footer-icon" src={(process.env.NEXT_PUBLIC_BASE_PATH || '') + siteConfig.icon}
+          width="44" height="44" alt="" />
+      )}
+      <span>
+        {siteConfig.footer || (
+          <>
+            Powered by{' '}
+            <a href="https://github.com/kotulc/mndsite" target="_blank" rel="noopener noreferrer">mndsite</a>
+            {' '}and{' '}
+            <a href="https://nextra.site" target="_blank" rel="noopener noreferrer">Nextra</a>
+          </>
+        )}
+      </span>
+      {formatted && (
+        <time className="site-footer-updated" dateTime={build_time}>Updated {formatted}</time>
       )}
     </div>
   )

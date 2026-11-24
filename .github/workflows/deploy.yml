@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -26,11 +28,14 @@ jobs:
         env:
           BASE_PATH: ${{ vars.BASE_PATH }}
 
+      - name: Verify documentation export
+        if: ${{ !vars.CONTENT_SOURCE || vars.CONTENT_SOURCE == 'docs' || vars.CONTENT_SOURCE == './docs' }}
+        run: npm test -- --runInBand tests/build/smoke.test.js
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
 
-  # TODO: support versioning by also tagging with git tags (e.g. v1.0.0) when pushed
   publish:
     needs: build
     runs-on: ubuntu-latest

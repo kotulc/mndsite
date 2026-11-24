@@ -16,6 +16,24 @@ function plain_text(text) {
 }
 
 
+function first_paragraph(markdown, max = 280) {
+  /** First prose paragraph as plain text, length-capped for index listings.
+   *  Link labels are kept; URLs and markdown punctuation are dropped. */
+  const blocks = String(markdown || '').replace(/\r\n?/g, '\n').split(/\n\s*\n/)
+  for (const block of blocks) {
+    const trimmed = block.trim()
+    if (!trimmed || /^#{1,6}\s/.test(trimmed) || /^```/.test(trimmed)) continue
+    const text = plain_text(trimmed.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'))
+    if (!text) continue
+    if (text.length <= max) return text
+    const cut = text.slice(0, max)
+    const sp = cut.lastIndexOf(' ')
+    return `${(sp > 160 ? cut.slice(0, sp) : cut).trim()}…`
+  }
+  return null
+}
+
+
 function word_count(text) {
   /** Count prose words (length > 1), ignoring code and markdown syntax. */
   return plain_text(text).split(' ').filter(w => w.length > 1).length
@@ -96,5 +114,5 @@ function section_tree(body) {
 
 
 module.exports = {
-  MIN_LEVEL, MAX_LEVEL, plain_text, word_count, reading_time, extract_links, section_tree,
+  MIN_LEVEL, MAX_LEVEL, plain_text, first_paragraph, word_count, reading_time, extract_links, section_tree,
 }

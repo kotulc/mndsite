@@ -7,7 +7,9 @@ import { useRouter } from 'next/router'
 
 
 export default function AutoRedirect({ to }) {
-  const { replace } = useRouter()
-  useEffect(() => { replace(to) }, [])
+  const router = useRouter()
+  useEffect(() => {
+    if (router.isReady && (typeof router.query.view !== 'string' || router.query.view === 'pages')) router.replace(to)
+  }, [router.isReady, router.query.view, to])
   return null
 }

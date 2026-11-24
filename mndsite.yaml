@@ -1,19 +1,69 @@
-title: mndsite
-description: Static documentation sites from plain markdown
-repo_url: https://github.com/kotulc/nlp-mndsite
-feed_url: updates
-theme_toggle: navbar
-toc: true
+# mndsite's own site config, and the worked example for the 0.3 contract: every key is
+# set to a real value rather than left blank. Optional keys name their default instead —
+# `none` (feature off), `auto` (derive it), `default` (built-in) — so nothing here is "".
+# On/off flags are booleans; comments list allowed values only when more than one exists.
 
-theme:
-  color: default
-  typeset: sans
+title: MndSite
+icon: /assets/mnd.svg
+description: Static documentation sites from plain markdown
+repo_url: https://github.com/kotulc/mndsite
+feed_url: updates
+expandable_feed: true
+rss:
+  site_url: https://kotulc.github.io/mndsite/
+drafts:
+  - docs/updates/plans.md
+  - docs/updates/roadmap.md
+footer: MIT licensed · built with MndSite
 
 content: ./docs
 output: ./dist
+
+# Consumer extension points, mirrored into components/custom/ and public/assets/ each build.
+components: ./site/components
+assets: ./site/assets
 
 nav_order:
   "": [about, getting-started, configuration]
   features: [overview, components]
   specifications: [format]
-  updates: [welcome]
+
+theme:
+  color: default       # default, slate, gray, blue, indigo, violet, rose, orange, ...
+  typeset: sans        # sans, serif, humanist, geometric, mono
+  navbar: background   # none, primary (theme tint), background (match page), or any CSS color
+  footer: background   # pair with navbar for matching chrome
+
+# Page labels and Browse filters come from these frontmatter fields.
+frontmatter:
+  title: title
+  description: [description, desc]
+  date: date
+  reading_time: reading_time
+  related: related
+  facets:
+    categories:
+      key: categories
+      label: Topic
+      color: blue
+    tags:
+      key: tags
+      label: Tags
+      color: violet
+    status:
+      key: status
+      label: Status
+      color: amber
+
+# Rendered elements, in display order.
+display:
+  crumbs: true
+  header: [date, reading_time, facets]
+  toc: [description, sections, related, edit]
+  navbar: [browse, feed, github, theme]
+
+# "Edit this page" targets. Used only when repo_url is set.
+edit:
+  branch: main
+  path: docs            # auto derives this from the content dir
+  url: auto             # auto derives a template from the repo_url host

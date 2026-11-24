@@ -1,8 +1,8 @@
 /**
  * Unit tests for markdown text helpers and flat page meta construction.
  */
-const { section_tree, word_count, extract_links } = require('../../scripts/text')
-const { build_page, parse_user_tags, parse_desc, parse_reading_time, parse_related } = require('../../scripts/meta')
+const { section_tree, word_count, extract_links, first_paragraph } = require('../../scripts/text')
+const { build_page, build_facets, parse_desc, parse_reading_time, parse_related } = require('../../scripts/meta')
 
 
 describe('section_tree', () => {
@@ -41,8 +41,8 @@ describe('build_page', () => {
   test('test_build_page_flat_fields', () => {
     const node = build_page({
       slug: 'my-page', title: 'My Page', url: '/my-page', content,
-      published: '2026-01-15', created: '2026-07-20',
-      fm: { tags: ['yaml'], reading_time: 4 },
+      created: '2026-07-20',
+      fm: { date: '2026-01-15', tags: ['yaml'], reading_time: 4 },
     })
     expect(node).toMatchObject({
       name: 'My Page', url: '/my-page', slug: 'my-page',
@@ -52,8 +52,8 @@ describe('build_page', () => {
     expect(node.metrics.reading_time).toBe(4)
     expect(node.links).toEqual(expect.arrayContaining(['/other', 'https://example.com']))
     expect(node.sections.map(s => s.name)).toEqual(['Section One'])
-    expect(node.tags[0]).toMatchObject({ term: 'yaml', group: 'user' })
-    expect(node.tags[0].score).toBeUndefined()
+    expect(node.facets).toEqual({ tags: ['yaml'] })
+    expect(node.excerpt).toMatch(/Intro line with a link/)
   })
 
   test('test_build_page_no_reading_time_when_absent', () => {
@@ -69,15 +69,33 @@ describe('build_page', () => {
     })
     expect(node.desc).toBe('Hello')
   })
+
+  test('test_build_page_excerpt_from_first_section_when_no_intro', () => {
+    const node = build_page({
+      slug: 'p', title: 'P', url: '/p',
+      content: '# P\n\n## Section\n\nFirst section paragraph here.\n',
+      fm: { desc: 'frontmatter desc' },
+    })
+    expect(node.excerpt).toMatch(/First section paragraph/)
+  })
 })
 
 
 describe('parse helpers', () => {
-  test('test_parse_user_tags_dedupes', () => {
-    expect(parse_user_tags({ tags: ['a', 'B', 'a'] })).toEqual([
-      { term: 'a', group: 'user' },
-      { term: 'B', group: 'user' },
-    ])
+  test('test_build_facets_dedupes_values', () => {
+    const groups = { tags: { key: ['tags'], sort: 'alpha' } }
+    expect(build_facets({ tags: ['a', 'B', 'a'] }, groups, null, '')).toEqual({ tags: ['a', 'B'] })
+  })
+
+  test('test_build_facets_ignores_undeclared_fields', () => {
+    expect(build_facets({ status: ['stable'] }, {}, null, '')).toEqual({})
+  })
+
+  test('custom edition labels come only from authored frontmatter', () => {
+    const facets = { edition: { key: ['edition'] } }
+    expect(build_facets({}, facets)).toEqual({})
+    expect(build_facets({ edition: 'spring preview' }, facets)).toEqual({ edition: 'spring preview' })
+    expect(build_facets({ edition: 'v0.2' }, facets)).toEqual({ edition: 'v0.2' })
   })
 
   test('test_parse_desc_null_when_absent', () => {
@@ -100,6 +118,11 @@ describe('parse helpers', () => {
 describe('word_count / links', () => {
   test('test_word_count_ignores_code_fences', () => {
     expect(word_count('one two\n```\ncode here\n```\nthree')).toBe(3)
+  })
+
+  test('test_first_paragraph_keeps_link_text_and_caps', () => {
+    expect(first_paragraph('See [Theme](/theme) next.\n\n## Later\n\nNope.')).toBe('See Theme next.')
+    expect(first_paragraph('# Title\n\n' + 'word '.repeat(80))).toMatch(/…$/)
   })
 
   test('test_extract_links_skips_images', () => {

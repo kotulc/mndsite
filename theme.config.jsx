@@ -1,14 +1,16 @@
-import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/router'
+import Breadcrumbs from './components/Breadcrumbs'
 import PageHeader from './components/PageHeader'
 import TagList from './components/TagList'
-import MetaSidebar from './components/MetaSidebar'
-import { PageInfoToggle, PageInfoPanel } from './components/PageInfo'
-import { TocMenuToggle, TocMenuPanel } from './components/TocMenu'
+import PageContents, { TocTitle, TocExtra, TocHeading } from './components/PageContents'
 import SiteFooter from './components/SiteFooter'
 import GitHubLink from './components/GitHubLink'
-import FeedLink from './components/FeedLink'
+import FeedLink, { FeedSubscription } from './components/FeedLink'
 import ThemeToggle from './components/ThemeToggle'
+import NavbarSearch from './components/BrowseSearch'
+import { group_chips, header_field_keys } from './components/facets'
+import { PageHeading } from './components/PageChrome'
 import siteConfig from './site.config'
 import siteMeta from './public/site-meta.json'
 
@@ -31,81 +33,104 @@ function use_page_meta() {
 
 
 function PageMeta() {
-  /** Renders published date, supplied reading time, and frontmatter tags. */
+  /** Metadata under the page title, driven by display.header: date and reading time in
+   *  the metrics line, then facet chips, both in listed order. */
   const meta = use_page_meta()
-  const metrics = meta.metrics || {}
-  const mins = siteConfig.reading_time === false ? null : metrics.reading_time
-  const chips = Array.isArray(meta.tags) ? meta.tags.slice(0, 8) : []
+  const header = siteConfig.display.header
+  const chips = group_chips(meta.facets, header_field_keys(header))
+
   return (
     <>
-      <PageHeader date={meta.published} reading_time={mins} />
       <TagList tags={chips} />
+      <PageHeader
+        date={header.includes('date') ? meta.published : ''}
+        reading_time={header.includes('reading_time') ? (meta.metrics || {}).reading_time : null}
+        order={header}
+      />
     </>
   )
 }
 
 
 function bg_rules(selector, value) {
-  /** Background override CSS for a configured navbar/footer color ('' | 'primary' | CSS color). */
-  if (!value) return ''
-  if (value === 'primary') return (
-    `${selector}{background:hsl(var(--site-hs) 94%)!important}` +
-    `html.dark ${selector}{background:hsl(var(--site-hs) 45%/0.2)!important}`
-  )
-  return `${selector}{background:${value}!important}`
+  /** Custom navbar/footer colors only — primary/background/none live in global.css. */
+  if (!value || value === 'primary' || value === 'background' || value === 'none') return ''
+  return `${selector}{background-color:${value}!important}`
 }
+
+
+function chip_rules(groups) {
+  /** One chip color pair per frontmatter field key, from its group or versioning hue. */
+  const pair = (name, hue) =>
+    `.chip-${name}{background:hsl(${hue} 70% 92%);color:hsl(${hue} 55% 32%)}` +
+    `:is(html[class~="dark"]) .chip-${name}` +
+    `{background:hsl(${hue} 35% 22%);color:hsl(${hue} 70% 75%)}`
+
+  const rules = []
+  for (const spec of Object.values(groups || {})) {
+    for (const key of spec.key || []) rules.push(pair(key, spec.hue))
+  }
+  return rules.join('')
+}
+
+
+const TOC_HAS_SECTIONS = siteConfig.display.toc.includes('sections')
 
 
 const THEME_CSS = [
   siteConfig.theme.font_stack && `body{font-family:${siteConfig.theme.font_stack}}`,
   bg_rules('.nextra-nav-container-blur', siteConfig.theme.navbar),
-  bg_rules('footer.nx-bg-gray-100', siteConfig.theme.footer),
+  bg_rules('footer', siteConfig.theme.footer),
+  chip_rules(siteConfig.frontmatter.facets),
 ].filter(Boolean).join('')
 
 
 function PageTitle({ children }) {
-  /** Custom h1 override: heading + Info/Contents actions, page metadata, optional panels.
-   *  Info and Contents are mutually exclusive — opening one closes the other. */
-  const [info_open, set_info_open] = useState(false)
-  const [toc_open, set_toc_open] = useState(false)
-
-  function toggle_info() {
-    set_info_open(v => !v)
-    set_toc_open(false)
-  }
-  function toggle_toc() {
-    set_toc_open(v => !v)
-    set_info_open(false)
-  }
-
   return (
     <>
+      <Breadcrumbs heading={children} />
       <div className="page-title-row">
-        <h1 className="nx-mt-2 nx-text-4xl nx-font-bold nx-tracking-tight nx-text-slate-900 dark:nx-text-slate-100">{children}</h1>
-        <div className="page-title-actions">
-          <PageInfoToggle open={info_open} on_toggle={toggle_info} />
-          <TocMenuToggle open={toc_open} on_toggle={toggle_toc} />
-        </div>
+        <PageHeading>{children}</PageHeading>
+        <FeedSubscription />
       </div>
       <PageMeta />
-      <PageInfoPanel open={info_open} on_close={() => set_info_open(false)} />
-      <TocMenuPanel open={toc_open} on_close={() => set_toc_open(false)} />
     </>
   )
 }
 
 
 export default {
-  logo: <span style={{ fontWeight: 600 }}>{siteConfig.title}</span>,
+  logo: (
+    <span className="site-logo">
+      {siteConfig.icon && (
+        <img src={(process.env.NEXT_PUBLIC_BASE_PATH || '') + siteConfig.icon} width="28" height="28" alt="" />
+      )}
+      <span>{siteConfig.title}</span>
+    </span>
+  ),
   primaryHue: siteConfig.theme.hue,
   primarySaturation: siteConfig.theme.saturation,
-  darkMode: siteConfig.theme_toggle !== 'navbar',
+  darkMode: false,   // the navbar toggle is ours; Nextra's sidebar copy is never used
+  search: { component: NavbarSearch },
   navbar: {
     extraContent: (
       <div className="navbar-icons">
-        {siteConfig.theme_toggle === 'navbar' && <ThemeToggle />}
-        <FeedLink />
-        <GitHubLink />
+        {siteConfig.display.navbar.map(item => {
+          if (item === 'browse') return (
+            <Link key={item} href={siteMeta.browse} className="icon-link browse-link" aria-label="Browse pages" title="Browse pages">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7" rx="1.25" />
+                <rect x="14" y="3" width="7" height="7" rx="1.25" />
+                <rect x="3" y="14" width="7" height="7" rx="1.25" />
+                <rect x="14" y="14" width="7" height="7" rx="1.25" />
+              </svg>
+            </Link>
+          )
+          if (item === 'theme') return <ThemeToggle key={item} />
+          if (item === 'feed') return <FeedLink key={item} />
+          if (item === 'github') return <GitHubLink key={item} />
+          return null
+        })}
       </div>
     ),
   },
@@ -126,9 +151,12 @@ export default {
   ),
   feedback: { content: null },
   // Nextra renders editLink before toc.extraContent, so its own copy is disabled here —
-  // MetaSidebar renders "Edit this page" itself, last, after Related.
+  // PageContents renders "Edit this page" itself, last, after Related.
   editLink: { component: () => null },
-  toc: siteConfig.toc === false ? { component: () => null } : { extraContent: <MetaSidebar /> },
+  // With `sections` listed, Nextra owns the heading list (and its scroll-spy) and the
+  // description rides in its title slot; otherwise PageContents renders the sidebar whole.
+  toc: TOC_HAS_SECTIONS
+    ? { title: <TocTitle />, extraContent: <TocExtra />, headingComponent: TocHeading }
+    : { component: () => <PageContents order={siteConfig.display.toc} /> },
   components: { h1: PageTitle },
-  main: ({ children }) => <>{children}</>,
 }

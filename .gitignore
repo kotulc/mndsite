@@ -10,8 +10,10 @@ public/dir-feeds/
 
 # Build output
 dist/
+.next-dev/
 .next/
 node_modules/
 
 SPEC.md
 components/custom/
+work/

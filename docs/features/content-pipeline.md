@@ -15,6 +15,8 @@ related:
     url: /getting-started
   - title: Configuration
     url: /configuration
+version: 0.2
+status: stable
 ---
 
 # Content Pipeline
@@ -90,21 +92,23 @@ node scripts/cli.js build --config mndsite.yaml
 
 6. **Preserves frontmatter** — the supplied block is kept verbatim on the output page, so Nextra and theme components can read unknown fields; renderer metadata is mirrored into `site-meta.json`.
 
-7. **Generates `_meta.json`** — navigation labels and sibling order at every directory level:
+7. **Generates missing landing pages** — a directory with no `index.md` gets a redirect `index.mdx` to its first sorted page, so `/`, `/features/`, and every other directory route resolves. Authors never have to write one.
+
+8. **Generates `_meta.json`** — navigation labels and sibling order at every directory level:
    - `nav_order` in `mndsite.yaml` pins listed slugs first in declared order
    - Remaining siblings sort alphabetically by slug
    - Directory labels come from the index page title, then a slug-to-title fallback
 
-8. **Writes `site-meta.json`** — flat page list derived from frontmatter and content (tags, related, links, word count, sections). No local tagging or embedding step.
+9. **Writes `site-meta.json`** — flat page list: `facets`, `related`, `links`, `source`, `identity`, word count, sections. No local tagging or embedding step.
 
 ## Source layout rules
 
 - The configured content root is the site route tree
-- `index.md`, `index.mdx`, or `home.md` at any level → that section's landing page
-- mndsite does not create redirect indexes or synthesize landing pages — mndmap emits index documents for generated folders/groups
+- `index.md`, `index.mdx`, or `home.md` at any level → that section's landing page when supplied
+- A directory with **no** index document gets a generated redirect `index.mdx` to its first sorted page (hidden from the sidebar)
 - `_assets/` at the content root → copied to `public/_assets/`
 - `images/` next to markdown → copied and path-rewritten for legacy layouts
-- Internal links should already resolve in the supplied content (rewritten by mndmap when used)
+- Internal links and MDX imports should already resolve in publication-ready content (rewritten by mndmap when used); ingest warns on remaining `.md` links and `_assets/` imports
 
 ## Cross-project contract
 

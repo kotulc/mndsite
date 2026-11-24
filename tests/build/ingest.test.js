@@ -89,31 +89,57 @@ describe('extract_content', () => {
 })
 
 
-const PAGES = path.join(__dirname, '../../pages')
 const ROOT_CFG = path.join(__dirname, '../../mndsite.yaml')
 
+// Ingest the repo's own content into a temp root, so the generated pages/ and
+// public/site-meta.json the dev server and the other suites read stay untouched.
+let root
+const pages_dir = () => path.join(root, 'pages')
+
 beforeAll(async () => {
-  await ingest.run(load_config(ROOT_CFG))
+  root = fs.mkdtempSync(path.join(os.tmpdir(), 'mndsite-ingest-'))
+  await ingest.run({ ...load_config(ROOT_CFG), root })
 })
 
+afterAll(() => fs.rmSync(root, { recursive: true, force: true }))
+
 describe('pages output ordering', () => {
+  test('repeat ingestion preserves unchanged routes and removes obsolete output', async () => {
+    const article = path.join(pages_dir(), 'about.mdx')
+    const stale = path.join(pages_dir(), 'obsolete.mdx')
+    fs.utimesSync(article, 100, 100)
+    fs.writeFileSync(stale, '# Obsolete')
+    await ingest.run({ ...load_config(ROOT_CFG), root })
+    expect(fs.statSync(article).mtimeMs).toBe(100000)
+    expect(fs.existsSync(stale)).toBe(false)
+  })
+
   test('test_pages_features_meta_follows_nav_order', () => {
     const expected = siteConfig.nav_order['features']
-    const meta = JSON.parse(fs.readFileSync(path.join(PAGES, 'features', '_meta.json'), 'utf8'))
+    const meta = JSON.parse(fs.readFileSync(path.join(pages_dir(), 'features', '_meta.json'), 'utf8'))
     const keys = Object.keys(meta).filter(k => k !== 'index')
     expect(keys.slice(0, expected.length)).toEqual(expected)
   })
 
-  test('test_pages_updates_meta_follows_nav_order', () => {
-    const meta = JSON.parse(fs.readFileSync(path.join(PAGES, 'updates', '_meta.json'), 'utf8'))
-    expect(Object.keys(meta)[0]).toBe('welcome')
+  test('feed navigation lists the same posts in the same order as the cards', () => {
+    const meta = JSON.parse(fs.readFileSync(path.join(pages_dir(), 'updates', '_meta.json'), 'utf8'))
+    const cards = JSON.parse(fs.readFileSync(path.join(root, 'public', 'post-feed.json'), 'utf8'))
+    expect(Object.entries(meta).filter(([, value]) => !value.display).map(([slug]) => '/updates/' + slug))
+      .toEqual(cards.map(card => card.href))
+    const nav = JSON.parse(fs.readFileSync(path.join(pages_dir(), '_meta.json'), 'utf8'))
+    expect(nav.updates.theme.pagination).toBe(false)
+  })
+
+  test('root redirect is hidden and its About target is listed once', () => {
+    const meta = JSON.parse(fs.readFileSync(path.join(pages_dir(), '_meta.json'), 'utf8'))
+    expect(meta.index).toEqual({ display: 'hidden' })
+    expect(Object.values(meta).filter(title => title === 'About')).toHaveLength(1)
   })
 })
 
 
 describe('site meta output', () => {
-  const meta_path = path.join(__dirname, '../../public/site-meta.json')
-  const load = () => JSON.parse(fs.readFileSync(meta_path, 'utf8'))
+  const load = () => JSON.parse(fs.readFileSync(path.join(root, 'public', 'site-meta.json'), 'utf8'))
   const has_pages = () => {
     try { return load().pages.length > 0 } catch { return false }
   }
@@ -133,12 +159,12 @@ describe('site meta output', () => {
     expect(page.sections.map(s => s.name)).toContain('Fields')
     expect(Array.isArray(page.links)).toBe(true)
     expect(Array.isArray(page.related)).toBe(true)
-    expect(Array.isArray(page.tags)).toBe(true)
+    expect(page.facets).toMatchObject({ categories: expect.any(Array) })
   })
 
   test('test_pages_preserve_frontmatter', () => {
     for (const f of ['getting-started.mdx', 'configuration.mdx']) {
-      const p = path.join(PAGES, f)
+      const p = path.join(pages_dir(), f)
       if (!fs.existsSync(p)) return
       const content = fs.readFileSync(p, 'utf8')
       expect(content.startsWith('---\n')).toBe(true)
@@ -150,7 +176,7 @@ describe('site meta output', () => {
 
 describe('navtree naming', () => {
   test('test_nav_label_from_frontmatter_title', () => {
-    const meta = JSON.parse(fs.readFileSync(path.join(PAGES, 'specifications', '_meta.json'), 'utf8'))
+    const meta = JSON.parse(fs.readFileSync(path.join(pages_dir(), 'specifications', '_meta.json'), 'utf8'))
     expect(meta['page-metadata']).toBe('Page Metadata')
   })
 

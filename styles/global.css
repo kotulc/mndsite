@@ -9,10 +9,13 @@
   --site-primary-700: hsl(var(--site-hs) 39%);
   --site-gray-100: #f3f4f6;
   --site-gray-200: #e5e7eb;
+  --crumb-height: 1.5rem;   /* breadcrumb row height */
   --site-gray-400: #9ca3af;
   --site-gray-500: #6b7280;
   --site-gray-600: #4b5563;
   --site-gray-900: #111827;
+  --site-chrome-bg: #fff;   /* page background — used by theme.navbar/footer: background */
+  --content-gutter: 1.5rem;
 }
 
 :is(html[class~="dark"]) {
@@ -25,236 +28,152 @@
   --site-gray-500: #8a8a8a;
   --site-gray-600: #a3a3a3;
   --site-gray-900: #ededed;
+  --site-chrome-bg: #111;
+}
+
+/* Navbar/footer chrome — loaded after Nextra; html data attrs set in theme.config.jsx. */
+html[data-chrome-navbar="primary"] .nextra-nav-container-blur {
+  background-color: hsl(var(--site-hs) 94%) !important;
+}
+
+:is(html[class~="dark"])[data-chrome-navbar="primary"] .nextra-nav-container-blur {
+  background-color: hsl(var(--site-hs) 45% / 0.2) !important;
+}
+
+html[data-chrome-footer="primary"] footer {
+  background-color: hsl(var(--site-hs) 94%) !important;
+}
+
+:is(html[class~="dark"])[data-chrome-footer="primary"] footer {
+  background-color: hsl(var(--site-hs) 45% / 0.2) !important;
+}
+
+html[data-chrome-navbar="background"] .nextra-nav-container-blur,
+html[data-chrome-footer="background"] footer {
+  background-color: var(--site-chrome-bg) !important;
 }
 
 
-/* Per-page continuation feed */
-.feed-section { margin-top: 2rem; }
-
-.feed-section-divider {
-  border-top: 2px solid var(--site-gray-200);
-  margin: 4rem 0 3rem;
-}
-
-.feed-section-title {
-  font-size: 2.25rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-}
-
-.feed-section-title a { color: inherit; text-decoration: none; transition: color 0.15s; }
-
-.feed-section-title a:hover { text-decoration: underline; }
-
-
-/* Pagination link shown when group exceeds max_feed_pages */
-.feed-pagination {
-  margin-top: 4rem;
-  padding-top: 2rem;
-  border-top: 2px solid var(--site-gray-200);
-  font-size: 1.125rem;
+.site-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: .375rem;
   font-weight: 600;
 }
 
-.feed-pagination a {
-  color: var(--site-primary-600);
-  text-decoration: none;
-}
-
-.feed-pagination a:hover { text-decoration: underline; }
-
-
-/* DirFeed inline feed container */
-.dir-feed { display: flex; flex-direction: column; }
-
-.feed-loading { font-style: italic; color: var(--site-gray-500); }
-
-
-/* Markdown body in DirFeed sections — mirrors Nextra's MDX prose element classes */
-.feed-section-content p { margin-top: 1.5rem; line-height: 1.75; }
-
-.feed-section-content p:first-child { margin-top: 0; }
-
-.feed-section-content h2 {
-  font-size: 1.875rem;
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  margin-top: 2.5rem;
-  padding-bottom: 0.25rem;
-  border-bottom: 1px solid var(--site-gray-200);
-  color: var(--site-gray-900);
-}
-
-.feed-section-content h3 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  margin-top: 2rem;
-  color: var(--site-gray-900);
-}
-
-.feed-section-content h4 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-top: 1.5rem;
-  color: var(--site-gray-900);
-}
-
-.feed-section-content ul {
-  list-style-type: disc;
-  margin-top: 1.5rem;
-  padding-left: 1.5rem;
-}
-
-.feed-section-content ol {
-  list-style-type: decimal;
-  margin-top: 1.5rem;
-  padding-left: 1.5rem;
-}
-
-.feed-section-content a {
-  color: var(--site-primary-600);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.feed-section-content code {
-  background: rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.04);
-  border-radius: 0.375rem;
-  padding: 0.125rem 0.25em;
-  font-size: 0.9em;
-  overflow-wrap: break-word;
-}
-
-.feed-section-content pre { margin-top: 1.5rem; overflow-x: auto; }
-
-.feed-section-content pre code { background: none; border: none; padding: 0; font-size: inherit; }
-
-
-/* Dark mode overrides for feed-section-content */
-:is(html[class~="dark"]) .feed-section-content h2,
-:is(html[class~="dark"]) .feed-section-content h3,
-:is(html[class~="dark"]) .feed-section-content h4 { color: #f1f5f9; }
-
-:is(html[class~="dark"]) .feed-section-content h2 {
-  border-bottom-color: rgba(255, 255, 255, 0.1);
-}
-
-:is(html[class~="dark"]) .feed-section-content code {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-
-/* Remove extra top margin on first DirFeed entry (aligns with regular page h1 spacing) */
-.dir-feed > .feed-section:first-child { margin-top: 0; }
-
+.site-logo img { flex: none; }
 
 /* Navbar icons group — wraps theme/feed/github icons */
 .navbar-icons { display: flex; align-items: center; gap: 0.5rem; }
 
 
-/* =============================================================================
-   NAVBAR COLUMN ALIGNMENT
-   ─────────────────────────────────────────────────────────────────────────────
-   Goal: mirror the 3-column page layout (sidebar / content / TOC) in the navbar.
-
-   Key measurements (from built HTML):
-     • Nav + page share the same container: max-w-[90rem] (1440px), mx-auto
-     • Nav has safe-area padding: 1.5rem each side → inner width = 87rem
-     • Page has no outer padding → sidebar/TOC edges are flush with container
-     • Left sidebar: 16rem  (visible at md: 768px+)
-     • Right TOC:    16rem  (visible at xl: 1280px+)
-
-   Alignment formula:
-     nav element width = sidebar width − nav padding = 16rem − 1.5rem = 14.5rem
-     logo (14.5rem) + search (flex fill) + icons (14.5rem) = 87rem ✓
-
-   Selectors (Nextra internals — verified from built HTML):
-     Nav element:    .nextra-nav-container nav
-     Logo anchor:    .nextra-nav-container nav a.ltr\:nx-mr-auto
-     Search wrapper: .nextra-nav-container nav .nextra-search
-     Search results: .nextra-search ul
-     Icons group:    .navbar-icons  (custom wrapper in theme.config.jsx)
-   ============================================================================= */
-
-/* — Reflow nav to flex-start so fixed-width columns stack left-to-right — */
-.nextra-nav-container nav {
-  margin-right: auto !important;
+/* The navbar and page share Nextra's centered 90rem container. */
+.nextra-content > main {
+  padding-inline-start: var(--content-gutter);
 }
 
-/* — Logo column: aligns right edge with left sidebar right edge — */
-.nextra-nav-container nav a.ltr\:nx-mr-auto {
-  min-width: 14.5rem;   /* = 16rem sidebar − 1.5rem nav padding */
-  flex-shrink: 0;
+.nextra-sidebar-container > .md\:nx-hidden {
+  padding-inline: var(--content-gutter);
 }
 
-/* — Icons group: push right at md–lg; lock to 14.5rem column at xl+ — */
+.nextra-sidebar-container > .md\:nx-hidden:empty {
+  display: none;
+}
+
+.nextra-search input {
+  display: block;
+  width: 100%;
+  padding: .5rem .75rem;
+  border: 1px solid transparent;
+  border-radius: .5rem;
+  background: var(--site-gray-100);
+  color: var(--site-gray-900);
+  line-height: 1.25;
+}
+
+.nextra-search input:focus-visible {
+  outline: 2px solid var(--site-primary-600);
+}
+
+@media (width < 768px) {
+  html:has(.navbar-search-on-results) {
+    --nextra-navbar-height: 7rem;
+  }
+
+  .nextra-nav-container nav:has(> .navbar-search-on-results) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-rows: 4rem auto;
+    row-gap: 0;
+  }
+
+  .nextra-nav-container .navbar-search-on-results {
+    display: block;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    align-self: start;
+  }
+}
+
 @media (min-width: 768px) {
+  :root {
+    --content-gutter: 1rem;
+    --sidebar-width: 16rem;
+    --navbar-start-padding: max(env(safe-area-inset-left), 1.5rem);
+    --navbar-gap: 0.5rem;
+    --search-end-space: 3rem;
+  }
+
+  .nextra-content > main {
+    padding-inline-end: 3rem;
+  }
+
+  .nextra-sidebar-container.md\:nx-w-64 {
+    width: var(--sidebar-width);
+  }
+
+  .nextra-nav-container nav {
+    gap: var(--navbar-gap);
+    padding-inline-start: var(--navbar-start-padding);
+  }
+
+  /* The logo, navbar padding, and gap end at the body's content gutter. */
+  .nextra-nav-container nav > .ltr\:nx-mr-auto {
+    flex: 0 0 calc(var(--sidebar-width) + var(--content-gutter) - var(--navbar-start-padding) - var(--navbar-gap));
+    min-width: 0;
+    margin-inline-end: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .nextra-nav-container nav > .nextra-search {
+    flex: 1;
+    min-width: 0;
+    margin-inline-end: var(--search-end-space);
+  }
+
+  .nextra-nav-container nav .nextra-search input {
+    font-size: .875rem;
+  }
+
   .navbar-icons {
-    margin-left: auto;
     flex-shrink: 0;
   }
-  div.nextra-search {
-    flex: 1 1 auto;
-    padding-left: 0rem;
-    padding-right: 3rem;
-    left: 0;
-    width: 60%;
-  }
-  /* Nextra search results */
-  :is([dir=ltr] .ltr\:md\:nx-left-auto) {
-    margin-top: 1rem;
-    right: 0;
-    width: auto;
-  }
-  .md\:nx-px-12 {
-    padding-left: 1rem !important;
-    padding-right: 3rem;
-  }
 }
 
-/* — Search: leave Nextra's default (256px) untouched below xl — */
-/* — At xl+: expand to fill the content column — */
 @media (min-width: 1280px) {
+  :root {
+    --content-gutter: 3rem;
+    --search-end-space: 4rem;
+  }
+
+  .nextra-content > main {
+    padding-inline-end: 5rem;
+  }
+
   .navbar-icons {
-    width: 14.5rem;    /* = 16rem TOC − 1.5rem nav padding */
-    margin-left: 0;
-  }
-  .nextra-nav-container nav .nextra-search {
-    flex: 1 1 auto;
-    width: auto !important;  /* overrides Nextra's md:w-64 utility */
-  }
-  div.nextra-search {
-    padding-left: 2rem;
-    padding-right: 4rem;
-    width: 75%;
-  }
-  /* Nextra search results */
-  :is([dir=ltr] .ltr\:md\:nx-left-auto) {
-    margin-top: 1rem;
-    right: 0;
-    width: auto;
-  }
-  .md\:nx-px-12 {
-    padding-left: 3rem !important;
-    padding-right: 5rem !important;
+    width: calc(var(--sidebar-width) - 1.5rem);
   }
 }
-
-/* — Search results panel (position: absolute, anchored to .nextra-search top-left) — */
-/* — Only override visual properties; do not change position/top/left/z-index — */
-/* Selectors to use when styling:
-     .nextra-search ul                         results container
-     .nextra-search ul li                      individual result row
-     .nextra-search ul li[aria-selected="true"] highlighted row
-   Available variables: --site-gray-100/200, --site-primary-100/700 */
-
-/* — Dark mode: add dark variants here using the same selectors — */
-/* :is(html[class~="dark"]) .nextra-search ul { } */
-
-/* ============================================================================= */
 
 
 /* Navbar icon buttons/links (GitHub, feed, theme toggle) */
@@ -282,6 +201,13 @@
 button.icon-link { border: none; background: transparent; cursor: pointer; }
 
 
+.feed-subscribe {
+  color: var(--site-primary-600);
+  font-size: .8125rem;
+  text-decoration: underline;
+  text-underline-offset: .15em;
+}
+
 /* Responsive images */
 img {
   max-width: 100%;
@@ -291,290 +217,42 @@ img {
   border-radius: 4px;
 }
 
-/* Page title row: h1 + "Info" intelligence toggle sitting beside it */
 .page-title-row {
   display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: .875rem;
 }
 
-.page-title-row h1 { flex: 1 1 auto; min-width: 0; }
-
-.page-title-actions {
-  display: flex;
-  flex-shrink: 0;
-  align-items: flex-start;
-  gap: 0.5rem;
-  margin-top: 0.85rem;
-}
-
-.page-info-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  flex-shrink: 0;
-  margin-top: 0;   /* spacing comes from .page-title-actions */
-  padding: 0.2rem 0.5rem;
-  border: 1px solid var(--site-gray-200);
-  border-radius: 9999px;
-  background: transparent;
-  color: var(--site-gray-500);
-  font-family: inherit;
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.page-info-toggle:hover {
-  background: var(--site-primary-100);
-  color: var(--site-primary-700);
-  border-color: var(--site-primary-100);
-}
-
-.page-info-toggle[aria-expanded="true"] {
-  background: var(--site-primary-100);
-  color: var(--site-primary-700);
-  border-color: var(--site-primary-100);
-}
-
-.page-info-toggle:focus-visible {
-  outline: 2px solid var(--site-primary-600);
-  outline-offset: 2px;
-}
-
-/* Contents button — same pill as Info, only below xl where Nextra hides .nextra-toc */
-.toc-menu-toggle {
-  display: none;
-  align-items: center;
-  gap: 0.25rem;
-  flex-shrink: 0;
-  padding: 0.2rem 0.5rem;
-  border: 1px solid var(--site-gray-200);
-  border-radius: 9999px;
-  background: transparent;
-  color: var(--site-gray-500);
-  font-family: inherit;
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-@media (max-width: 1279px) {
-  .toc-menu-toggle { display: inline-flex; }
-}
-
-.toc-menu-toggle:hover,
-.toc-menu-toggle[aria-expanded="true"] {
-  background: var(--site-primary-100);
-  color: var(--site-primary-700);
-  border-color: var(--site-primary-100);
-}
-
-.toc-menu-toggle:focus-visible {
-  outline: 2px solid var(--site-primary-600);
-  outline-offset: 2px;
-}
-
-.toc-menu-count {
-  margin-left: 0.125rem;
-  opacity: 0.65;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Inline expand panels (Info + Contents) — dividers above/below, no card chrome */
-.page-info-panel,
-.toc-menu-panel {
-  margin: 1.25rem 0 1.5rem;
-  padding: 1.25rem 0;
-  border-top: 1px solid #e5e7eb;
-  border-bottom: 1px solid #e5e7eb;
-  background: transparent;
-  font-size: 0.875rem;
-}
-
-:is(html[class~="dark"]) .page-info-panel,
-:is(html[class~="dark"]) .toc-menu-panel {
-  border-top-color: #262626;
-  border-bottom-color: #262626;
-}
-
-.page-info-title,
-.toc-menu-title {
-  margin: 0 0 1.25rem;
-  color: var(--site-gray-400);
-  font-size: 0.6875rem;
-  font-weight: 400;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  text-align: left;
-}
-
-.toc-menu-block {
-  margin: 0;
-}
-
-.toc-menu-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
-  column-gap: 1.25rem;
-  row-gap: 0.15rem;
-}
-
-.toc-menu-list li {
-  margin: 0;
-  padding: 0.2rem 0;
-}
-
-.toc-menu-list a {
-  color: var(--site-primary-600);
-  text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  line-height: 1.35;
-}
-
-.toc-menu-list a:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.toc-menu-sub {
-  padding-left: 0.85rem;
-}
-
-.toc-menu-sub a {
-  font-weight: 400;
-  color: var(--site-gray-600);
-}
-
-.toc-menu-sub a:hover {
-  color: var(--site-primary-600);
-}
-
-/* Related / Edit inside Contents panel — no divider; Related uses the same horizontal grid as Sections */
-.toc-menu-meta .meta-sidebar-content {
-  font-size: inherit;
-  color: inherit;
-}
-
-.toc-menu-meta .meta-sidebar-section {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: none;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
-  column-gap: 1.25rem;
-  row-gap: 0.15rem;
-}
-
-.toc-menu-block + .toc-menu-meta .meta-sidebar-section {
-  margin-top: 1.25rem;
-}
-
-.toc-menu-meta .meta-sidebar-section .panel-label {
-  grid-column: 1 / -1;
-}
-
-.toc-menu-meta .related-link {
-  margin: 0;
-  padding: 0.2rem 0;
-}
-
-.toc-menu-meta .related-link a {
-  font-size: 0.875rem;
-  font-weight: 500;
-  line-height: 1.35;
-}
-
-.toc-menu-meta .meta-sidebar-edit {
-  margin-top: 1rem;
-  padding-top: 0;
-  border-top: none;
-}
-
-/* Shared subsection labels (Summary / Sections / Related) across Info + Contents panels */
-.panel-label {
-  margin: 0 0 0.375rem;
-  color: var(--site-gray-900);
-  font-size: 0.6875rem;
-  font-weight: 650;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.page-info-summary {
-  margin: 0;
-}
-
-.page-info-desc {
-  margin: 0;
-  line-height: 1.6;
-  color: var(--site-gray-600);
-}
-
-.page-info-section-map {
-  margin-top: 1rem;
-}
-
-.page-info-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
-  width: 100%;
-  background: transparent;
-}
-
-.page-info-row {
-  display: flex;
-  align-items: stretch;
-  gap: 0.75rem;
+.page-crumbs {
+  margin-top: .375rem;
   min-width: 0;
+  color: var(--site-gray-600);
+  font-size: .8125rem;
+  line-height: 1.4;
 }
 
-/* Mosaic tiles — transparent so they sit on the page background */
-.page-info-section {
-  box-sizing: border-box;
-  display: flex;
-  flex: 1 1 0;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.3rem;
-  min-width: 0;
-  padding: 0.15rem 0.15rem 0.25rem 0;
-  background: transparent;
-}
-
-.page-info-section-name {
-  display: block;
-  font-size: 0.8125rem;
-  font-weight: 400;
-  line-height: 1.25;
-  color: var(--site-primary-600);
-  text-decoration: none;
-}
-
-a.page-info-section-name:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.page-info-section .tag-list {
+.page-crumbs ol {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.3rem;
+  align-items: baseline;
+  gap: .2rem .45rem;
   margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-:is(html[class~="dark"]) .page-info-section {
-  background: transparent;
+.page-crumbs li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: .45rem;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
+
+.page-crumbs a { color: inherit; text-decoration: none; }
+.page-crumbs a:hover { color: var(--site-primary-600); text-decoration: underline; }
+.page-crumbs a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 
 /* Page header: date + reading time */
 .page-header {
@@ -611,21 +289,11 @@ a.page-info-section-name:hover {
   color: var(--site-gray-600);
 }
 
-/* Fixed tag-group chips (singular groups + legacy plural aliases) */
-.chip-category, .chip-categories { background: hsl(210 70% 92%); color: hsl(210 55% 32%); }
-.chip-topic,     .chip-topics     { background: hsl(265 70% 94%); color: hsl(265 45% 40%); }
-.chip-concept,   .chip-concepts   { background: hsl(35 80% 88%);  color: hsl(35 65% 28%); }
-.chip-entity,    .chip-entities   { background: hsl(340 75% 94%); color: hsl(340 55% 40%); }
-/* Author/frontmatter tags — same blue as category (taggly-era categories look) */
-.chip-user       { background: hsl(210 70% 92%); color: hsl(210 55% 32%); }
-.chip-custom     { background: hsl(150 55% 88%); color: hsl(150 50% 24%); }
+/* Per-facet chip colors are generated from config hues in theme.config.jsx.
+   .chip-custom is the fallback for values whose facet the config does not declare. */
+.chip-custom { background: hsl(150 55% 88%); color: hsl(150 50% 24%); }
 
-:is(html[class~="dark"]) .chip-category, :is(html[class~="dark"]) .chip-categories { background: hsl(210 35% 22%); color: hsl(210 70% 75%); }
-:is(html[class~="dark"]) .chip-topic,     :is(html[class~="dark"]) .chip-topics     { background: hsl(265 35% 24%); color: hsl(265 70% 80%); }
-:is(html[class~="dark"]) .chip-concept,   :is(html[class~="dark"]) .chip-concepts   { background: hsl(35 35% 20%);  color: hsl(35 70% 72%); }
-:is(html[class~="dark"]) .chip-entity,    :is(html[class~="dark"]) .chip-entities   { background: hsl(340 35% 22%); color: hsl(340 70% 80%); }
-:is(html[class~="dark"]) .chip-user       { background: hsl(210 35% 22%); color: hsl(210 70% 75%); }
-:is(html[class~="dark"]) .chip-custom     { background: hsl(150 30% 18%); color: hsl(150 55% 70%); }
+:is(html[class~="dark"]) .chip-custom { background: hsl(150 30% 18%); color: hsl(150 55% 70%); }
 
 /* Custom hover tooltip only — use data-tooltip so the browser does not also show native title */
 .chip[data-tooltip] {
@@ -782,18 +450,86 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 
 .filter-panel .panel-label { margin-bottom: 0.5rem; }
 
-/* Hide breadcrumb on root-level pages — no parent path, so no chevron separator svg */
-.nextra-breadcrumb:not(:has(svg)) { display: none; }
+/* Nextra's own breadcrumb is replaced by components/Breadcrumbs.jsx, which renders on
+   every page and roots the trail at Home. Scoped through .nextra-content to outrank
+   Nextra's own .nx-flex — its utility sheet loads after this one, so a bare
+   .nextra-breadcrumb rule ties on specificity and loses, leaving both trails stacked. */
+.nextra-content .nextra-breadcrumb { display: none; }
 
-/* Metadata sidebar — rendered via toc.extraContent, below the page TOC headings.
-   Spacing/divider above Related comes from Nextra's sticky extraContent wrapper
-   (nx-mt-8 nx-border-t nx-pt-8), not a custom rule on Related itself. */
-.meta-sidebar-content {
+/* Page contents — the right sidebar body (toc.title + toc.extraContent) and the same
+   body inline in the Contents panel. */
+.page-contents {
   font-size: 0.8125rem;
   color: var(--site-gray-600);
 }
 
-.related-link { padding: 0.125rem 0; }
+/* Block labels (Description / On This Page / Related), shared with the filter panel.
+   Declared block so the sidebar's <span> copies stack like the <p> copies elsewhere. */
+.panel-label {
+  display: block;
+  margin: 0 0 0.375rem;
+  color: var(--site-gray-900);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+/* Description: a <p> in the panel, a <span> inside Nextra's ToC title <p> in the sidebar */
+.page-contents-desc {
+  display: block;
+  margin: 0;
+  color: var(--site-gray-600);
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* Only the sidebar title slot puts these two adjacent, with no block wrapper between,
+   so the description's divider hangs off the heading that follows it. */
+.page-contents-desc + .page-contents-heading {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--site-gray-200);
+}
+
+/* One rhythm down the sidebar: 1.25rem between blocks, whoever renders them. Nextra's
+   own divider above Related is 2rem/2rem out of the box — bring it into line. */
+.nextra-toc .page-contents-block + .page-contents-block {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--site-gray-200);
+}
+
+.nextra-toc div.nx-sticky.nx-bottom-0 {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+}
+
+.nextra-toc p:has(.page-contents-heading) { margin-bottom: 0.375rem; }
+
+.page-contents-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.page-contents-list li { margin: 0; }
+
+.page-contents-list li,
+.related-link { padding: 0.25rem 0; }
+
+.page-contents-list a {
+  color: var(--site-primary-600);
+  text-decoration: none;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.page-contents-list a:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+.page-contents-sub { padding-left: 0.85rem; }
+
+.page-contents-sub a { font-weight: 400; color: var(--site-gray-600); }
+
+.page-contents-sub a:hover { color: var(--site-primary-600); }
 
 .related-link a {
   color: var(--site-primary-600);
@@ -803,29 +539,31 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 
 .related-link a:hover { text-decoration: underline; }
 
-.meta-sidebar-edit {
+.page-contents-edit {
   display: block;
-  margin-top: 1.25rem;
   color: var(--site-primary-600);
   text-decoration: none;
   font-weight: 500;
 }
 
-.meta-sidebar-edit:hover { text-decoration: underline; }
+.page-contents-edit:hover { text-decoration: underline; }
 
-/* Site footer: copyright · updated timestamp · credits */
 .site-footer {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   width: 100%;   /* fill Nextra's footer flex row so centering holds at all widths */
-  gap: 0.25rem 1.25rem;
+  gap: 0.375rem;
   font-size: 0.8125rem;
   color: var(--site-gray-500);
   text-align: center;
 }
 
-.site-footer-sep { opacity: 0.4; }
+.site-footer-icon {
+  margin: 0;
+  border-radius: 0;
+  opacity: 0.22;
+}
 
 .site-footer a {
   color: inherit;
@@ -835,3 +573,93 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 }
 
 .site-footer a:hover { color: var(--site-primary-600); }
+
+.site-footer-updated {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--site-gray-400);
+  opacity: 0.65;
+  letter-spacing: 0.02em;
+}
+
+
+/* Published feed layout and controls */
+html:has(.published-feed) {
+  --nextra-navbar-height: 3.25rem;
+}
+body:has(.published-feed) article h1 {
+  font-size: clamp(1.9rem, 3vw, 2.375rem);
+  line-height: 1.15;
+  letter-spacing: -.04em;
+}
+
+.feed-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .55rem;
+  margin-top: 1.5rem;
+  padding-bottom: .85rem;
+  border-bottom: 1px solid var(--site-gray-200);
+}
+.feed-controls :is(input, select, button) {
+  min-height: 2.125rem;
+  max-width: 100%;
+  padding: .35rem .65rem;
+  border: 1px solid var(--site-gray-200);
+  border-radius: .4rem;
+  background: var(--site-chrome-bg);
+  color: inherit;
+  font: inherit;
+  font-size: .875rem;
+}
+.feed-controls input {
+  flex: 1 1 12rem;
+  min-width: 0;
+  background: var(--site-gray-100);
+}
+.feed-controls :focus-visible {
+  outline: 2px solid var(--site-primary-600);
+  outline-offset: 2px;
+}
+.feed-count, .feed-empty {
+  color: var(--site-gray-600);
+  font-size: .875rem;
+}
+.feed-count { margin-inline-start: auto; }
+.feed-empty { margin-block: 1rem; }
+
+@media (min-width: 768px) {
+  body:has(.published-feed) .nextra-sidebar-container {
+    top: var(--nextra-navbar-height);
+  }
+  body:has(.published-feed) .nextra-toc:not(:has(a, button)) {
+    display: none;
+  }
+  article:has(.published-feed) {
+    justify-content: flex-start;
+  }
+  article:has(.published-feed) main {
+    max-width: 56rem;
+    padding-block: 2rem;
+  }
+}
+
+@media (768px <= width < 1280px) {
+  article:has(.published-feed) main {
+    padding-inline-end: clamp(1rem, 4vw, 3rem);
+  }
+}
+
+.browse-results { display: grid; margin-top: 1rem; }
+.browse-result { border-bottom: 1px solid var(--site-gray-200); padding: .85rem 0; }
+.browse-result > a { color: var(--site-primary-600); font-weight: 600; }
+.browse-result p { font-size: .9rem; color: var(--site-gray-600); margin: .3rem 0; }
+.browse-result mark {
+  background: var(--site-primary-100);
+  color: inherit;
+  border-radius: .125em;
+  font-weight: 650;
+}
+.browse-result .tag-list { margin-top: .5rem; }
+.tag-list a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }

@@ -1,0 +1,6 @@
+# Minimal mndsite.yaml — every other key falls back to its documented default.
+# Served from /assets/starter.yaml; copy it to your repo root and edit `title`.
+title: My Project
+repo_url: https://github.com/username/my-project
+content: ./docs
+output: ./dist

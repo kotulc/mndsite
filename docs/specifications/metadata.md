@@ -2,6 +2,8 @@
 title: Metadata Contract
 categories:
   - spec
+version: 0.2
+status: stable
 ---
 
 # Metadata Contract
@@ -12,6 +14,7 @@ mndsite does **not** generate semantic tags or embedding-based related links. En
 
 ```json
 {
+  "browse": "/browse",
   "pages": [
     {
       "url": "/configuration",
@@ -25,15 +28,15 @@ mndsite does **not** generate semantic tags or embedding-based related links. En
       "related": [
         { "name": "Getting Started", "url": "/getting-started" }
       ],
-      "tags": [
-        { "term": "yaml", "group": "user" },
-        { "term": "guide", "group": "category" }
-      ],
+      "source": "configuration.md",
+      "facets": {
+        "categories": ["guide"],
+        "tags": ["yaml", "markdown"]
+      },
       "sections": [
         {
           "name": "Fields",
           "level": 2,
-          "tags": [],
           "sections": []
         }
       ]
@@ -42,29 +45,31 @@ mndsite does **not** generate semantic tags or embedding-based related links. En
 }
 ```
 
-## Tags
+## Facets
 
-Fixed group vocabulary: **`category`**, **`topic`**, **`concept`**, **`entity`**, **`user`**.
+`facets` holds one entry per declared content dimension, keyed by source frontmatter field. There is no
+fixed vocabulary — `mndsite.yaml` `facets` decides which frontmatter fields are read and what
+each is called. Values keep their supplied shape: a list stays a list, a scalar stays a scalar.
 
-| Field | Meaning |
+| Rule | Behavior |
 |-------|---------|
-| `term` | Display string |
-| `group` | One of the fixed groups |
+| Undeclared frontmatter field | Ignored — never appears in `facets` |
+| Field absent from a page | Facet omitted for that page |
+| Sections | Carry no facet values (no local section tagging) |
 
-Tag sources at ingest:
+`source` is the ingested file's path relative to the content root, keeping its original
+extension (`index.md`, not the emitted `index.mdx`). It exists so "Edit this page" can point
+at the repo copy of that file, and is unused when `repo_url` is not set.
 
-- frontmatter `tags` → group `user`
-- frontmatter `categories` → group `category`
-- section `tags` → always `[]` (no local section tagging)
-
-Future upstream enrichment (Taggly) must arrive through frontmatter and be versioned before mndsite consumes additional groups or scores.
+Future upstream enrichment (Taggly) must arrive through frontmatter and be declared as a
+facet before mndsite renders it.
 
 Frontmatter:
 
 ```yaml
 title: My Page
 date: 2026-01-15
-desc: Optional summary for Page intelligence
+desc: Summary shown in Contents and feed previews
 reading_time: 4
 tags: [yaml, markdown]
 categories: [guide]
@@ -109,4 +114,6 @@ mndmap may fill missing `reading_time` upstream (words ÷ 200, minimum 1 minute)
 
 ## Sections
 
-`sections` mirror the heading tree extracted from page body text. Section records carry `name`, `level`, and empty `tags` arrays. PageInfo uses them for the Sections mosaic and in-page anchor links.
+`sections` mirror the heading tree extracted from page body text. Section records carry
+`name`, `level`, and nested `sections`. `PageContents` uses them for the **On This Page**
+list and in-page anchor links.

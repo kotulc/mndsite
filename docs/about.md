@@ -1,4 +1,21 @@
-# mndsite
+---
+title: About
+description: What mndsite is, how it fits the mndmap pipeline, and what it does not do
+categories:
+  - reference
+tags:
+  - overview
+  - pipeline
+related:
+  - title: Getting Started
+    url: /getting-started
+  - title: Content Pipeline
+    url: /features/content-pipeline
+version: 0.2
+status: stable
+---
+
+# About mndsite
 
 A portable static site renderer for publication-ready Markdown and MDX — drop it into any CI/CD pipeline as a build step.
 
@@ -13,6 +30,10 @@ Raw markdown directories also work when content is already publication-ready —
 
 The engine is packaged as a Docker image: mount your content and config, get a static site.
 
+
+## Publishing with Trendly
+
+Open the content repository in Trendly to preview its posts and choose which drafts to publish. Editors and agents can edit the same Markdown files. mndsite reads the saved files and publication settings during the next build. The [Updates feed](/updates) shows the published cards. On Updates, use **Subscribe via RSS** to open the feed or copy its address into Trendly's external subscriptions.
 
 ## Pipeline split
 
@@ -55,7 +76,8 @@ or browse the [Features](/features) section for the full capability overview.
 - **`_assets/` handoff** — static assets copied to `public/_assets/` with path rewriting
 - **Images** — legacy `images/` subtrees copied and path-rewritten; corrupt EXIF stripped
 - **Reading time** — displayed when supplied in frontmatter
-- **Tags and categories** — rendered from frontmatter as pill chips below each title
+- **Facets** — any declared frontmatter dimension rendered as colored chips and (future) sidebar filters
+- **Breadcrumbs and sidebar contents** — configurable via `display.crumbs` and `display.toc`
 - **Related links** — outbound links and frontmatter `related` entries in the ToC sidebar
 - **Nav ordering** — sibling order via `nav_order` from mndmap or YAML
 - **Custom components** — optional consumer React components synced each build
@@ -72,7 +94,7 @@ or browse the [Features](/features) section for the full capability overview.
 - YAML config + CLI wrapper
 - Docker image, GHCR publishing
 - GitHub Pages deployment
-- Metadata display from supplied frontmatter
+- Configurable `display`, `fields`, and `facets` in `mndsite.yaml`
 - mndmap destination fixture contract
 - Nav ordering via `nav_order`
 

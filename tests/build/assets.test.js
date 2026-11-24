@@ -6,20 +6,24 @@ const fs   = require('fs')
 const os   = require('os')
 const path = require('path')
 
-const { sync_assets } = require('../../scripts/ingest')
+const { sync_assets, set_target_root } = require('../../scripts/ingest')
 
 
-const ASSETS = path.join(__dirname, '..', '..', 'public', 'assets')
-
+// A temp root keeps the suite off the real public/assets, which the dev build owns.
 let src_dir
+let root_dir
+const assets = () => path.join(root_dir, 'public', 'assets')
 
 beforeEach(() => {
-  src_dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mndsite-assets-'))
+  src_dir  = fs.mkdtempSync(path.join(os.tmpdir(), 'mndsite-assets-'))
+  root_dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mndsite-root-'))
+  set_target_root(root_dir)
 })
 
 afterEach(() => {
+  set_target_root(null)
   fs.rmSync(src_dir, { recursive: true, force: true })
-  fs.rmSync(ASSETS, { recursive: true, force: true })
+  fs.rmSync(root_dir, { recursive: true, force: true })
 })
 
 
@@ -31,8 +35,8 @@ test('test_sync_copies_assets_recursively', () => {
 
   const copied = sync_assets(src_dir)
   expect(copied.sort()).toEqual(['data', 'graph.json'])
-  expect(fs.existsSync(path.join(ASSETS, 'graph.json'))).toBe(true)
-  expect(fs.existsSync(path.join(ASSETS, 'data', 'extra.csv'))).toBe(true)
+  expect(fs.existsSync(path.join(assets(), 'graph.json'))).toBe(true)
+  expect(fs.existsSync(path.join(assets(), 'data', 'extra.csv'))).toBe(true)
 })
 
 test('test_sync_cleans_stale_assets', () => {
@@ -44,12 +48,12 @@ test('test_sync_cleans_stale_assets', () => {
   fs.writeFileSync(path.join(src_dir, 'new.json'), '{}')
   sync_assets(src_dir)
 
-  expect(fs.existsSync(path.join(ASSETS, 'old.json'))).toBe(false)
-  expect(fs.existsSync(path.join(ASSETS, 'new.json'))).toBe(true)
+  expect(fs.existsSync(path.join(assets(), 'old.json'))).toBe(false)
+  expect(fs.existsSync(path.join(assets(), 'new.json'))).toBe(true)
 })
 
 test('test_sync_unset_config_removes_dir', () => {
   /** No assets config copies nothing and leaves no public/assets/ dir. */
   expect(sync_assets('')).toEqual([])
-  expect(fs.existsSync(ASSETS)).toBe(false)
+  expect(fs.existsSync(assets())).toBe(false)
 })

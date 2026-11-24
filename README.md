@@ -1,4 +1,4 @@
-# mndsite
+# MndSite
 
 A portable static site renderer for publication-ready Markdown and MDX — drop it into any CI/CD pipeline as a build step.
 
@@ -8,6 +8,8 @@ Point it at a directory of content with a YAML config, and it outputs a fully-bu
 ## Purpose
 
 `mndsite` is a Next.js + Nextra-based static site renderer designed to work at the end of a markdown publishing pipeline. In the typical workflow, **mndmap** organizes source markdown, enriches frontmatter, and emits a destination directory; `mndsite` mirrors that tree, builds navigation, and produces a `dist/` folder. Publishing is left to the caller.
+
+[Trendly](https://github.com/kotulc/trendly) opens the same repository to preview posts, manage draft publication, and read RSS subscriptions. Editors and agents work on the Markdown files. mndsite builds the public pages, expandable feed, and RSS from those files and `mndsite.yaml`.
 
 Raw markdown directories also work when content is already publication-ready — the same YAML config and CLI apply.
 
@@ -39,11 +41,14 @@ or browse [Features](docs/features/overview.md) for the full capability overview
 - **`_assets/` handoff** — static assets copied to `public/_assets/` with path rewriting
 - **Images** — legacy `images/` subtrees copied and path-rewritten; corrupt EXIF stripped
 - **Reading time** — displayed when supplied in frontmatter
-- **Tags and categories** — rendered from frontmatter as pill chips below each title
+- **Facets** — tags, categories, or any declared frontmatter dimension, rendered as colored chips
+- **Pages** — browse and filter published pages with shareable URLs
 - **Related links** — outbound links and frontmatter `related` entries in the ToC sidebar
 - **Nav ordering** — sibling order via `nav_order` from mndmap or YAML
 - **Custom components** — optional consumer React components synced each build
-- **Theme toggle** — light / dark / system toggle in the navbar
+- **Breadcrumbs** — trail above the title (`display.crumbs`)
+- **Right sidebar** description, sections, related, and edit link (`display.toc`)
+- **Theme toggle** — light / dark / system toggle in the navbar (`display.navbar`)
 - **GitHub header icon** — circular GitHub repo link, auto-shown from `repo_url`
 - **YAML config** — single file drives the entire build
 - **Docker** — packaged as a container for use in any CI/CD pipeline
@@ -95,45 +100,156 @@ and exits with the build's exit code.
 
 ## mndsite.yaml Reference
 
-Full schema with defaults:
+Only `title` is required. Every other key has a **named default** rather than a blank:
+`none` turns a feature off, `auto` derives a value, `default` keeps the built-in behavior.
+Writing `""` reads the same as the default, so nothing in the file ever needs to be empty.
+
+The repo's own [mndsite.yaml](mndsite.yaml) is the worked example — every key set to a real
+value. Full schema with defaults:
 
 ```yaml
 # Required
 title: My Site
 
 # Optional — site identity
-description: ""              # SEO meta description added to every page
-repo_url: ""                 # shows a GitHub icon in the navbar when set
-feed_url: ""                 # slug of the section used as the per-page feed
-footer: ""                   # custom footer credits; empty keeps the default
-
-# Optional — layout
-theme_toggle: navbar         # "navbar" or "sidebar"
-toc: true                    # show table of contents
-reading_time: true           # show reading time when present in frontmatter
+description: none            # SEO meta description added to every page
+repo_url: none               # shows a GitHub icon in the navbar when set
+feed_url: none               # section slug linked from the navbar feed icon
+expandable_feed: false       # show dated posts inline at the feed_url section
+rss: false                   # opt in with { site_url: https://example.org/site/ }
+footer: default              # custom footer credits; `default` keeps the built-in
 
 # Optional — theme presets (see docs/configuration.md for all values)
 theme:
   color: default             # accent palette: default, slate, blue, emerald, rose, ...
   typeset: sans              # body font stack: sans, serif, humanist, geometric, mono
-  navbar: ""                 # navbar background: "primary" (theme tint) or any CSS color
-  footer: ""                 # footer background: "primary" (theme tint) or any CSS color
+  navbar: none               # navbar background: primary, background, or any CSS color
+  footer: none               # footer background: primary, background, or any CSS color
 
 # Optional — navigation
 nav_order: {}                # map of section slug → ordered list of page slugs
 
+# Optional — frontmatter keys mndsite reads (frontmatter is inert unless named here).
+# `none` disables a mapping; pages then fall back to their slug for the title.
+frontmatter:
+  title: title
+  description: [description, desc]
+  date: date
+  reading_time: reading_time
+  related: related
+
+  # Content dimensions — labels on articles and in Search
+  facets:
+    categories: { key: categories, label: Category, color: blue }   # blue, violet, amber, rose, green, teal, or 0-359
+    tags:       { key: tags,       label: Tags,     color: violet }
+
+# Optional — rendered elements, in display order; omit one to turn it off
+display:
+  crumbs: true                           # breadcrumb trail above the title
+  header: [date, reading_time, facets]   # metadata under the title; accepts facet names
+  toc: [description, sections, related, edit]   # right sidebar (≥ xl)
+  navbar: [browse, theme, feed, github]          # navbar icons, left to right
+
+# Optional — "Edit this page" targets; used ONLY when repo_url is set
+edit:
+  branch: main                 # branch the link targets
+  path: auto                   # repo-relative content root; `auto` uses the content dir
+  url: auto                    # template override; `auto` derives one from the repo_url host
+
 # Optional — consumer extensions
-components: ""               # React components mirrored into components/custom/
-assets: ""                   # static files mirrored into public/assets/
+components: none             # React components mirrored into components/custom/
+assets: none                 # static files mirrored into public/assets/
 
 # Paths — resolved relative to this file
 content: ./docs              # source markdown directory
 output: ./dist               # output directory for built site
 ```
 
-### Removed configuration keys
+### Browsing pages by label
 
-`meta` and `flatten` are no longer supported. Move tagging, related-link scoring, and directory organization upstream to **mndmap** or into frontmatter. Config files that still contain these keys fail at load time with migration guidance.
+Type in the navbar search to open live results on the **Pages** view, or open it directly (grid icon, **Browse pages**) to see all published pages. Match titles, paths, descriptions, labels, and page text. Use the grouped filter to narrow results by label. Article chips link to the same results. Query text and filters are shareable, for example `/browse/?q=deployment` or `/browse/?facet=status&tag=stable`.
+
+Declare labels in `frontmatter.facets`. A facet can read several keys. The `tags` facet uses Trendly's spelling normalization. Other facets retain their authored labels. For example:
+
+```yaml
+frontmatter:
+  facets:
+    tags: { key: [tags, keywords], label: Tags }
+    topics: { key: topics, label: Topic, color: teal }
+    edition: { key: edition, label: Edition }
+```
+
+The sidebar follows the content directory. Existing configurations can remove `frontmatter.groups` and `display.sidebar`. An old `versioning.key` is accepted as an ordinary facet for authored values. Builds no longer infer editions from Git or package metadata or export tagged snapshots. To keep historical pages online, include them in the content tree.
+
+### Display and disabling features
+
+Every rendered element is listed in `display`, and omitting it is how you turn it off —
+there is no second switch. Zones and their elements:
+
+| Zone | Elements | Renders |
+|------|----------|---------|
+| `crumbs` | `true` / `false` | Breadcrumb trail above the title |
+| `header` | `date`, `reading_time`, `facets`, or any facet name | Date, reading time, facet chips |
+| `toc` | `description`, `sections`, `related`, `edit` | Right sidebar at ≥ xl |
+| `contents` | same as `toc` | Inline Contents panel below the title (defaults to `toc`) |
+| `navbar` | `browse`, `theme`, `feed`, `github` | Navbar icons |
+
+`display.header` also accepts facet names directly:
+
+```yaml
+display:
+  header: [date, status, tags]   # status chips between the date and tag chips
+```
+
+Frontmatter stays on the emitted page for Nextra; the reader sees values only through
+`frontmatter` mappings into `site-meta.json` and the display zones above.
+
+### Edit links
+
+`repo_url` is what enables them — with no `repo_url` there is no "Edit this page" link and
+the `edit` block is ignored entirely. When it is set, each page links to the repo copy of
+the file it was built from (`docs/features/overview.md`), using a template derived from the
+host: GitHub, GitLab, and Bitbucket are known, and any other host falls back to `repo_url`
+itself. `edit.path` defaults to the content directory relative to `mndsite.yaml`; set it
+explicitly when the config file is not at the repo root.
+
+### Config contract version
+
+The release version's `MAJOR.MINOR` **is** the config contract version — `0.3.x` releases
+all read the **0.3** contract. There is no `contract:` key in the file and no load-time
+rejection of retired keys; pre-1.0, an unknown top-level key is simply ignored.
+
+[CHANGELOG.md](CHANGELOG.md) is the migration record — it lists what each contract version
+added, changed, and removed, including the 0.1 → 0.2 key replacements.
+
+### RSS subscriptions
+
+Set the public site URL to enable a build-time RSS 2.0 feed.
+
+```yaml
+feed_url: updates
+rss:
+  site_url: https://example.org/my-site/
+```
+
+mndsite writes `rss.xml`, adds RSS autodiscovery to the site, and shows **Subscribe via RSS** beside the feed title. On card feeds, the sidebar lists the same dated posts as the cards, newest first within each folder. Undated articles remain available through Search and at their own URLs. The RSS icon in the navbar opens that page. For sites that publish RSS without a `feed_url`, the icon opens the XML feed directly. RSS contains dated posts beneath that section, newest first, with summaries and links to the full posts. Leave `feed_url` unset to include dated posts from across the site.
+
+List repository-relative Markdown paths under `drafts` in `mndsite.yaml` to keep those files out of generated pages, navigation, and feeds. Remove a path from the list to publish it again at the same URL. You can also keep draft files and draft-only assets outside the published content directory.
+
+```yaml
+drafts:
+  - docs/updates/working-note.md
+```
+
+Use the complete public site URL, including any GitHub Pages subpath. Keep the existing `BASE_PATH` setting for the build. Feed item IDs use the permanent post URL, so revisions at the same URL retain their IDs.
+
+### Expandable post feed
+
+Set `expandable_feed: true` and point `feed_url` at a section inside the content directory. The section page lists the same dated posts used for RSS when both are enabled. Each row expands to show the Markdown body, source cards, and a permanent link. Write a `description` in frontmatter or let mndsite generate an excerpt. The optional `sources` list supports an HTTP(S) `url` and optional `title`, `publisher`, `description`, `image_url`, `kind`, `audio_url`, `video_url`, and `placement`.
+
+The card shows a media-type icon based on the first source, the post title, a source label, and the publication date. Use `site` to set the source label. Expanded cards show values from `frontmatter.facets`. Give a YouTube or direct audio link the Markdown title `"embed"` for a click-to-load player inside the expanded post. Set `placement: inline` on its source entry to show the player only in the body.
+
+For a local preview, run `npm run watch -- --config <path>` and `npm run dev` in separate terminals. The watcher rebuilds the feed when the config or files in the content, assets, or components directories change.
 
 ### BASE_PATH environment variable
 

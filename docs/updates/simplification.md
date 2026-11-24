@@ -1,3 +1,8 @@
+---
+version: 0.2
+status: deprecated
+---
+
 # mndsite renderer simplification plan
 
 ## Status and authority
@@ -307,7 +312,7 @@ fixture contract.
 ### M3 — Adapt renderer metadata
 
 - derive internal renderer metadata from supplied frontmatter;
-- update PageHeader, TagList, PageInfo, MetaSidebar, feeds, and ToC integrations;
+- update PageHeader, TagList, PageContents, Breadcrumbs, and ContentsMenu integrations;
 - make optional fields safe;
 - remove assumptions that tags or related links always exist.
 

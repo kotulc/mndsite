@@ -5,7 +5,11 @@ import siteConfig from '../../site.config'
 jest.mock('../../site.config', () => ({ title: 'testsite', footer: '' }))
 
 
-afterEach(() => { siteConfig.footer = '' })
+afterEach(() => {
+  siteConfig.footer = ''
+  delete siteConfig.icon
+  jest.restoreAllMocks()
+})
 
 test('test_site_footer_default_credits', () => {
   /** Without a footer config value the default mndsite/Nextra credits render. */
@@ -22,8 +26,19 @@ test('test_site_footer_custom_text', () => {
   expect(screen.queryByText('Nextra')).not.toBeInTheDocument()
 })
 
-test('test_site_footer_copyright_title', () => {
-  /** The copyright line always includes the site title. */
-  render(<SiteFooter />)
-  expect(screen.getByText(new RegExp(`© \\d{4} testsite`))).toBeInTheDocument()
+test('the configured icon appears above the footer text and updated date', () => {
+  siteConfig.icon = '/assets/mnd.svg'
+  siteConfig.footer = 'Custom credits'
+  const buildTime = '2026-01-02T15:04:00.000Z'
+  jest.replaceProperty(process, 'env', {
+    ...process.env, NEXT_PUBLIC_BASE_PATH: '/project', NEXT_PUBLIC_BUILD_TIME: buildTime,
+  })
+
+  const { container } = render(<SiteFooter />)
+  const [icon, text, updated] = container.firstElementChild.children
+  expect(icon).toHaveAttribute('src', '/project/assets/mnd.svg')
+  expect(icon).toHaveAttribute('width', '44')
+  expect(text).toHaveTextContent(/^Custom credits$/)
+  expect(updated).toHaveAttribute('datetime', buildTime)
+  expect(updated).toHaveTextContent('Updated January 2, 2026')
 })
