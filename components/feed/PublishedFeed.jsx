@@ -1,4 +1,5 @@
-import { single, useListingSearch } from '../useListingSearch'
+import { single } from '../useListingSearch'
+import { useSiteSearch } from '../SiteSearch'
 import Feed, { entryMediaType } from './Feed'
 import { normalize_tags } from './card-meta.mjs'
 import entries from '../../public/post-feed.json'
@@ -26,7 +27,7 @@ const tags = [...new Set(posts.flatMap(post => post.tags))].sort()
 const mediaTypes = [...new Set(posts.map(post => post.media))].sort()
 
 export default function PublishedFeed() {
-  const { basePath, query, text, setText, search, update, changeText } = useListingSearch()
+  const { basePath, query, text, update } = useSiteSearch()
   const tag = normalize_tags([single(query.tag)])[0] || ''
   const media = single(query.media)
   const oldest = query.sort === 'oldest'
@@ -37,8 +38,6 @@ export default function PublishedFeed() {
 
   return <section className="published-feed" aria-label="Published posts">
     <div className="feed-controls" role="group" aria-label="Filter posts">
-      <input type="search" aria-label="Search posts" placeholder="Search posts" ref={search}
-        value={text} onChange={event => changeText(event.target.value)} />
       {(tags.length > 0 || tag) && <select aria-label="Filter by tag" value={tag}
         onChange={event => update({ tag: event.target.value })}>
         <option value="">All tags</option>
@@ -55,10 +54,8 @@ export default function PublishedFeed() {
         onChange={event => update({ sort: event.target.value })}>
         <option value="">Newest first</option><option value="oldest">Oldest first</option>
       </select>
-      {(text || tag || media || oldest) && <button type="button" onClick={() => {
-        setText('')
-        update({ q: '', tag: '', media: '', sort: '' })
-      }}>Clear</button>}
+      {(text || tag || media || oldest) && <button type="button" onClick={() =>
+        update({ q: '', tag: '', media: '', sort: '' })}>Clear</button>}
       <span className="feed-count" role="status">{visible.length} {visible.length === 1 ? 'post' : 'posts'}</span>
     </div>
     {!visible.length && <p className="feed-empty">{posts.length ? 'No posts match these filters.' : 'No published posts yet.'}</p>}

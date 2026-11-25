@@ -7,7 +7,7 @@
  * - Preserves frontmatter on output pages; renderer metadata mirrors to site-meta.json
  * - Copies _assets/ and images/ subtrees to public/
  * - Auto-generates _meta.json at each level; sort order: nav_order > alpha
- * - Generates a redirect index.mdx for any directory that supplies no landing page
+ * - Generates missing landing pages and can render the homepage as a page feed
  *
  * Does not extract keywords, run embeddings, flatten directories, or rewrite links.
  *
@@ -286,6 +286,7 @@ function ingest_dir(src_dir, dest_dir, rel, excluded) {
   const img_url = copy_images(src_dir, rel)
   const nav_nodes = []
   const pages = []
+  const reading_paths = new Map()
 
   for (const entry of fs.readdirSync(src_dir).sort()) {
     const src_entry = path.join(src_dir, entry)
@@ -298,6 +299,7 @@ function ingest_dir(src_dir, dest_dir, rel, excluded) {
       const sub = ingest_dir(src_entry, path.join(dest_dir, entry), sub_rel, excluded)
       pages.push(...sub.pages)
       nav_nodes.push({ slug: entry, name: sub.title, type: 'folder' })
+      reading_paths.set(entry, sub.reading_order)
       continue
     }
 
@@ -309,6 +311,7 @@ function ingest_dir(src_dir, dest_dir, rel, excluded) {
     const slug = (base === 'home' || base === 'index') ? 'index' : base
     const page = ingest_page(src_entry, dest_dir, rel, slug, base, img_url)
     pages.push(page)
+    reading_paths.set(slug, [page.url])
     nav_nodes.push({
       slug, name: page.name, type: 'page', url: page.url,
       published: page.published, facets: page.facets,
@@ -317,52 +320,30 @@ function ingest_dir(src_dir, dest_dir, rel, excluded) {
 
   const sorted    = sort_entries(nav_nodes, rel)
   const index = sorted.find(n => n.slug === 'index')
-  const title = index ? index.name : slug_to_title(path.basename(src_dir))
-  const feed = !!_config.feed_url && rel === norm_path(_config.feed_url)
-  let generated
-  if (feed && (_config.expandable_feed || _config.rss)) {
+  const title = index?.name || slug_to_title(path.basename(src_dir))
+  let generated_index
+  if (!rel && _config.homepage_feed) {
     const landing = path.join(dest_dir, 'index.mdx')
     if (!index) {
-      fs.writeFileSync(landing, `---\ntitle: ${JSON.stringify(title)}\n---\n\n# ${title}\n`)
-      sorted.unshift({ slug: 'index', name: title })
+      fs.writeFileSync(landing, '---\ntitle: Pages\n---\n\n# Pages\n')
+      generated_index = { display: 'hidden', theme: { toc: false, pagination: false } }
     }
-    if (_config.expandable_feed) {
-      const root = '../'.repeat(rel.split('/').length + 1)
-      fs.appendFileSync(landing, `\n\nimport PublishedFeed from '${root}components/feed/PublishedFeed'\n\n<PublishedFeed />\n`)
-    } else if (!index) {
-      const links = feed_entries(pages, rel).map(({ page }) =>
-        `- <Link href={${JSON.stringify(page.url)}}>{${JSON.stringify(page.name)}}</Link>`)
-      fs.appendFileSync(landing, "\nimport Link from 'next/link'\n\n" + links.join('\n') + '\n')
-    }
-  } else {
-    generated = auto_index(dest_dir, sorted, rel)
+    fs.appendFileSync(landing, "\n\nimport PageFeed from '../components/feed/PageFeed'\n\n<PageFeed />\n")
+  } else if (auto_index(dest_dir, sorted, rel)) {
+    generated_index = { display: 'hidden' }
   }
 
-  // A generated index only redirects — hide it so it does not duplicate its target's entry.
-  const section = norm_path(_config.feed_url || '')
-  const in_feed = _config.expandable_feed && (rel === section || rel.startsWith(section + '/'))
-  let meta_pairs = sorted.map(node => {
-    const feed_root = _config.expandable_feed && node.type === 'folder' &&
-      (rel ? rel + '/' + node.slug : node.slug) === section
-    return [node.slug, feed_root ? { title: node.name, theme: { pagination: false } } : node.name]
-  })
-  if (in_feed) {
-    // Group nested posts by their first path segment, preserving newest-first order.
-    const prefix = rel ? '/' + rel + '/' : '/'
-    const posts = feed_entries(pages, section)
-    const order = new Set(posts.map(({ page }) => page.url === '/' + rel
-      ? 'index' : page.url.slice(prefix.length).split('/')[0]))
-    const nodes = new Map(sorted.map(node => [node.slug, node]))
-    const visible = [...order].filter(slug => nodes.has(slug)).map(slug => [slug, nodes.get(slug).name])
-    const hidden = sorted.filter(node => !order.has(node.slug)).map(node => [node.slug, {
-      title: node.name, display: node.type === 'folder' ? 'children' : 'hidden',
-    }])
-    meta_pairs = [...visible, ...hidden]
-  }
-  if (generated) meta_pairs.unshift(['index', { display: 'hidden' }])
+  // Generated home and redirect pages stay out of the site tree.
+  const meta_pairs = sorted.map(node => [node.slug, node.name])
+  if (generated_index) meta_pairs.unshift(['index', generated_index])
   write_meta(path.join(dest_dir, '_meta.json'), meta_pairs)
 
-  return { pages, title }
+  // Visit the section landing page before its children, then follow the exported navigation order.
+  const reading_order = [
+    ...(index ? [index.url] : []),
+    ...Object.keys(Object.fromEntries(meta_pairs)).flatMap(slug => slug === 'index' ? [] : reading_paths.get(slug) || []),
+  ]
+  return { pages, title, reading_order }
 }
 
 
@@ -391,17 +372,53 @@ function sync_assets(assets_dir) {
   return fs.readdirSync(dest)
 }
 
-async function write_expandable_feed(config, pages) {
-  const data_path = path.join(TARGET.public, 'post-feed.json')
-  if (!config.expandable_feed) {
-    fs.rmSync(data_path, { force: true })
-    return
+function add_meta_entry(directory, slug, value) {
+  const file = path.join(directory, '_meta.json')
+  const entries = fs.existsSync(file) ? Object.entries(JSON.parse(fs.readFileSync(file, 'utf8'))) : []
+  write_meta(file, [...entries, [slug, value]])
+}
+
+function write_feed_page(config, pages, entries) {
+  const feed = config.feed
+  if (!feed?.path || (!feed.cards && !config.rss) || (feed.path === '/' && config.homepage_feed)) return
+  const authored = pages.some(page => page.url === feed.path)
+  if (authored && !feed.cards) return
+
+  const parts = feed.path.split('/').filter(Boolean)
+  const target = path.join(TARGET.pages, ...parts)
+  const index = fs.existsSync(target) && !fs.existsSync(target + '.mdx')
+  const landing = index ? path.join(target, 'index.mdx') : target + '.mdx'
+  if (!index && !authored) {
+    let parent = TARGET.pages
+    for (const part of parts.slice(0, -1)) {
+      const child = path.join(parent, part)
+      if (!fs.existsSync(child)) {
+        if (!fs.existsSync(child + '.mdx')) add_meta_entry(parent, part, { display: 'children' })
+        fs.mkdirSync(child)
+      }
+      parent = child
+    }
+    add_meta_entry(parent, parts.at(-1), { display: 'hidden' })
   }
-  const section = norm_path(config.feed_url)
-  const directory = path.join(TARGET.pages, section)
-  if (!fs.existsSync(path.join(directory, 'index.mdx'))) throw new Error(`Feed section "${section}" was not found in the content tree`)
+
+  if (!authored) {
+    const title = feed.cards ? 'Feed' : slug_to_title(parts.at(-1) || 'Feed')
+    fs.writeFileSync(landing, `---\ntitle: ${JSON.stringify(title)}\npagination: false\n---\n\n# ${title}\n`)
+  }
+  if (feed.cards) {
+    const root = '../'.repeat(parts.length + Number(index))
+    fs.appendFileSync(landing, `\n\nimport PublishedFeed from '${root}components/feed/PublishedFeed'\n\n<PublishedFeed />\n`)
+  } else {
+    const links = entries.map(({ page }) =>
+      `- <Link href={${JSON.stringify(page.url)}}>{${JSON.stringify(page.name)}}</Link>`)
+    fs.appendFileSync(landing, "\nimport Link from 'next/link'\n\n" + links.join('\n') + '\n')
+  }
+}
+
+async function write_expandable_feed(config, entries) {
+  if (!config.feed?.cards) return
   const { card_meta } = await import('../components/feed/card-meta.mjs')
-  const entries = feed_entries(pages, section).map(({ page }) => {
+  const cards = entries.map(({ page }) => {
     const raw = fs.readFileSync(path.join(config.content, page.source), 'utf8')
     const frontmatter = parse_fm(raw)
     const sources = Array.isArray(frontmatter.sources) ? frontmatter.sources.filter(source => typeof source?.url === 'string')
@@ -413,21 +430,33 @@ async function write_expandable_feed(config, pages) {
       href: page.url, sources, ...card_meta(frontmatter, config.frontmatter?.facets),
     }
   })
-  fs.writeFileSync(data_path, JSON.stringify(entries) + '\n')
+  fs.writeFileSync(path.join(TARGET.public, 'post-feed.json'), JSON.stringify(cards) + '\n')
 
 }
 
-function write_browse_page() {
+function remove_generated_browse_pages() {
+  for (const slug of ['browse', 'browse-pages']) {
+    const file = path.join(TARGET.pages, slug + '.mdx')
+    if (fs.existsSync(file)) fs.rmSync(file)
+  }
+  const meta = path.join(TARGET.pages, '_meta.json')
+  if (!fs.existsSync(meta)) return
+  write_meta(meta, Object.entries(JSON.parse(fs.readFileSync(meta, 'utf8')))
+    .filter(([slug]) => slug !== 'browse' && slug !== 'browse-pages'))
+}
+
+function write_browse_page(config) {
+  if (config.homepage_feed) {
+    remove_generated_browse_pages()
+    return '/'
+  }
   let slug = 'browse'
   while (fs.existsSync(path.join(TARGET.pages, slug)) || fs.existsSync(path.join(TARGET.pages, slug + '.mdx'))) {
     slug += '-pages'
   }
   fs.writeFileSync(path.join(TARGET.pages, slug + '.mdx'),
     "---\ntitle: Pages\n---\n\nimport Browse from '../components/Browse'\n\n# Pages\n\n<Browse />\n")
-  const nav = path.join(TARGET.pages, '_meta.json')
-  const entries = Object.entries(JSON.parse(fs.readFileSync(nav, 'utf8')))
-  entries.push([slug, { display: 'hidden', theme: { toc: false, pagination: false } }])
-  write_meta(nav, entries)
+  add_meta_entry(TARGET.pages, slug, { display: 'hidden', theme: { toc: false, pagination: false } })
   return '/' + slug
 }
 
@@ -493,11 +522,14 @@ async function generate(config) {
 
   const workspace = config.dir || ROOT
   const excluded = new Set(['drafts', ...(config.drafts || [])].map(file => path.resolve(workspace, file)))
-  const { pages } = ingest_dir(src, TARGET.pages, '', excluded)
-  const browse = write_browse_page()
+  const { pages, reading_order } = ingest_dir(src, TARGET.pages, '', excluded)
+  const entries = feed_entries(pages, config.feed)
+  write_feed_page(config, pages, entries)
+  const browse = write_browse_page(config)
   pages.sort((a, b) => a.url.localeCompare(b.url))
   fs.mkdirSync(TARGET.public, { recursive: true })
-  fs.writeFileSync(TARGET.meta, JSON.stringify({ browse, pages }, null, 2) + '\n')
+  const metadata = { browse, pages, ...(config.homepage_feed && { reading_order }) }
+  fs.writeFileSync(TARGET.meta, JSON.stringify(metadata, null, 2) + '\n')
   const search = Object.fromEntries(pages.map(page => [
     page.url,
     plain_text(extract_content(fs.readFileSync(path.join(src, page.source), 'utf8'))
@@ -505,8 +537,8 @@ async function generate(config) {
       .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')),
   ]))
   fs.writeFileSync(path.join(TARGET.public, 'search-index.json'), JSON.stringify(search) + '\n')
-  await write_expandable_feed(config, pages)
-  write_rss(TARGET.public, pages, config)
+  await write_expandable_feed(config, entries)
+  write_rss(TARGET.public, entries, config)
   console.log(`  Wrote site metadata (${pages.length} pages) to public/site-meta.json`)
 
   for (const name of ['_app.jsx', '_document.jsx']) {

@@ -92,7 +92,7 @@ node scripts/cli.js build --config mndsite.yaml
 
 6. **Preserves frontmatter** — the supplied block is kept verbatim on the output page, so Nextra and theme components can read unknown fields; renderer metadata is mirrored into `site-meta.json`.
 
-7. **Generates missing landing pages** — a directory with no `index.md` gets a redirect `index.mdx` to its first sorted page, so `/`, `/features/`, and every other directory route resolves. Authors never have to write one.
+7. **Generates missing landing pages** — a directory with no `index.md` typically gets a redirect `index.mdx` to its first sorted page. With `homepage_feed: true`, the root route shows page cards. Authors can also provide an introduction in a root index.
 
 8. **Generates `_meta.json`** — navigation labels and sibling order at every directory level:
    - `nav_order` in `mndsite.yaml` pins listed slugs first in declared order

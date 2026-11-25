@@ -40,6 +40,7 @@ const DEFAULTS = {
   feed_url:       'none',
   rss:            false,
   expandable_feed: false,
+  homepage_feed:  false,
   footer:         'default',
   theme:          { color: 'default', typeset: 'sans', navbar: 'none', footer: 'none' },
   display: {
@@ -87,6 +88,34 @@ function resolve_rss(raw) {
   } catch {
     throw new Error("mndsite.yaml: 'rss.site_url' must be the absolute public HTTP(S) site URL")
   }
+}
+
+function resolve_feed(raw, section, expandable) {
+  if (raw == null) {
+    if (!section) return null
+    const directory = section.replace(/^\/+|\/+$/g, '')
+    if (directory && !/^[\w-]+(?:\/[\w-]+)*$/.test(directory)) {
+      throw new Error("mndsite.yaml: 'feed_url' must be a site section")
+    }
+    return { path: '/' + directory, include: [directory ? directory + '/' : './'], cards: expandable }
+  }
+  if (typeof raw !== 'object' || Array.isArray(raw) || !Array.isArray(raw.include)) {
+    throw new Error("mndsite.yaml: 'feed.include' must be a list of content-relative paths")
+  }
+  const route = typeof raw.path === 'string' ? raw.path.trim().replace(/^\/+|\/+$/g, '') : ''
+  if (raw.path != null && (!route || !/^[\w-]+(?:\/[\w-]+)*$/.test(route))) {
+    throw new Error("mndsite.yaml: 'feed.path' must be a site path such as /feed/")
+  }
+  const include = raw.include.map(value => {
+    const entry = typeof value === 'string' ? value.trim() : ''
+    if (entry === '.' || entry === './') return './'
+    const relative = entry.replace(/^\.\//, '').replace(/\/$/, '')
+    if (/[\\:\0]/.test(relative) || relative.split('/').some(part => !part || part === '.' || part === '..')) {
+      throw new Error("mndsite.yaml: 'feed.include' must contain paths relative to content")
+    }
+    return entry.endsWith('/') || !/\.mdx?$/i.test(relative) ? relative + '/' : relative
+  })
+  return { path: route ? '/' + route : '', include: [...new Set(include)], cards: !!route }
 }
 
 
@@ -280,11 +309,15 @@ function load_config(yaml_path) {
     file.split('/').some(part => !part || part === '.' || part === '..') || !/\.mdx?$/i.test(file))) {
     throw new Error("mndsite.yaml: 'drafts' must be a list of repository-relative Markdown paths")
   }
-  if (cfg.expandable_feed !== true && cfg.expandable_feed !== false) {
+  if (raw.feed == null && cfg.expandable_feed !== true && cfg.expandable_feed !== false) {
     throw new Error("mndsite.yaml: 'expandable_feed' must be true or false")
   }
-  if (cfg.expandable_feed && !/^\/?[\w-]+(?:\/[\w-]+)*\/?$/.test(cfg.feed_url)) {
+  if (raw.feed == null && cfg.expandable_feed && !/^\/?[\w-]+(?:\/[\w-]+)*\/?$/.test(cfg.feed_url)) {
     throw new Error("mndsite.yaml: 'expandable_feed' requires a 'feed_url' section")
+  }
+  cfg.feed = resolve_feed(raw.feed, cfg.feed_url, cfg.expandable_feed)
+  if (cfg.homepage_feed !== true && cfg.homepage_feed !== false) {
+    throw new Error("mndsite.yaml: 'homepage_feed' must be true or false")
   }
 
   const theme = { ...DEFAULTS.theme, ...(raw.theme || {}) }
@@ -320,7 +353,7 @@ function load_config(yaml_path) {
 function write_site_config(config, dest_dir) {
   const dir  = dest_dir || path.join(__dirname, '..')
   const keys = [
-    'title', 'icon', 'repo_url', 'feed_url', 'rss', 'description', 'footer',
+    'title', 'icon', 'repo_url', 'feed', 'homepage_feed', 'rss', 'description', 'footer',
     'theme', 'nav_order', 'frontmatter',
     'display', 'edit',
   ]

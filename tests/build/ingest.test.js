@@ -121,19 +121,38 @@ describe('pages output ordering', () => {
     expect(keys.slice(0, expected.length)).toEqual(expected)
   })
 
-  test('feed navigation lists the same posts in the same order as the cards', () => {
+  test('the feed selection leaves the content tree in navigation order', () => {
     const meta = JSON.parse(fs.readFileSync(path.join(pages_dir(), 'updates', '_meta.json'), 'utf8'))
     const cards = JSON.parse(fs.readFileSync(path.join(root, 'public', 'post-feed.json'), 'utf8'))
-    expect(Object.entries(meta).filter(([, value]) => !value.display).map(([slug]) => '/updates/' + slug))
-      .toEqual(cards.map(card => card.href))
+    expect(Object.keys(meta).filter(slug => slug !== 'index'))
+      .toEqual(['publishing-with-trendly', 'simplification', 'welcome'])
+    expect(cards.map(card => card.href)).toEqual(['/updates/publishing-with-trendly', '/updates/welcome'])
     const nav = JSON.parse(fs.readFileSync(path.join(pages_dir(), '_meta.json'), 'utf8'))
-    expect(nav.updates.theme.pagination).toBe(false)
+    expect(nav.updates).toBe('Updates')
   })
 
-  test('root redirect is hidden and its About target is listed once', () => {
+  test('the homepage feed stays out of the site tree and About is listed once', () => {
     const meta = JSON.parse(fs.readFileSync(path.join(pages_dir(), '_meta.json'), 'utf8'))
-    expect(meta.index).toEqual({ display: 'hidden' })
+    expect(fs.readFileSync(path.join(pages_dir(), 'index.mdx'), 'utf8')).toContain('<PageFeed />')
+    expect(meta.index).toEqual({ display: 'hidden', theme: { toc: false, pagination: false } })
     expect(Object.values(meta).filter(title => title === 'About')).toHaveLength(1)
+    expect(fs.readFileSync(path.join(pages_dir(), 'features', 'index.mdx'), 'utf8')).toContain('<AutoRedirect')
+  })
+
+  test('homepage_feed uses the root Pages index as the browse route', () => {
+    const site = JSON.parse(fs.readFileSync(path.join(root, 'public/site-meta.json'), 'utf8'))
+    expect(site.browse).toBe('/')
+    expect(fs.existsSync(path.join(pages_dir(), 'browse.mdx'))).toBe(false)
+    expect(fs.readFileSync(path.join(pages_dir(), 'index.mdx'), 'utf8')).not.toContain('<AutoRedirect')
+  })
+
+  test('homepage reading order follows root, nested, and Updates navigation', () => {
+    const { reading_order } = JSON.parse(fs.readFileSync(path.join(root, 'public', 'site-meta.json'), 'utf8'))
+    expect(reading_order.slice(0, 4)).toEqual(['/about', '/getting-started', '/configuration', '/archive'])
+    expect(reading_order.filter(url => url.startsWith('/features/')).slice(0, 3))
+      .toEqual(['/features/overview', '/features/components', '/features/content-pipeline'])
+    expect(reading_order.filter(url => url.startsWith('/updates/')))
+      .toEqual(['/updates/publishing-with-trendly', '/updates/simplification', '/updates/welcome'])
   })
 })
 

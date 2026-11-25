@@ -42,6 +42,47 @@ describe('static RSS feed', () => {
     expect(index['/browse']).toContain('Case-sensitive identifier')
   })
 
+  test('the homepage feed preserves an authored introduction and stays separate from RSS', async () => {
+    post('posts/index.md', 'Site introduction')
+    post('posts/updates/index.md', 'Updates introduction')
+    post('posts/updates/new.md', 'New post', '2026-10-10')
+    post('posts/guide.md', 'Dated guide', '2026-10-12')
+    const config = configure('homepage_feed: true\nexpandable_feed: true\nrss:\n  site_url: https://example.org/project/\n')
+    await run(config)
+
+    const home = fs.readFileSync(path.join(root, 'pages/index.mdx'), 'utf8')
+    expect(home.indexOf('First paragraph.')).toBeLessThan(home.indexOf('<PageFeed />'))
+    expect(home).toContain('<PageFeed />')
+    expect(home).not.toContain('<AutoRedirect')
+    const { reading_order } = JSON.parse(fs.readFileSync(path.join(root, 'public/site-meta.json'), 'utf8'))
+    expect(reading_order).toEqual(['/', '/guide', '/updates', '/updates/new'])
+    const rss = new DOMParser().parseFromString(fs.readFileSync(path.join(root, 'public/rss.xml'), 'utf8'), 'text/xml')
+    expect([...rss.querySelectorAll('item > title')].map(title => title.textContent)).toEqual(['New post'])
+  })
+
+  test('a separate feed route selects directories and exact files for both outputs', async () => {
+    post('posts/updates/new.md', 'Selected update', '2026-10-10')
+    post('posts/updates/notes.md', 'Undated note')
+    post('posts/updates/draft.md', 'Draft update', '2026-10-14')
+    post('posts/guide.md', 'Selected guide', '2026-10-12')
+    post('posts/reference.md', 'Reference', '2026-10-13')
+    fs.mkdirSync(path.join(root, 'posts/updates-archive'))
+    post('posts/updates-archive/old.md', 'Archive', '2026-10-11')
+    await run(configure('feed:\n  path: /news/feed/\n  include: [updates/, guide.md]\n' +
+      'drafts: [posts/updates/draft.md]\nrss:\n  site_url: https://example.org/project/\n'))
+
+    const read = file => fs.readFileSync(path.join(root, file), 'utf8')
+    expect(read('pages/news/feed.mdx')).toContain("import PublishedFeed from '../../components/feed/PublishedFeed'")
+    expect(JSON.parse(read('pages/_meta.json')).news).toEqual({ display: 'children' })
+    expect(JSON.parse(read('pages/news/_meta.json')).feed).toEqual({ display: 'hidden' })
+    expect(JSON.parse(read('pages/updates/_meta.json')).notes).toBe('Undated note')
+    const cards = JSON.parse(read('public/post-feed.json'))
+    expect(cards.map(card => card.href)).toEqual(['/guide', '/updates/new'])
+    const rss = new DOMParser().parseFromString(read('public/rss.xml'), 'text/xml')
+    expect(rss.querySelector('channel > link').textContent).toBe('https://example.org/project/news/feed/')
+    expect([...rss.querySelectorAll('item > title')].map(title => title.textContent)).toEqual(cards.map(card => card.title))
+  })
+
   test('exports ordered published summaries and permanent URLs, then removes disabled output', async () => {
     post('posts/updates/new.md', 'New & notable', '2026-10-10', 'A <B> summary')
     post('posts/updates/old.md', 'Old note', '2026-09-08')
@@ -123,7 +164,7 @@ describe('static RSS feed', () => {
     const output = path.join(root, 'pages', 'updates', 'index.mdx')
     await run(config)
     expect(fs.readFileSync(path.join(root, 'pages', 'index.mdx'), 'utf8')).toContain('to="/updates/"')
-    expect(fs.readFileSync(output, 'utf8')).toContain('# Updates')
+    expect(fs.readFileSync(output, 'utf8')).toContain('# Feed')
     expect(fs.readFileSync(output, 'utf8')).toContain('<PublishedFeed />')
     expect(JSON.parse(fs.readFileSync(path.join(root, 'public', 'post-feed.json'), 'utf8')))
       .toEqual([expect.objectContaining({

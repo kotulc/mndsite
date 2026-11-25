@@ -14,7 +14,7 @@ const RSS_ICON = (
 )
 
 
-const section = siteConfig.feed_url && '/' + siteConfig.feed_url.replace(/^\/+|\/+$/g, '')
+const section = siteConfig.feed?.path
 const rssUrl = siteConfig.rss && new URL('rss.xml', siteConfig.rss.site_url).href
 
 export default function FeedLink() {

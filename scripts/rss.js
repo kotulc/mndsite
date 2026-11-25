@@ -21,21 +21,22 @@ function published_date(value) {
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value ? date : null
 }
 
-function feed_entries(pages, section) {
-  const root = '/' + (section || '').replace(/^\/+|\/+$/g, '')
+function feed_entries(pages, feed) {
+  const include = feed?.include || ['./']
   return pages.flatMap(page => {
     const date = published_date(page.published)
-    if (!date || page.url === root || !page.url.startsWith(root === '/' ? root : root + '/')) return []
+    if (!date || page.url === '/' || page.url === feed?.path) return []
+    if (!include.some(entry => entry === './' ||
+      (entry.endsWith('/') ? page.source.startsWith(entry) : page.source === entry))) return []
     return [{ page, date }]
   }).sort((a, b) => b.date - a.date || a.page.url.localeCompare(b.page.url))
 }
 
-function render_rss(pages, config) {
+function render_rss(entries, config) {
   const base = config.rss.site_url
-  const section = (config.feed_url || '').replace(/^\/+|\/+$/g, '')
-  const channel_url = post_url(section, base)
+  const channel_url = post_url(config.feed?.path || '/', base)
   const self = new URL('rss.xml', base).href
-  const items = feed_entries(pages, section).map(({ page, date }) => {
+  const items = entries.map(({ page, date }) => {
     const link = xml(post_url(page.url, base))
     return [
       '    <item>',
@@ -62,10 +63,10 @@ function render_rss(pages, config) {
   ].join('\n')
 }
 
-function write_rss(public_dir, pages, config) {
+function write_rss(public_dir, entries, config) {
   const target = path.join(public_dir, 'rss.xml')
   if (config.rss) {
-    fs.writeFileSync(target, render_rss(pages, config))
+    fs.writeFileSync(target, render_rss(entries, config))
     console.log('  Wrote RSS feed to public/rss.xml')
   } else if (fs.existsSync(target) && fs.readFileSync(target, 'utf8').startsWith(HEADER)) {
     fs.unlinkSync(target)

@@ -9,6 +9,6 @@ tags: [publishing, rss]
 
 Open the site repository in Trendly and edit a Markdown post in your editor or agent workspace. Give the post a date and a description, then check its card in **Site feed**. Save your publication choices and commit the content and configuration to the branch your publishing workflow builds.
 
-During the build, mndsite uses the same configuration to generate the public post, its entry on the Updates page, and its RSS item. To follow future updates, open the feed using the RSS icon in the navbar and copy the **Subscribe via RSS** link into **Subscriptions** in Trendly or another feed reader.
+During the build, mndsite uses the same configuration to generate the public post, its entry on the Feed page, and its RSS item. To follow future updates, open Feed using the RSS icon in the navbar and copy the **Subscribe via RSS** link into **Subscriptions** in Trendly or another feed reader.
 
-See [Configuration](/configuration) for the feed section, deployed URL, and draft settings.
+See [Configuration](/configuration) for the feed selection, deployed URL, and draft settings.

@@ -80,6 +80,65 @@ html[data-chrome-footer="background"] footer {
   display: none;
 }
 
+.nextra-sidebar-container > .nx-grow {
+  padding-inline: .9rem;
+}
+
+.nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) {
+  gap: .2rem;
+}
+
+.nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) li > :is(a, button) {
+  border-radius: .36rem;
+  padding: .57rem .65rem;
+  color: var(--site-gray-900);
+  font-weight: 540;
+}
+
+.nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) li > :is(a, button):hover {
+  background: var(--site-gray-100);
+}
+
+.nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) li > :is(a, button):focus-visible {
+  outline: 2px solid var(--site-gray-500);
+  outline-offset: -2px;
+}
+
+.nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) li.active > :is(a, button) {
+  background: var(--site-gray-100);
+  color: var(--site-gray-900);
+  font-weight: 650;
+}
+
+.nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) ul {
+  gap: .15rem;
+  margin: .1rem 0 .35rem;
+  margin-inline-start: 1.15rem;
+  padding-inline: .5rem 0;
+  border-inline-start: 1px solid var(--site-gray-200);
+}
+
+.nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) ul::before {
+  content: none;
+}
+
+.nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) ul li > :is(a, button) {
+  padding: .35rem .48rem;
+  color: var(--site-gray-600);
+  font-size: .8125rem;
+}
+
+.nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) li:has(> :is(a, button) + div) > :is(a, button) {
+  font-weight: 650;
+}
+
+.nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) li:has(> :is(a, button) + div) > :is(a, button) > svg {
+  width: .95rem;
+  height: .95rem;
+  color: var(--site-gray-600);
+  flex: none;
+}
+
 .nextra-search input {
   display: block;
   width: 100%;
@@ -93,6 +152,10 @@ html[data-chrome-footer="background"] footer {
 
 .nextra-search input:focus-visible {
   outline: 2px solid var(--site-primary-600);
+}
+
+html:has(.published-feed) {
+  --nextra-navbar-height: 3.25rem;
 }
 
 @media (width < 768px) {
@@ -130,6 +193,19 @@ html[data-chrome-footer="background"] footer {
 
   .nextra-sidebar-container.md\:nx-w-64 {
     width: var(--sidebar-width);
+  }
+
+  .nextra-sidebar-container.md\:nx-sticky::after {
+    content: "";
+    position: absolute;
+    inset-block: 1.4rem 1rem;
+    inset-inline-end: 0;
+    border-inline-end: 1px solid var(--site-gray-200);
+    pointer-events: none;
+  }
+
+  .nextra-sidebar-container > .nx-grow {
+    padding-block: 1.4rem 1rem;
   }
 
   .nextra-nav-container nav {
@@ -583,11 +659,8 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 }
 
 
-/* Published feed layout and controls */
-html:has(.published-feed) {
-  --nextra-navbar-height: 3.25rem;
-}
-body:has(.published-feed) article h1 {
+/* Feed layout and controls */
+article:has(:is(.published-feed, .page-feed)) h1 {
   font-size: clamp(1.9rem, 3vw, 2.375rem);
   line-height: 1.15;
   letter-spacing: -.04em;
@@ -633,20 +706,20 @@ body:has(.published-feed) article h1 {
   body:has(.published-feed) .nextra-sidebar-container {
     top: var(--nextra-navbar-height);
   }
-  body:has(.published-feed) .nextra-toc:not(:has(a, button)) {
+  body:has(:is(.published-feed, .page-feed)) .nextra-toc:not(:has(a, button)) {
     display: none;
   }
-  article:has(.published-feed) {
+  article:has(:is(.published-feed, .page-feed)) {
     justify-content: flex-start;
   }
-  article:has(.published-feed) main {
+  article:has(:is(.published-feed, .page-feed)) main {
     max-width: 56rem;
     padding-block: 2rem;
   }
 }
 
 @media (768px <= width < 1280px) {
-  article:has(.published-feed) main {
+  article:has(:is(.published-feed, .page-feed)) main {
     padding-inline-end: clamp(1rem, 4vw, 3rem);
   }
 }

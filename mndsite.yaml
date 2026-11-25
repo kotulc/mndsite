@@ -7,8 +7,10 @@ title: MndSite
 icon: /assets/mnd.svg
 description: Static documentation sites from plain markdown
 repo_url: https://github.com/kotulc/mndsite
-feed_url: updates
-expandable_feed: true
+feed:
+  path: /updates/
+  include: [updates/]
+homepage_feed: true
 rss:
   site_url: https://kotulc.github.io/mndsite/
 drafts:
@@ -60,7 +62,7 @@ display:
   crumbs: true
   header: [date, reading_time, facets]
   toc: [description, sections, related, edit]
-  navbar: [browse, feed, github, theme]
+  navbar: [feed, github, theme]
 
 # "Edit this page" targets. Used only when repo_url is set.
 edit:

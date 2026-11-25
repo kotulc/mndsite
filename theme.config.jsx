@@ -8,7 +8,7 @@ import SiteFooter from './components/SiteFooter'
 import GitHubLink from './components/GitHubLink'
 import FeedLink, { FeedSubscription } from './components/FeedLink'
 import ThemeToggle from './components/ThemeToggle'
-import NavbarSearch from './components/BrowseSearch'
+import NavbarSearch from './components/SiteSearch'
 import { group_chips, header_field_keys } from './components/facets'
 import { PageHeading } from './components/PageChrome'
 import siteConfig from './site.config'
@@ -136,9 +136,10 @@ export default {
   },
   footer: { text: <SiteFooter /> },
   useNextSeoProps() {
+    const { pathname } = useRouter()
     const meta = use_page_meta()
     return {
-      titleTemplate: `%s – ${siteConfig.title}`,
+      titleTemplate: pathname === '/' && siteConfig.homepage_feed ? '%s' : `%s – ${siteConfig.title}`,
       description: meta.desc || siteConfig.description || undefined,
     }
   },

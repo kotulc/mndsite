@@ -5,7 +5,7 @@ import '../components/feed/feed.css'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { browseFilter } from '../components/facets'
-import { BrowseSearchProvider } from '../components/BrowseSearch'
+import { SiteSearchProvider } from '../components/SiteSearch'
 import siteMeta from '../public/site-meta.json'
 import { useEffect } from 'react'
 import siteConfig from '../site.config'
@@ -33,9 +33,9 @@ export default function App({ Component, pageProps }) {
             href={new URL('rss.xml', siteConfig.rss.site_url).href} />
         </Head>
       )}
-      <BrowseSearchProvider>
+      <SiteSearchProvider>
         <Component {...pageProps} />
-      </BrowseSearchProvider>
+      </SiteSearchProvider>
     </>
   )
 }

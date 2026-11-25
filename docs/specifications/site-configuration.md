@@ -19,8 +19,8 @@ At build time the CLI generates `site.config.js` from the YAML; both the ingest 
 | `title` | string | — | Site name shown in browser tab and navbar logo |
 | `description` | string | `''` | SEO meta description; per-page frontmatter overrides it |
 | `repo_url` | string | `''` | GitHub repo URL; shows GitHub icon and "Edit this page" link when non-empty |
-| `feed_url` | string | `''` | Section slug linked from the navbar feed icon |
-| `expandable_feed` | boolean | `false` | Show dated posts as expandable cards in the feed section |
+| `feed.path` | string | unset | Public route for the expandable Feed page |
+| `feed.include` | list | all dated content if `feed` is omitted | Content-relative Markdown files and directories shared by Feed and RSS |
 | `rss.site_url` | URL | unset | Public site URL used for RSS discovery and post permalinks |
 | `drafts` | list | `[]` | Repository-relative Markdown paths excluded from the build |
 | `footer` | string | `''` | Custom footer credits text |

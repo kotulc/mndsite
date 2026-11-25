@@ -78,7 +78,7 @@ Renders the site-wide footer: copyright year, build timestamp, and credits.
 ### GitHubLink / ThemeToggle / FeedLink
 
 Navbar icons rendered when their token appears in `display.navbar`. Each returns null when
-its prerequisite is missing (`repo_url` for GitHub, a feed section or RSS URL for feed). The RSS icon opens the feed section, where **Subscribe via RSS** links to the published XML. Nextra's built-in
+its prerequisite is missing (`repo_url` for GitHub, a Feed path or RSS URL for feed). The RSS icon opens Feed, where **Subscribe via RSS** links to the published XML. Nextra's built-in
 dark-mode toggle is disabled — the theme toggle is only the navbar control.
 
 

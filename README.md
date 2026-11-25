@@ -114,8 +114,9 @@ title: My Site
 # Optional — site identity
 description: none            # SEO meta description added to every page
 repo_url: none               # shows a GitHub icon in the navbar when set
-feed_url: none               # section slug linked from the navbar feed icon
-expandable_feed: false       # show dated posts inline at the feed_url section
+# feed:                       # optional public feed and RSS selection
+#   path: /feed/
+#   include: [posts/]
 rss: false                   # opt in with { site_url: https://example.org/site/ }
 footer: default              # custom footer credits; `default` keeps the built-in
 
@@ -167,7 +168,7 @@ output: ./dist               # output directory for built site
 
 ### Browsing pages by label
 
-Type in the navbar search to open live results on the **Pages** view, or open it directly (grid icon, **Browse pages**) to see all published pages. Match titles, paths, descriptions, labels, and page text. Use the grouped filter to narrow results by label. Article chips link to the same results. Query text and filters are shareable, for example `/browse/?q=deployment` or `/browse/?facet=status&tag=stable`.
+The **Pages** homepage lists all published pages when `homepage_feed` is enabled. Use the navbar search to match titles, paths, descriptions, labels, and page text. Searches from articles and article chips open the site-wide results, which can also be narrowed by label. Query text and filters are shareable, for example `/browse/?q=deployment` or `/browse/?facet=status&tag=stable`.
 
 Declare labels in `frontmatter.facets`. A facet can read several keys. The `tags` facet uses Trendly's spelling normalization. Other facets retain their authored labels. For example:
 
@@ -227,12 +228,14 @@ added, changed, and removed, including the 0.1 → 0.2 key replacements.
 Set the public site URL to enable a build-time RSS 2.0 feed.
 
 ```yaml
-feed_url: updates
+feed:
+  path: /updates/
+  include: [updates/, guides/release-notes.md]
 rss:
   site_url: https://example.org/my-site/
 ```
 
-mndsite writes `rss.xml`, adds RSS autodiscovery to the site, and shows **Subscribe via RSS** beside the feed title. On card feeds, the sidebar lists the same dated posts as the cards, newest first within each folder. Undated articles remain available through Search and at their own URLs. The RSS icon in the navbar opens that page. For sites that publish RSS without a `feed_url`, the icon opens the XML feed directly. RSS contains dated posts beneath that section, newest first, with summaries and links to the full posts. Leave `feed_url` unset to include dated posts from across the site.
+MndSite writes `rss.xml` and adds RSS autodiscovery to the site. `feed.include` selects directories and individual Markdown files relative to `content`. Feed and RSS list the same dated pages, newest first, at their original URLs. The site tree follows the content directory and `nav_order`. Omit `feed.path` to link the navbar icon directly to RSS, or omit the `feed` block to include dated pages from across the site in RSS.
 
 List repository-relative Markdown paths under `drafts` in `mndsite.yaml` to keep those files out of generated pages, navigation, and feeds. Remove a path from the list to publish it again at the same URL. You can also keep draft files and draft-only assets outside the published content directory.
 
@@ -245,7 +248,7 @@ Use the complete public site URL, including any GitHub Pages subpath. Keep the e
 
 ### Expandable post feed
 
-Set `expandable_feed: true` and point `feed_url` at a section inside the content directory. The section page lists the same dated posts used for RSS when both are enabled. Each row expands to show the Markdown body, source cards, and a permanent link. Write a `description` in frontmatter or let mndsite generate an excerpt. The optional `sources` list supports an HTTP(S) `url` and optional `title`, `publisher`, `description`, `image_url`, `kind`, `audio_url`, `video_url`, and `placement`.
+Set `feed.path` to the public route for expandable cards. This route can be separate from the directories in `feed.include`. Each row expands to show the Markdown body, source cards, and a permanent link. Write a `description` in frontmatter or let mndsite generate an excerpt. The optional `sources` list supports an HTTP(S) `url` and optional `title`, `publisher`, `description`, `image_url`, `kind`, `audio_url`, `video_url`, and `placement`.
 
 The card shows a media-type icon based on the first source, the post title, a source label, and the publication date. Use `site` to set the source label. Expanded cards show values from `frontmatter.facets`. Give a YouTube or direct audio link the Markdown title `"embed"` for a click-to-load player inside the expanded post. Set `placement: inline` on its source entry to show the player only in the body.
 

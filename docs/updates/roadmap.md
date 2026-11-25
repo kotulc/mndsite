@@ -25,3 +25,15 @@ status: draft
 **Phase 3 — Deploy adapters** *(planned)*
 - `mndsite deploy --provider vercel|cloudflare|s3`
 - Credentials via environment variables; project ID via YAML
+
+## Long-term reading experience
+
+Treat a site as a sequence of short, self-contained posts. Long articles and
+complex documents can become ordered sequences of micro-posts, each covering one
+idea or task. Readers should be able to skim the feed, open a piece in context,
+and follow the sequence back to the full document when they need it.
+
+The first step is a homepage feed with one card per published page. Next, explore
+how authors can define the boundaries and order of individual pieces while
+keeping stable links to the original documents. The site tree remains the way to
+navigate by topic, and RSS continues to serve dated updates.

@@ -2,8 +2,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 import Browse from '../../components/Browse'
 
 let mockText
-jest.mock('../../components/BrowseSearch', () => ({
-  useBrowseSearch: () => ({ basePath: '', query: {}, text: mockText }),
+jest.mock('../../components/SiteSearch', () => ({
+  useSiteSearch: () => ({ basePath: '', query: {}, text: mockText }),
 }))
 jest.mock('../../public/site-meta.json', () => ({
   browse: '/browse',

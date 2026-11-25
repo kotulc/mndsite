@@ -37,8 +37,9 @@ Writing `""` reads the same as the default, so no value in the file ever needs t
 | `icon` | string | `none` | Site-relative image path for the navbar mark and browser favicon, such as `/assets/mnd.svg` |
 | `description` | string | `none` | SEO meta description added to every page's `<head>` |
 | `repo_url` | string | `none` | GitHub repo link shown as an icon in the header; `none` hides it |
-| `feed_url` | string | `none` | Section slug linked from the navbar feed icon |
-| `expandable_feed` | boolean | `false` | Render dated posts as expandable cards on the `feed_url` page |
+| `feed.path` | string | unset | Public route for the expandable Feed page and its navbar link |
+| `feed.include` | list | all dated content if `feed` is omitted | Files and directories to select, relative to `content`. Feed and RSS use the same selection. |
+| `homepage_feed` | boolean | `false` | Show published pages as cards on the homepage, after any authored index content. Cards follow the sidebar's reading order by default. Search them from the navbar or use the label and date controls. |
 | `rss.site_url` | URL | unset | Absolute deployed site URL, including its base path. Enables RSS at `rss.xml` |
 | `drafts` | list | `[]` | Repository-relative Markdown paths to omit from publication |
 | `footer` | string | `default` | Custom footer credits text; `default` keeps "Powered by mndsite and Nextra" |
@@ -64,8 +65,9 @@ Writing `""` reads the same as the default, so no value in the file ever needs t
 title: My Site
 description: What my site is about
 repo_url: https://github.com/myuser/my-repo
-feed_url: updates
-expandable_feed: true
+feed:
+  path: /updates/
+  include: [updates/, guides/release-notes.md]
 rss:
   site_url: https://myuser.github.io/my-repo/
 drafts:
@@ -187,7 +189,7 @@ facet's key simply has no value for it, and keeps its route either way.
 
 ## Pages
 
-Type in the navbar search to open live results on the **Pages** view, or open it directly (**Browse pages** in the navbar) to see all published pages. Match titles, paths, descriptions, labels, and page text. Use the grouped filter to narrow results by label. Article chips link to the same results. Query text and filters are shareable, for example `/browse/?q=deployment` or `/browse/?facet=status&tag=stable`.
+When `homepage_feed` is enabled, the **Pages** homepage lists all published pages. Use the navbar search to match titles, paths, descriptions, labels, and page text. Searches from articles and article chips open site-wide results. Sites can also link directly to the results by including `browse` in `display.navbar`. Query text and filters are shareable, for example `/browse/?q=deployment` or `/browse/?facet=status&tag=stable`.
 
 Declare labels in `frontmatter.facets`. A facet can read several keys. The `tags` facet uses Trendly's spelling normalization. Other facets retain their authored labels. For example:
 

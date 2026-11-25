@@ -45,5 +45,5 @@ test('test_tag_list_returns_null_when_empty', () => {
 
 test('article label links to the canonical Browse filter', () => {
   render(<TagList tags={[{ term: 'STATIC-site', group: 'tags' }]} />)
-  expect(screen.getByRole('link').getAttribute('href')).toMatch(/^\/browse\/?\?tag=static\+site$/)
+  expect(screen.getByRole('link').getAttribute('href')).toMatch(/^\/(?:browse\/?)?\?tag=static\+site$/)
 })
