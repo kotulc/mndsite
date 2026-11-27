@@ -2,6 +2,7 @@ const withNextra = require('nextra')({
   theme: './components/DocsLayout.jsx',
   themeConfig: './theme.config.jsx',
   flexsearch: false,
+  mdxOptions: { rehypePlugins: [require('./scripts/reading-cards')] },
 })
 
 const basePath = process.env.NODE_ENV === 'production' ? (process.env.BASE_PATH || '') : ''

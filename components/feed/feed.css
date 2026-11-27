@@ -59,7 +59,7 @@
 }
 .mnd-feed-summary::-webkit-details-marker { display: none; }
 .mnd-feed-summary:has(> .mnd-feed-tags) { grid-template-columns: minmax(0, 1fr) fit-content(34%) max-content; }
-.mnd-feed-entry:not([open]) > .mnd-feed-summary:hover {
+:is(.mnd-feed-entry:not([open]) > .mnd-feed-summary, a.mnd-feed-entry):hover {
   background: color-mix(in srgb, var(--feed-card-fill, var(--feed-soft)) 94%, currentColor);
 }
 .mnd-feed-summary:focus-visible { outline: 2px solid var(--feed-focus); outline-offset: 2px; }
@@ -103,13 +103,19 @@
 .page-feed {
   --navbar-height: var(--nextra-navbar-height);
 }
-.page-feed .mnd-feed-search-excerpt {
+.reading-article .reading-card-list {
+  margin: 0;
+}
+:is(.page-feed, .reading-card-list) .mnd-feed-search-excerpt {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
 }
-.page-feed-chevron {
+.page-feed a.mnd-feed-entry .mnd-feed-search-excerpt {
+  display: block;
+}
+.mnd-feed-chevron {
   align-self: center;
   width: .5rem;
   height: .5rem;
@@ -118,7 +124,8 @@
   border-bottom: 1.5px solid var(--feed-muted);
   transform: rotate(45deg);
 }
-.mnd-feed-entry[open] .page-feed-chevron { transform: rotate(225deg); }
+.mnd-feed-entry[open] .mnd-feed-chevron { transform: rotate(225deg); }
+.page-feed-chevron-link { transform: rotate(-45deg); }
 .mnd-feed-site, .mnd-feed-meta-item { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mnd-feed-publication { white-space: nowrap; }
 .mnd-feed-info > .mnd-feed-meta > * + * { border-inline-start: 1px solid var(--feed-divider); padding-inline-start: .55rem; }
@@ -201,7 +208,7 @@
 }
 @media (max-width: 520px) {
   .mnd-feed-entry { margin-inline: .35rem; }
-  .mnd-feed-entry > .mnd-feed-summary { padding-inline: .75rem; gap: .5rem; }
+  :is(.mnd-feed-entry > .mnd-feed-summary, a.mnd-feed-entry) { padding-inline: .75rem; gap: .5rem; }
   .mnd-feed-entry[open] > .mnd-feed-summary { padding-inline: .85rem; }
   .mnd-feed-context, .mnd-feed-body { padding-inline: .85rem; }
 }

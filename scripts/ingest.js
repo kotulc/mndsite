@@ -21,6 +21,7 @@ const yaml = require('js-yaml')
 const { strip_dir } = require('./fix-exif')
 const meta = require('./meta')
 const { plain_text } = require('./text')
+const { cardSummaries, readingMarkup, indexSections } = require('./reading-cards')
 const { feed_entries, write_rss } = require('./rss')
 
 
@@ -152,6 +153,14 @@ function extract_content(mdx) {
 }
 
 
+function toSearchText(markdown) {
+  return plain_text(markdown
+    .replace(/^\s*(?:```|~~~).*$/gm, ' ')
+    .replace(/^( {0,3}##[ \t]+.*?)\s+\[#[a-z0-9-]+\](?=[ \t]*#*[ \t]*$)/gm, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'))
+}
+
+
 function slug_to_title(s) {
   return s.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
@@ -263,7 +272,9 @@ function ingest_page(src_entry, dest_dir, rel, slug, base, img_url) {
 
   const dest = path.join(dest_dir, `${slug}.mdx`)
   const body = prepare_body(raw, img_url)
-  fs.writeFileSync(dest, set_fm_title(fm_block(raw), title) + body)
+  const summaries = cardSummaries(fm)
+  const importPath = path.relative(dest_dir, path.join(TARGET.custom, '..', 'ReadingArticle')).split(path.sep).join('/')
+  fs.writeFileSync(dest, set_fm_title(fm_block(raw), title) + readingMarkup(body, summaries, importPath))
 
   const parts = [...(rel ? rel.split('/') : []), ...(slug === 'index' ? [] : [slug])]
   const url   = '/' + parts.join('/') || '/'
@@ -530,12 +541,13 @@ async function generate(config) {
   fs.mkdirSync(TARGET.public, { recursive: true })
   const metadata = { browse, pages, ...(config.homepage_feed && { reading_order }) }
   fs.writeFileSync(TARGET.meta, JSON.stringify(metadata, null, 2) + '\n')
-  const search = Object.fromEntries(pages.map(page => [
-    page.url,
-    plain_text(extract_content(fs.readFileSync(path.join(src, page.source), 'utf8'))
-      .replace(/^\s*(?:```|~~~).*$/gm, ' ')
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')),
-  ]))
+  const search = Object.fromEntries(pages.map(page => {
+    const raw = fs.readFileSync(path.join(src, page.source), 'utf8')
+    const body = extract_content(raw)
+    const text = toSearchText(body)
+    const cards = indexSections(body, cardSummaries(parse_fm(raw)), toSearchText)
+    return [page.url, cards.length ? { text, cards } : text]
+  }))
   fs.writeFileSync(path.join(TARGET.public, 'search-index.json'), JSON.stringify(search) + '\n')
   await write_expandable_feed(config, entries)
   write_rss(TARGET.public, entries, config)

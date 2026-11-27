@@ -117,3 +117,28 @@ test('exported Contents links resolve to the rendered headings', () => {
   expect(links.length).toBeGreaterThan(0)
   for (const link of links) expect(page.getElementById(link.hash.slice(1))).not.toBeNull()
 })
+
+test('reading cards keep article content, navigation, and search anchors in sync', () => {
+  const html = fs.readFileSync(path.join(OUT, 'features/content-pipeline/index.html'), 'utf8')
+  const page = new DOMParser().parseFromString(html, 'text/html')
+  const cards = [...page.querySelectorAll('details[data-reading-card]')]
+  const ids = cards.map(card => card.dataset.readingCard)
+  const search = JSON.parse(fs.readFileSync(path.join(OUT, 'search-index.json'), 'utf8'))
+  const entry = search['/features/content-pipeline']
+  expect(ids).toEqual(['pipeline-workflow', 'running-ingest', 'what-ingest-does',
+    'source-layout-rules', 'cross-project-contract'])
+  expect(entry.cards.map(card => card.id)).toEqual(ids)
+  expect([...page.querySelectorAll('.reading-controls button')].map(button => button.textContent))
+    .toEqual(['Expand sections'])
+  expect(page.querySelector('.reading-controls').textContent).toBe('Expand sections')
+  expect(ids.every(id => page.querySelector(`.nextra-toc a[href="#${id}"]`))).toBe(true)
+  expect(cards.every((card, index) => card.open === (index === 0) &&
+    card.querySelector('summary') === page.getElementById(ids[index]))).toBe(true)
+  expect(cards[0].contains(page.getElementById('mndsite-owns'))).toBe(true)
+  expect(cards[1].querySelector('pre').textContent).toContain('npm run ingest')
+  expect(page.querySelector('.reading-article .reading-card-links')).toBeNull()
+  expect([...page.querySelectorAll('main > .nx-border-t > a[title]')].map(link => link.title))
+    .toEqual(['Components', 'Deployment'])
+  expect(entry.cards[1].text).toContain('npm run ingest')
+  expect(typeof search['/features/overview']).toBe('string')
+})

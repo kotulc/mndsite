@@ -16,7 +16,7 @@ rss:
 drafts:
   - docs/updates/plans.md
   - docs/updates/roadmap.md
-footer: MIT licensed · built with MndSite
+footer: Powered by MndSite · MIT Licensed
 
 content: ./docs
 output: ./dist

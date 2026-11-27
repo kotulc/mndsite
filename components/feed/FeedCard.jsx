@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
+import Link from 'next/link'
 
 const useBrowserLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
@@ -62,11 +63,11 @@ export function FacetChip({ facet: { name, label, hue, value } }) {
     style={hue === undefined ? undefined : { '--facet-hue': hue }}>{value}</span>
 }
 
-export function FeedCard({ title, meta, tags, badge, excerpt, searchExcerpt, preview = searchExcerpt, open, focusOnOpen, toggle, children }) {
+export function FeedCard({ title, meta, tags, badge, excerpt, searchExcerpt, preview = searchExcerpt, href, open, focusOnOpen, toggle, children }) {
   const summary = useRef(null)
 
   useBrowserLayoutEffect(() => {
-    if (!open) return
+    if (!open || href) return
     const header = summary.current
     if (focusOnOpen) header.focus({ preventScroll: true })
 
@@ -82,7 +83,19 @@ export function FeedCard({ title, meta, tags, badge, excerpt, searchExcerpt, pre
       // Keep the title and media together when they can share the viewport.
       return media_rect.bottom - rect.top <= available ? { top: rect.top, bottom: media_rect.bottom } : media_rect
     })
-  }, [open, focusOnOpen])
+  }, [open, focusOnOpen, href])
+
+  const heading = <>
+    <span className="mnd-feed-info">
+      <span className="mnd-feed-title" title={title}>{title}</span>
+      <span className="mnd-feed-meta">{meta}</span>
+      {(!open || href) && preview && <span className="mnd-feed-search-excerpt">{preview}</span>}
+    </span>
+    {tags}
+    {badge}
+  </>
+
+  if (href) return <Link href={href} className="mnd-feed-entry mnd-feed-summary">{heading}</Link>
 
   return <details className="mnd-feed-entry" open={open}>
     <summary ref={summary} className="mnd-feed-summary" onClick={event => {
@@ -90,13 +103,7 @@ export function FeedCard({ title, meta, tags, badge, excerpt, searchExcerpt, pre
       if (!open) event.currentTarget.focus({ preventScroll: true })
       toggle()
     }}>
-      <span className="mnd-feed-info">
-        <span className="mnd-feed-title" title={title}>{title}</span>
-        <span className="mnd-feed-meta">{meta}</span>
-        {!open && preview && <span className="mnd-feed-search-excerpt">{preview}</span>}
-      </span>
-      {tags}
-      {badge}
+      {heading}
     </summary>
     {open && <>
       {excerpt && <div className="mnd-feed-context"><p className="mnd-feed-excerpt">{excerpt}</p></div>}

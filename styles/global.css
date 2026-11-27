@@ -31,6 +31,124 @@
   --site-chrome-bg: #111;
 }
 
+.reading-article {
+  --reading-toolbar-height: 3rem;
+  margin-top: 1.5rem;
+  overflow-anchor: none;
+}
+
+.reading-controls {
+  position: sticky;
+  top: var(--nextra-navbar-height, 4rem);
+  z-index: 5;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: .5rem;
+  min-height: var(--reading-toolbar-height);
+  margin-bottom: .75rem;
+  padding: .25rem .625rem;
+  border-bottom: 1px solid var(--site-gray-200);
+  background: var(--site-chrome-bg);
+  color: var(--site-gray-600);
+  font-size: .8125rem;
+}
+
+.reading-controls button {
+  padding: .45rem .5rem;
+  border-radius: .35rem;
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+}
+
+.reading-controls button:enabled:hover {
+  background: var(--site-gray-100);
+}
+
+/* Nextra also renders a heading list on the right. Keep it as a fallback until
+   the desktop section links have mounted under the current page. */
+body:has(.reading-sidebar-sections) .nextra-toc p:has(.page-contents-heading) .page-contents-heading,
+body:has(.reading-sidebar-sections) .nextra-toc p:has(.page-contents-heading) + ul,
+body:has(.reading-sidebar-sections) .nextra-toc p:has(.page-contents-heading):not(:has(.page-contents-desc)) {
+  display: none;
+}
+
+.reading-card > summary,
+.reading-card-body [id] {
+  scroll-margin-top: calc(var(--reading-toolbar-height) + 0.75rem);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:has(.reading-article[data-scrolling]) {
+    scroll-behavior: smooth;
+  }
+
+  .reading-card[data-animate] .mnd-feed-chevron {
+    transition: transform 200ms ease;
+  }
+
+  .reading-card::details-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 0fr;
+  }
+
+  .reading-card[data-animate]::details-content {
+    transition: grid-template-rows 220ms ease, content-visibility 220ms allow-discrete;
+  }
+
+  .reading-card[open]::details-content {
+    grid-template-rows: 1fr;
+  }
+
+  .reading-card > .reading-card-panel {
+    overflow: clip;
+    min-height: 0;
+  }
+}
+
+.reading-card-body [data-reading-id] > h2:first-child:not(:focus-within) {
+  position: absolute;
+  overflow: hidden;
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* Nextra renders page navigation after a separate vertical spacer. */
+.nextra-content > main > .nx-mt-16:has(+ .nx-border-t.nx-pt-8 > a[title]) {
+  margin-top: 1.5rem;
+}
+
+.nextra-content > main > .nx-border-t.nx-pt-8:has(> a[title]) {
+  align-items: baseline;
+  gap: 1rem;
+  padding-top: 0.75rem;
+  border-color: var(--site-gray-200);
+}
+
+.nextra-content > main > .nx-border-t.nx-pt-8 > a[title] {
+  max-width: calc((100% - 1rem) / 2);
+  padding: 0;
+  color: var(--site-primary-700);
+  font-size: 0.875rem;
+  font-weight: 400;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.nextra-content > main > .nx-border-t.nx-pt-8 > a[title]:hover {
+  text-decoration-thickness: 2px;
+}
+
+.nextra-content > main > .nx-border-t.nx-pt-8 > a[title] > svg {
+  height: 0.875rem;
+  align-self: center;
+}
+
 /* Navbar/footer chrome — loaded after Nextra; html data attrs set in theme.config.jsx. */
 html[data-chrome-navbar="primary"] .nextra-nav-container-blur {
   background-color: hsl(var(--site-hs) 94%) !important;
@@ -82,6 +200,8 @@ html[data-chrome-footer="background"] footer {
 
 .nextra-sidebar-container > .nx-grow {
   padding-inline: .9rem;
+  overscroll-behavior-y: contain;
+  overflow-anchor: none;
 }
 
 .nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) {
@@ -126,6 +246,11 @@ html[data-chrome-footer="background"] footer {
   padding: .35rem .48rem;
   color: var(--site-gray-600);
   font-size: .8125rem;
+}
+
+.nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) a[href^="#"][aria-current="location"] {
+  text-decoration: underline;
+  text-underline-offset: .18em;
 }
 
 .nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) li:has(> :is(a, button) + div) > :is(a, button) {
@@ -248,6 +373,58 @@ html:has(.published-feed) {
 
   .navbar-icons {
     width: calc(var(--sidebar-width) - 1.5rem);
+  }
+
+}
+
+@media screen and (min-width: 768px) {
+  /* Reserve the navigation column while the sidebar stays pinned to the viewport. */
+  div:has(> .nextra-sidebar-container.md\:nx-sticky) {
+    padding-inline-start: var(--sidebar-width);
+  }
+
+  div:has(> .nextra-sidebar-container.md\:nx-sticky.md\:nx-w-20) {
+    padding-inline-start: 5rem;
+  }
+
+  .nextra-sidebar-container.md\:nx-sticky {
+    position: fixed;
+    top: var(--nextra-navbar-height);
+    inset-inline-start: max(0px, (100% - 90rem) / 2);
+    height: var(--site-sidebar-height, calc(100vh - var(--nextra-navbar-height)));
+    transition-property: width;
+  }
+
+  .nextra-sidebar-container.md\:nx-sticky > .nx-grow {
+    height: auto;
+    min-height: 0;
+  }
+}
+
+@media screen and (min-width: 1280px) {
+  div:has(> .nextra-toc) {
+    padding-inline-end: var(--sidebar-width);
+  }
+
+  body:has(:is(.published-feed, .page-feed)) div:has(> .nextra-toc:not(:has(a, button))) {
+    padding-inline-end: 0;
+  }
+
+  .nextra-toc {
+    position: fixed;
+    top: var(--nextra-navbar-height);
+    inset-inline-end: max(0px, (100% - 90rem) / 2);
+    max-height: var(--site-sidebar-height, calc(100vh - var(--nextra-navbar-height)));
+    overflow: hidden auto;
+    overscroll-behavior-y: contain;
+    overflow-anchor: none;
+  }
+
+  /* Scroll the outer panel so Nextra's active-heading effect cannot scroll it. */
+  .nextra-toc > .nextra-scrollbar {
+    position: static;
+    max-height: none;
+    overflow: visible;
   }
 }
 
@@ -728,7 +905,7 @@ article:has(:is(.published-feed, .page-feed)) h1 {
 .browse-result { border-bottom: 1px solid var(--site-gray-200); padding: .85rem 0; }
 .browse-result > a { color: var(--site-primary-600); font-weight: 600; }
 .browse-result p { font-size: .9rem; color: var(--site-gray-600); margin: .3rem 0; }
-.browse-result mark {
+:is(.browse-result, .page-feed) mark {
   background: var(--site-primary-100);
   color: inherit;
   border-radius: .125em;

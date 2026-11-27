@@ -17,13 +17,19 @@ related:
     url: /configuration
 version: 0.2
 status: stable
+reading_cards:
+  pipeline-workflow: Follow Markdown from mndmap's organization step through MndSite's static export.
+  running-ingest: Run ingest against the default docs directory or build from a project config.
+  what-ingest-does: See how ingest mirrors pages, copies assets, and generates navigation and metadata.
+  source-layout-rules: Lay out Markdown and assets so the generated routes follow your directory tree.
+  cross-project-contract: See how the mndmap fixture verifies the handoff between the two projects.
 ---
 
 # Content Pipeline
 
 The content pipeline (`scripts/ingest.js`) mirrors a publication-ready Markdown/MDX tree into the Next.js `pages/` directory and writes renderer metadata to `public/site-meta.json`. It is the **mndsite** stage of the publishing workflow — organization and enrichment happen upstream in **mndmap**.
 
-## Pipeline workflow
+## Pipeline workflow [#pipeline-workflow]
 
 ```text
 source Markdown/MDX
@@ -63,7 +69,7 @@ source Markdown/MDX
 
 mndsite does **not** extract keywords, run embeddings, flatten directories, score related pages, or rewrite links semantically.
 
-## Running ingest
+## Running ingest [#running-ingest]
 
 Directly (uses root `mndsite.yaml` or `site.config.js` defaults):
 
@@ -78,7 +84,7 @@ Config-driven build (matches Docker and CI):
 node scripts/cli.js build --config mndsite.yaml
 ```
 
-## What ingest does
+## What ingest does [#what-ingest-does]
 
 1. **Mirrors `.md` and `.mdx`** — any file named `home.md`, `index.md`, or `index.mdx` becomes `index.mdx` (the section landing page). All other files keep their slug. Routes match the source tree; nothing is flattened or regrouped.
 
@@ -101,7 +107,7 @@ node scripts/cli.js build --config mndsite.yaml
 
 9. **Writes `site-meta.json`** — flat page list: `facets`, `related`, `links`, `source`, `identity`, word count, sections. No local tagging or embedding step.
 
-## Source layout rules
+## Source layout rules [#source-layout-rules]
 
 - The configured content root is the site route tree
 - `index.md`, `index.mdx`, or `home.md` at any level → that section's landing page when supplied
@@ -109,7 +115,8 @@ node scripts/cli.js build --config mndsite.yaml
 - `_assets/` at the content root → copied to `public/_assets/`
 - `images/` next to markdown → copied and path-rewritten for legacy layouts
 - Internal links and MDX imports should already resolve in publication-ready content (rewritten by mndmap when used); ingest warns on remaining `.md` links and `_assets/` imports
+- To present a page as reading cards, add a `reading_cards` map to its frontmatter. Use each section's anchor as the key and a short preview as its value. Give each H2 a matching explicit anchor, such as `[#source-layout-rules]`, so search can link to the right card.
 
-## Cross-project contract
+## Cross-project contract [#cross-project-contract]
 
 The repository includes an mndmap destination fixture at `tests/fixtures/mndmap-destination/` and contract tests in `tests/build/mndmap-fixture.test.js`. These verify route preservation, `_assets/` copying, and frontmatter-only metadata derivation.

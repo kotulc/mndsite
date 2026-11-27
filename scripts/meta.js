@@ -89,7 +89,7 @@ function parse_related(fm, frontmatter) {
 
 function build_sections(section_nodes) {
   return (section_nodes || []).map(node => ({
-    name: node.name,
+    name: node.name.replace(/\s+\[#[^\]]+\]$/, ''),
     level: node.level,
     sections: build_sections(node.children || []),
   }))

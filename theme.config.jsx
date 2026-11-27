@@ -9,6 +9,7 @@ import GitHubLink from './components/GitHubLink'
 import FeedLink, { FeedSubscription } from './components/FeedLink'
 import ThemeToggle from './components/ThemeToggle'
 import NavbarSearch from './components/SiteSearch'
+import SidebarTitle from './components/ReadingSections'
 import { group_chips, header_field_keys } from './components/facets'
 import { PageHeading } from './components/PageChrome'
 import siteConfig from './site.config'
@@ -112,6 +113,7 @@ export default {
   primarySaturation: siteConfig.theme.saturation,
   darkMode: false,   // the navbar toggle is ours; Nextra's sidebar copy is never used
   search: { component: NavbarSearch },
+  sidebar: { titleComponent: SidebarTitle },
   navbar: {
     extraContent: (
       <div className="navbar-icons">
