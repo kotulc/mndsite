@@ -4,7 +4,7 @@ import Breadcrumbs from './components/Breadcrumbs'
 import PageHeader from './components/PageHeader'
 import TagList from './components/TagList'
 import PageContents, { TocTitle, TocExtra, TocHeading } from './components/PageContents'
-import SiteFooter from './components/SiteFooter'
+import { SiteFooterLayout } from './components/SiteFooter'
 import GitHubLink from './components/GitHubLink'
 import FeedLink, { FeedSubscription } from './components/FeedLink'
 import ThemeToggle from './components/ThemeToggle'
@@ -136,7 +136,7 @@ export default {
       </div>
     ),
   },
-  footer: { text: <SiteFooter /> },
+  footer: { component: SiteFooterLayout },
   useNextSeoProps() {
     const { pathname } = useRouter()
     const meta = use_page_meta()
@@ -153,9 +153,7 @@ export default {
     </>
   ),
   feedback: { content: null },
-  // Nextra renders editLink before toc.extraContent, so its own copy is disabled here —
-  // PageContents renders "Edit this page" itself, last, after Related.
-  editLink: { component: () => null },
+  editLink: { component: null },
   // With `sections` listed, Nextra owns the heading list (and its scroll-spy) and the
   // description rides in its title slot; otherwise PageContents renders the sidebar whole.
   toc: TOC_HAS_SECTIONS

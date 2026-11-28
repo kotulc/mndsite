@@ -313,6 +313,48 @@ describe('resolve_theme — preset tables', () => {
 })
 
 
+test('retired source settings are dropped while the navbar repository URL is preserved', () => {
+  const cfg = load_config(write_yaml('title: t\nrepo_url: https://github.com/x/y\nedit: { branch: main }\ndisplay: { toc: [description, edit] }'))
+  expect(cfg.edit).toBeUndefined()
+  expect(cfg.display.toc).toEqual(['description'])
+  expect(cfg.repo_url).toBe('https://github.com/x/y')
+})
+
+test('related links preserve the configured titles, URLs, and order', () => {
+  const cfg = load_config(write_yaml('title: t\nrelated_links:\n  - { title: Guide, url: /guide/ }\n  - { title: Forum, url: https://example.com/forum }'))
+  expect(cfg.related_links).toEqual([
+    { name: 'Guide', href: '/guide/' },
+    { name: 'Forum', href: 'https://example.com/forum' },
+  ])
+})
+
+test('related links require a title and a web destination', () => {
+  expect(() => load_config(write_yaml('title: t\nrelated_links:\n  - { title: Invalid, url: "javascript:alert(1)" }')))
+    .toThrow('related_links[0]')
+})
+
+describe('support banner config', () => {
+  test.each(['https://example.com/support', '/support/'])('writes the support destination %s', url => {
+    const cfg = load_config(write_yaml(`title: t\nsupport:\n  enabled: true\n  url: ${url}`))
+    write_site_config(cfg, tmp)
+    expect(fs.readFileSync(path.join(tmp, 'site.config.js'), 'utf8')).toContain(`support: ${JSON.stringify({ url, title: 'Support' })}`)
+  })
+
+  test('writes the custom support link title', () => {
+    const cfg = load_config(write_yaml('title: t\nsupport:\n  title: Support the project\n  url: /support/'))
+    expect(cfg.support).toEqual({ url: '/support/', title: 'Support the project' })
+  })
+
+  test.each(['', '\nsupport: false', '\nsupport:\n  enabled: false\n  url: /support/'])('hides an unconfigured or disabled link (%s)', setting => {
+    expect(load_config(write_yaml('title: t' + setting)).support).toBeNull()
+  })
+
+  test.each(['', 'javascript:alert(1)', '//example.com/support'])('rejects an invalid enabled destination (%s)', url => {
+    expect(() => load_config(write_yaml(`title: t\nsupport:\n  enabled: true\n  url: '${url}'`))).toThrow('support.url')
+  })
+})
+
+
 describe('write_site_config — generated keys', () => {
   test('test_write_site_config_includes_theme_keys', () => {
     const cfg = load_config(write_yaml('title: t\nicon: assets/mark.svg\ndescription: d\nfooter: f\ntheme:\n  color: emerald'))
@@ -341,34 +383,5 @@ describe('write_site_config — generated keys', () => {
     expect(out).not.toHaveProperty('flatten')
     expect(out).not.toHaveProperty('page_tags')
     expect(out).not.toHaveProperty('section_tags')
-  })
-})
-
-
-describe('load_config — edit links', () => {
-  test('test_edit_path_defaults_to_content_dir', () => {
-    const cfg = load_config(write_yaml('title: t\ncontent: ./docs\n'))
-    expect(cfg.edit.path).toBe('docs')
-    expect(cfg.edit.branch).toBe('main')
-  })
-
-  test('test_edit_url_template_from_repo_host', () => {
-    const cfg = load_config(write_yaml('title: t\nrepo_url: https://github.com/x/y\n'))
-    expect(cfg.edit.url).toBe('{repo_url}/edit/{branch}/{file}')
-  })
-
-  test('test_edit_url_empty_for_unknown_host', () => {
-    const cfg = load_config(write_yaml('title: t\nrepo_url: https://git.example.com/x/y\n'))
-    expect(cfg.edit.url).toBe('')
-  })
-
-  test('test_edit_url_override_wins', () => {
-    const cfg = load_config(write_yaml('title: t\nrepo_url: https://github.com/x/y\nedit:\n  url: "{repo_url}/blob/{branch}/{file}"\n'))
-    expect(cfg.edit.url).toBe('{repo_url}/blob/{branch}/{file}')
-  })
-
-  test('test_edit_path_empty_when_content_outside_config_dir', () => {
-    const cfg = load_config(write_yaml('title: t\ncontent: ../elsewhere\n'))
-    expect(cfg.edit.path).toBe('')
   })
 })

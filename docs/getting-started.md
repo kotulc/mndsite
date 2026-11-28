@@ -80,7 +80,7 @@ frontmatter:
 display:
   sidebar: [pages, Topics]
   header: [date, reading_time, facets]
-  toc: [description, sections, related, edit]
+  toc: [description, sections, related]
 ```
 
 If deploying to a subpath (e.g. GitHub Pages project repo), set `BASE_PATH=/repo-name`

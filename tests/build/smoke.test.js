@@ -118,6 +118,20 @@ test('exported Contents links resolve to the rendered headings', () => {
   for (const link of links) expect(page.getElementById(link.hash.slice(1))).not.toBeNull()
 })
 
+test('the article sidebar shows related pages and recent posts, with support before the footer', () => {
+  const html = fs.readFileSync(path.join(OUT, 'configuration/index.html'), 'utf8')
+  const page = new DOMParser().parseFromString(html, 'text/html')
+  const blocks = [...page.querySelectorAll('.nextra-toc .page-contents-block')]
+  expect(blocks.map(block => block.querySelector('.panel-label').textContent))
+    .toEqual(['Related Pages', 'Related Links', 'Recent Posts'])
+  expect(blocks[1].querySelector('a').textContent).toBe('MndSite on GitHub')
+  expect([...blocks[2].querySelectorAll('a')].map(link => link.title))
+    .toEqual(['Publishing with Trendly', 'Welcome'])
+  const banner = page.querySelector('.support-banner')
+  expect(banner.querySelector('a').getAttribute('href')).toBe('https://example.com/support')
+  expect(banner.nextElementSibling.tagName).toBe('FOOTER')
+})
+
 test('reading cards keep article content, navigation, and search anchors in sync', () => {
   const html = fs.readFileSync(path.join(OUT, 'features/content-pipeline/index.html'), 'utf8')
   const page = new DOMParser().parseFromString(html, 'text/html')

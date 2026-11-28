@@ -37,6 +37,7 @@ describe('static RSS feed', () => {
     const index = JSON.parse(fs.readFileSync(path.join(root, 'public/search-index.json'), 'utf8'))
     expect(metadata.browse).toBe('/browse-pages')
     expect(metadata.pages.map(page => page.url)).toEqual(['/browse'])
+    expect(metadata.recent_posts).toBeUndefined()
     expect(fs.readFileSync(path.join(root, 'pages/browse-pages.mdx'), 'utf8')).toContain('<Browse />')
     expect(Object.keys(index)).toEqual(['/browse'])
     expect(index['/browse']).toContain('Case-sensitive identifier')
@@ -78,6 +79,10 @@ describe('static RSS feed', () => {
     expect(JSON.parse(read('pages/updates/_meta.json')).notes).toBe('Undated note')
     const cards = JSON.parse(read('public/post-feed.json'))
     expect(cards.map(card => card.href)).toEqual(['/guide', '/updates/new'])
+    expect(JSON.parse(read('public/site-meta.json')).recent_posts).toEqual([
+      { href: '/guide', name: 'Selected guide' },
+      { href: '/updates/new', name: 'Selected update' },
+    ])
     const rss = new DOMParser().parseFromString(read('public/rss.xml'), 'text/xml')
     expect(rss.querySelector('channel > link').textContent).toBe('https://example.org/project/news/feed/')
     expect([...rss.querySelectorAll('item > title')].map(title => title.textContent)).toEqual(cards.map(card => card.title))
@@ -117,6 +122,7 @@ describe('static RSS feed', () => {
 
     await run(configure('rss: false\n'))
     expect(fs.existsSync(target)).toBe(false)
+    expect(JSON.parse(fs.readFileSync(path.join(root, 'public/site-meta.json'), 'utf8')).recent_posts).toBeUndefined()
   })
 
   test('rejects a relative public site URL', () => {

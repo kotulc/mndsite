@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import SiteFooter from '../../components/SiteFooter'
+import SiteFooter, { SiteFooterLayout } from '../../components/SiteFooter'
 import siteConfig from '../../site.config'
 
 jest.mock('../../site.config', () => ({ title: 'testsite', footer: '' }))
@@ -8,7 +8,14 @@ jest.mock('../../site.config', () => ({ title: 'testsite', footer: '' }))
 afterEach(() => {
   siteConfig.footer = ''
   delete siteConfig.icon
+  delete siteConfig.support
   jest.restoreAllMocks()
+})
+
+test('the support banner renders its configured link text', () => {
+  siteConfig.support = { title: 'Support the project', url: 'https://example.com/support' }
+  render(<SiteFooterLayout />)
+  expect(screen.getByRole('link', { name: 'Support the project' })).toHaveAttribute('href', 'https://example.com/support')
 })
 
 test('test_site_footer_default_credits', () => {

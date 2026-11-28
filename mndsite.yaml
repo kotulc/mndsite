@@ -19,6 +19,13 @@ drafts:
   - docs/updates/plans.md
   - docs/updates/roadmap.md
 footer: Powered by MndSite · MIT Licensed
+support:
+  enabled: true
+  title: Support this project!
+  url: https://example.com/support
+related_links:
+  - title: MndSite on GitHub
+    url: https://github.com/kotulc/mndsite
 
 content: ./docs
 output: ./dist
@@ -63,11 +70,5 @@ frontmatter:
 display:
   crumbs: true
   header: [date, reading_time, facets]
-  toc: [description, sections, related, edit]
+  toc: [description, sections, related]
   navbar: [feed, github, theme]
-
-# "Edit this page" targets. Used only when repo_url is set.
-edit:
-  branch: main
-  path: docs            # auto derives this from the content dir
-  url: auto             # auto derives a template from the repo_url host

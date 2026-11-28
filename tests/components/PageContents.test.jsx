@@ -1,16 +1,16 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import PageContents, { cap_name, contents_items, edit_href } from '../../components/PageContents'
+import PageContents, { cap_name } from '../../components/PageContents'
 import { useSection, find_page } from '../../components/SectionContext'
 import site_config from '../../site.config'
+import siteMeta from '../../public/site-meta.json'
 
 jest.mock('../../components/SectionContext', () => ({
   useSection: jest.fn(),
   find_page: jest.fn(),
 }))
+jest.mock('../../public/site-meta.json', () => ({}))
 jest.mock('../../site.config', () => ({
-  repo_url: 'https://github.com/x/y',
-  display: { toc: ['description', 'sections', 'related', 'edit'] },
-  edit: { branch: 'main', path: 'docs', url: '{repo_url}/edit/{branch}/{file}' },
+  display: { toc: ['description', 'sections', 'related'] },
 }))
 jest.mock('next/link', () => ({
   __esModule: true,
@@ -30,13 +30,15 @@ jest.mock('next/router', () => ({
   }),
 }))
 
-const ORDER = ['description', 'sections', 'related', 'edit']
+const ORDER = ['description', 'sections', 'related']
 
 function mock_page(page, sections = []) {
   useSection.mockReturnValue({ page: { links: [], related: [], ...page }, sections })
 }
 
 beforeEach(() => {
+  site_config.related_links = []
+  siteMeta.recent_posts = []
   find_page.mockReturnValue(undefined)
   mock_push.mockClear()
   mock_replace.mockClear()
@@ -51,13 +53,9 @@ test('test_page_contents_returns_null_without_page', () => {
 })
 
 test('test_page_contents_returns_null_when_nothing_to_list', () => {
-  /** A page with no description, sections, links or repo_url renders nothing at all. */
-  const original = site_config.repo_url
-  site_config.repo_url = ''
   mock_page({})
   const { container } = render(<PageContents order={ORDER} />)
   expect(container).toBeEmptyDOMElement()
-  site_config.repo_url = original
 })
 
 test('test_page_contents_renders_labeled_description_first', () => {
@@ -87,13 +85,20 @@ test('test_page_contents_elides_long_names_but_keeps_them_on_hover', () => {
   expect(link.textContent).not.toContain('column')
 })
 
-test('test_page_contents_edit_link_renders_last', () => {
-  /** With a Related block present, the edit link is still the final child. */
-  find_page.mockReturnValue({ name: 'Other', url: '/other' })
-  mock_page({ links: ['/other'] })
+test('renders Related Pages, Related Links, and Recent Posts in order', () => {
+  mock_page({ links: ['/other', 'https://example.com/forum'] })
+  find_page.mockImplementation(href => href === '/other' ? { name: 'Other', url: '/other' } : undefined)
+  site_config.related_links = [
+    { name: 'Forum', href: 'https://example.com/forum' },
+    { name: 'Project guide', href: '/guide/' },
+  ]
+  siteMeta.recent_posts = [{ name: 'New post', href: '/new' }]
   const { container } = render(<PageContents order={ORDER} />)
-  expect(container.querySelector('.page-contents').lastElementChild)
-    .toContainElement(screen.getByText('Edit this page'))
+  expect([...container.querySelectorAll('.panel-label')].map(label => label.textContent))
+    .toEqual(['Related Pages', 'Related Links', 'Recent Posts'])
+  expect(screen.getByRole('link', { name: 'Forum' })).toHaveAttribute('href', 'https://example.com/forum')
+  expect(screen.getByRole('link', { name: 'Project guide' })).toHaveAttribute('href', '/guide/')
+  expect(screen.queryByText('example.com')).not.toBeInTheDocument()
 })
 
 test('test_page_contents_link_resolves_to_page_name_not_path', () => {
@@ -121,12 +126,12 @@ test('test_page_contents_drops_unresolved_internal_and_fragments', () => {
 })
 
 test('test_page_contents_links_and_related_share_one_section', () => {
-  /** Links and related pages render together under a single "Related" label. */
+  /** Internal links and frontmatter recommendations share the Related Pages label. */
   find_page.mockReturnValue({ name: 'Styling', url: '/features/styling' })
   mock_page({ links: ['/features/styling'], related: [{ name: 'Metadata', url: '/features/metadata' }] })
   const { container } = render(<PageContents order={ORDER} />)
   const labels = [...container.querySelectorAll('.panel-label')].map(l => l.textContent)
-  expect(labels.filter(l => l === 'Related')).toHaveLength(1)
+  expect(labels.filter(l => l === 'Related Pages')).toHaveLength(1)
   expect(container.querySelectorAll('.related-link')).toHaveLength(2)
 })
 
@@ -174,50 +179,5 @@ describe('cap_name', () => {
   test('test_cap_name_elides_a_single_long_word', () => {
     const word = 'x'.repeat(60)
     expect(cap_name(word)).toBe(`${'x'.repeat(26)}…`)
-  })
-})
-
-
-describe('contents_items', () => {
-  test('test_contents_items_keeps_only_elements_with_content', () => {
-    const page = { desc: '', links: [], related: [], source: 'a.md' }
-    expect(contents_items(ORDER, page, [])).toEqual(['edit'])
-  })
-
-  test('test_contents_items_empty_without_page', () => {
-    expect(contents_items(ORDER, null, [])).toEqual([])
-  })
-})
-
-
-describe('edit_href', () => {
-  test('test_edit_href_targets_the_page_source_in_the_repo', () => {
-    expect(edit_href({ source: 'features/overview.md' }))
-      .toBe('https://github.com/x/y/edit/main/docs/features/overview.md')
-  })
-
-  test('test_edit_href_falls_back_to_repo_root_without_source', () => {
-    expect(edit_href({ source: '' })).toBe('https://github.com/x/y')
-  })
-
-  test('test_edit_href_falls_back_to_repo_root_for_unknown_host', () => {
-    const original = site_config.edit.url
-    site_config.edit.url = ''
-    expect(edit_href({ source: 'a.md' })).toBe('https://github.com/x/y')
-    site_config.edit.url = original
-  })
-
-  test('test_edit_href_empty_without_repo_url', () => {
-    const original = site_config.repo_url
-    site_config.repo_url = ''
-    expect(edit_href({ source: 'a.md' })).toBe('')
-    site_config.repo_url = original
-  })
-
-  test('test_edit_href_omits_empty_path_segment', () => {
-    const original = site_config.edit.path
-    site_config.edit.path = ''
-    expect(edit_href({ source: 'a.md' })).toBe('https://github.com/x/y/edit/main/a.md')
-    site_config.edit.path = original
   })
 })

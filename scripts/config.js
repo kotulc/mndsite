@@ -11,14 +11,8 @@ const { resolve_theme } = require('./theme')
 
 const DISPLAY_ELEMENTS = {
   header:   ['date', 'reading_time', 'facets'],
-  toc:      ['description', 'sections', 'related', 'edit'],
+  toc:      ['description', 'sections', 'related'],
   navbar:   ['browse', 'feed', 'github', 'theme'],
-}
-
-const EDIT_TEMPLATES = {
-  'github.com':    '{repo_url}/edit/{branch}/{file}',
-  'gitlab.com':    '{repo_url}/-/edit/{branch}/{file}',
-  'bitbucket.org': '{repo_url}/src/{branch}/{file}?mode=edit',
 }
 
 const FACET_COLORS = { blue: 210, violet: 265, amber: 35, rose: 340, green: 150, teal: 190 }
@@ -46,10 +40,9 @@ const DEFAULTS = {
   display: {
     crumbs: true,
     header: ['date', 'reading_time', 'facets'],
-    toc:    ['description', 'sections', 'related', 'edit'],
+    toc:    ['description', 'sections', 'related'],
     navbar: ['browse', 'feed', 'github', 'theme'],
   },
-  edit:           { branch: 'main', path: 'auto', url: 'auto' },
   nav_order:      {},
   frontmatter: {
     title:        'title',
@@ -142,6 +135,48 @@ function as_bool(name, value, fallback = false) {
 }
 
 
+function resolve_support(raw) {
+  if (raw == null || raw === false) return null
+  if (typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error("mndsite.yaml: 'support' must be a mapping or false")
+  }
+  const enabled = as_bool('support.enabled', raw.enabled, true)
+  if (!enabled) return null
+
+  const url = resolve_link_url(raw.url)
+  if (!url) throw new Error("mndsite.yaml: 'support.url' must be an HTTP(S) URL or a site-relative path starting with /")
+  if (raw.title != null && typeof raw.title !== 'string') {
+    throw new Error("mndsite.yaml: 'support.title' must be text")
+  }
+  return { url, title: raw.title?.trim() || 'Support' }
+}
+
+
+function resolve_link_url(raw) {
+  const url = typeof raw === 'string' ? raw.trim() : ''
+  if (/^\/(?!\/)[^\\\s]*$/.test(url)) return url
+  if (/^https?:\/\/[^\\\s]+$/i.test(url)) {
+    try { return new URL(url).href }
+    catch { return '' }
+  }
+  return ''
+}
+
+
+function resolve_related_links(raw) {
+  if (raw == null) return []
+  if (!Array.isArray(raw)) throw new Error("mndsite.yaml: 'related_links' must be a list of title and url entries")
+  return raw.map((link, index) => {
+    const name = typeof link?.title === 'string' ? link.title.trim() : ''
+    const href = resolve_link_url(link?.url)
+    if (!name || !href) {
+      throw new Error(`mndsite.yaml: 'related_links[${index}]' requires a title and an HTTP(S) URL or site-relative path starting with /`)
+    }
+    return { name, href }
+  })
+}
+
+
 function normalize_key_list(key, path_label) {
   if (key == null || key === '') throw new Error(`mndsite.yaml: ${path_label} requires a 'key'`)
   const list = Array.isArray(key) ? key : [key]
@@ -223,6 +258,7 @@ function resolve_display(raw, facets) {
   const cfg = { ...DEFAULTS.display, ...raw_display }
   cfg.crumbs = resolve_crumbs(raw_display.crumbs)
   if (!Array.isArray(cfg.toc)) throw new Error(`mndsite.yaml: display.toc must be a list`)
+  cfg.toc = cfg.toc.filter(item => item !== 'edit')
 
   const field_keys = header_field_keys(facets)
 
@@ -258,29 +294,6 @@ function resolve_frontmatter(raw) {
 }
 
 
-function content_in_repo(config_dir, content_dir) {
-  const rel = path.relative(config_dir, content_dir).split(path.sep).join('/')
-  return !rel || rel.startsWith('..') || path.isAbsolute(rel) ? '' : rel
-}
-
-
-function resolve_edit(raw, repo_url, config_dir, content_dir) {
-  const cfg = { ...DEFAULTS.edit, ...(raw || {}) }
-
-  if (!cfg.branch) throw new Error(`mndsite.yaml: edit.branch must be a branch name`)
-  cfg.path = unset(cfg.path)
-    ? content_in_repo(config_dir, content_dir)
-    : String(cfg.path).replace(/^\/+|\/+$/g, '')
-
-  cfg.url = optional(cfg.url)
-  if (!cfg.url && repo_url) {
-    const host = (repo_url.match(/^https?:\/\/([^/]+)/) || [])[1] || ''
-    cfg.url = EDIT_TEMPLATES[host.replace(/^www\./, '')] || ''
-  }
-  return cfg
-}
-
-
 function load_config(yaml_path) {
   const abs  = path.resolve(yaml_path)
   const dir  = path.dirname(abs)
@@ -304,6 +317,9 @@ function load_config(yaml_path) {
   const icon = optional(cfg.icon)
   cfg.icon = icon ? '/' + icon.replace(/^\/+/, '') : ''
   cfg.rss = resolve_rss(raw.rss)
+  cfg.support = resolve_support(raw.support)
+  cfg.related_links = resolve_related_links(raw.related_links)
+  delete cfg.edit
   cfg.drafts = raw.drafts ?? []
   if (!Array.isArray(cfg.drafts) || cfg.drafts.some(file => typeof file !== 'string' || /[\\:\0]/.test(file) ||
     file.split('/').some(part => !part || part === '.' || part === '..') || !/\.mdx?$/i.test(file))) {
@@ -347,7 +363,6 @@ function load_config(yaml_path) {
 
   cfg.content = path.resolve(dir, cfg.content)
   cfg.output  = path.resolve(dir, cfg.output)
-  cfg.edit    = resolve_edit(raw.edit, cfg.repo_url, dir, cfg.content)
   if (cfg.components) cfg.components = path.resolve(dir, cfg.components)
   if (cfg.assets)     cfg.assets     = path.resolve(dir, cfg.assets)
 
@@ -358,9 +373,9 @@ function load_config(yaml_path) {
 function write_site_config(config, dest_dir) {
   const dir  = dest_dir || path.join(__dirname, '..')
   const keys = [
-    'title', 'icon', 'repo_url', 'feed', 'homepage_feed', 'rss', 'description', 'footer',
+    'title', 'icon', 'repo_url', 'feed', 'homepage_feed', 'rss', 'description', 'footer', 'support',
     'theme', 'nav_order', 'frontmatter',
-    'display', 'edit',
+    'display', 'related_links',
     ...(config.reading_cards != null ? ['reading_cards'] : []),
   ]
   const values = Object.fromEntries(keys.map(k => [k, config[k]]))

@@ -47,7 +47,7 @@ or browse [Features](docs/features/overview.md) for the full capability overview
 - **Nav ordering** — sibling order via `nav_order` from mndmap or YAML
 - **Custom components** — optional consumer React components synced each build
 - **Breadcrumbs** — trail above the title (`display.crumbs`)
-- **Right sidebar** description, sections, related, and edit link (`display.toc`)
+- **Right sidebar** description, sections, related pages, related links, and recent posts (`display.toc`)
 - **Theme toggle** — light / dark / system toggle in the navbar (`display.navbar`)
 - **GitHub header icon** — circular GitHub repo link, auto-shown from `repo_url`
 - **YAML config** — single file drives the entire build
@@ -148,14 +148,8 @@ frontmatter:
 display:
   crumbs: true                           # breadcrumb trail above the title
   header: [date, reading_time, facets]   # metadata under the title; accepts facet names
-  toc: [description, sections, related, edit]   # right sidebar (≥ xl)
+  toc: [description, sections, related]   # right sidebar (≥ xl)
   navbar: [browse, theme, feed, github]          # navbar icons, left to right
-
-# Optional — "Edit this page" targets; used ONLY when repo_url is set
-edit:
-  branch: main                 # branch the link targets
-  path: auto                   # repo-relative content root; `auto` uses the content dir
-  url: auto                    # template override; `auto` derives one from the repo_url host
 
 # Optional — consumer extensions
 components: none             # React components mirrored into components/custom/
@@ -191,7 +185,7 @@ there is no second switch. Zones and their elements:
 |------|----------|---------|
 | `crumbs` | `true` / `false` | Breadcrumb trail above the title |
 | `header` | `date`, `reading_time`, `facets`, or any facet name | Date, reading time, facet chips |
-| `toc` | `description`, `sections`, `related`, `edit` | Right sidebar at ≥ xl |
+| `toc` | `description`, `sections`, `related` | Right sidebar at ≥ xl |
 | `contents` | same as `toc` | Inline Contents panel below the title (defaults to `toc`) |
 | `navbar` | `browse`, `theme`, `feed`, `github` | Navbar icons |
 
@@ -204,15 +198,6 @@ display:
 
 Frontmatter stays on the emitted page for Nextra; the reader sees values only through
 `frontmatter` mappings into `site-meta.json` and the display zones above.
-
-### Edit links
-
-`repo_url` is what enables them — with no `repo_url` there is no "Edit this page" link and
-the `edit` block is ignored entirely. When it is set, each page links to the repo copy of
-the file it was built from (`docs/features/overview.md`), using a template derived from the
-host: GitHub, GitLab, and Bitbucket are known, and any other host falls back to `repo_url`
-itself. `edit.path` defaults to the content directory relative to `mndsite.yaml`; set it
-explicitly when the config file is not at the repo root.
 
 ### Config contract version
 

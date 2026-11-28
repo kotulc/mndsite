@@ -156,12 +156,11 @@ body:has(.reading-sidebar-sections) .nextra-toc p:has(.page-contents-heading):no
   color: var(--site-primary-700);
   font-size: 0.875rem;
   font-weight: 400;
-  text-decoration: underline;
-  text-underline-offset: 0.15em;
+  text-decoration: none;
 }
 
 .nextra-content > main > .nx-border-t.nx-pt-8 > a[title]:hover {
-  text-decoration-thickness: 2px;
+  color: var(--site-primary-600);
 }
 
 .nextra-content > main > .nx-border-t.nx-pt-8 > a[title] > svg {
@@ -222,6 +221,40 @@ html[data-chrome-footer="background"] footer {
   padding-inline: .9rem;
   overscroll-behavior-y: contain;
   overflow-anchor: none;
+}
+
+.support-banner {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  min-block-size: var(--support-banner-height);
+  padding: .25rem 1rem max(.25rem, env(safe-area-inset-bottom));
+  border-block-start: 1px solid var(--site-gray-200);
+  background: color-mix(in srgb, var(--site-chrome-bg) 96%, var(--site-gray-900));
+  color: var(--site-gray-600);
+  font-size: .8125rem;
+  text-align: center;
+}
+
+body:has(.support-banner) {
+  --support-banner-height: calc(2.25rem + env(safe-area-inset-bottom));
+}
+
+.support-banner a {
+  padding: .125rem .75rem;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.support-banner a:hover {
+  color: var(--site-gray-900);
+}
+
+.support-banner a:focus-visible {
+  outline: 2px solid var(--site-primary-600);
+  outline-offset: 2px;
 }
 
 .nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) {
@@ -445,7 +478,7 @@ html:has(.published-feed) {
     position: fixed;
     top: var(--nextra-navbar-height);
     inset-inline-start: max(0px, (100% - 90rem) / 2);
-    height: var(--site-sidebar-height, calc(100vh - var(--nextra-navbar-height)));
+    height: min(var(--site-sidebar-height, 100vh), calc(100vh - var(--nextra-navbar-height) - var(--support-banner-height, 0px)));
     transition-property: width;
   }
 
@@ -460,7 +493,7 @@ html:has(.published-feed) {
     padding-inline-end: var(--sidebar-width);
   }
 
-  body:has(:is(.published-feed, .page-feed)) div:has(> .nextra-toc:not(:has(a, button))) {
+  body:has(:is(.published-feed, .page-feed)) div:has(> .nextra-toc):not(:has(> .nextra-toc :is(a, button, .page-contents-desc))) {
     padding-inline-end: 0;
   }
 
@@ -468,7 +501,7 @@ html:has(.published-feed) {
     position: fixed;
     top: var(--nextra-navbar-height);
     inset-inline-end: max(0px, (100% - 90rem) / 2);
-    max-height: var(--site-sidebar-height, calc(100vh - var(--nextra-navbar-height)));
+    max-height: min(var(--site-sidebar-height, 100vh), calc(100vh - var(--nextra-navbar-height) - var(--support-banner-height, 0px)));
     overflow: hidden auto;
     overscroll-behavior-y: contain;
     overflow-anchor: none;
@@ -480,6 +513,7 @@ html:has(.published-feed) {
     max-height: none;
     overflow: visible;
   }
+
 }
 
 
@@ -797,8 +831,7 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
   border-top: 1px solid var(--site-gray-200);
 }
 
-/* One rhythm down the sidebar: 1.25rem between blocks, whoever renders them. Nextra's
-   own divider above Related is 2rem/2rem out of the box — bring it into line. */
+/* Keep the spacing consistent between the sidebar's metadata blocks. */
 .nextra-toc .page-contents-block + .page-contents-block {
   margin-top: 1.25rem;
   padding-top: 1.25rem;
@@ -806,8 +839,20 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
 }
 
 .nextra-toc div.nx-sticky.nx-bottom-0 {
+  position: static;
   margin-top: 1.25rem;
   padding-top: 1.25rem;
+}
+
+.nextra-toc:not(:has(.page-contents-desc)) div.nx-sticky.nx-bottom-0 {
+  padding-top: 0;
+  border-top: 0;
+  box-shadow: none;
+}
+
+.nextra-toc div.nx-sticky.nx-bottom-0:first-child,
+body:has(.reading-sidebar-sections) .nextra-toc:not(:has(.page-contents-desc)) div.nx-sticky.nx-bottom-0 {
+  margin-top: 0;
 }
 
 .nextra-toc p:has(.page-contents-heading) { margin-bottom: 0.375rem; }
@@ -844,16 +889,7 @@ button.chip-danger:hover { background: #fee2e2; filter: none; }
   font-weight: 600;
 }
 
-.related-link a:hover { text-decoration: underline; }
-
-.page-contents-edit {
-  display: block;
-  color: var(--site-primary-600);
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.page-contents-edit:hover { text-decoration: underline; }
+.related-link a:hover { color: var(--site-primary-700); }
 
 .site-footer {
   display: flex;
@@ -937,7 +973,7 @@ article:has(:is(.published-feed, .page-feed)) h1 {
   body:has(.published-feed) .nextra-sidebar-container {
     top: var(--nextra-navbar-height);
   }
-  body:has(:is(.published-feed, .page-feed)) .nextra-toc:not(:has(a, button)) {
+  body:has(:is(.published-feed, .page-feed)) .nextra-toc:not(:has(a, button, .page-contents-desc)) {
     display: none;
   }
   article:has(:is(.published-feed, .page-feed)) {

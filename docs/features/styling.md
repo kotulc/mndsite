@@ -110,7 +110,7 @@ Nextra layout
 │   └── page MDX body
 └── Right TOC column (Nextra, ≥ xl)
     ├── Description (TocTitle) + Nextra heading list (when sections listed)
-    └── PageContents tail                   (Related, Edit — display.toc)
+    └── PageContents tail                   (Related Pages, Related Links, Recent Posts)
 ```
 
 When `sections` is omitted from `display.toc`, `PageContents` renders the entire sidebar.

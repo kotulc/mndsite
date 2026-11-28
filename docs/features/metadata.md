@@ -36,8 +36,8 @@ reach the UI only through configured `fields`, `facets`, and `display` lists.
 | Facet chips | `display.header` (`facets` or facet names) | `page.facets` |
 | Description | `display.toc` | `desc` via `frontmatter.description` |
 | Section list | `display.toc` | Compiled MDX headings and their anchor IDs |
-| Related | `display.toc` | `links`, `related` |
-| Edit link | `display.toc` | `repo_url`, `edit`, `page.source` |
+| Related Pages | `display.toc` | Internal `links` and `related` entries |
+| Related Links | `related_links` and `display.toc` | Site-wide links and external article links |
 
 Omitting an element from its display list turns it off — there is no separate boolean switch.
 

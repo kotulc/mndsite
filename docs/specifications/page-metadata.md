@@ -27,10 +27,10 @@ Components render metadata from [site metadata](/specifications/metadata)
 5. REQ-5: `TagList` renders each chip with class `chip-{facetName}` for declared facets; undeclared groups use `chip-custom`
 6. REQ-6: `TagList` returns nothing when no chips are supplied
 7. REQ-7: `PageMeta` (header line + chips) renders below the custom h1, before page content
-8. REQ-8: `PageContents` renders listed blocks in order — Description, sections, Related, Edit — skipping empty blocks
+8. REQ-8: `PageContents` skips empty blocks and uses `display.toc` for article metadata and headings.
 9. REQ-9: `metrics.word_count` is always computed at ingest; `metrics.reading_time` only when present in frontmatter
 10. REQ-10: Related merges resolved internal `links`, external http(s) links, and frontmatter `related`
-11. REQ-11: Edit link renders last when `edit` is listed; requires `repo_url` and uses `page.source` + `edit` template
+11. REQ-11: Related Pages, Related Links, and Recent Posts render in that order when they have content.
 12. REQ-12: `Breadcrumbs` follows `display.crumbs`; `false` hides the trail
 13. REQ-13: `SectionContext` exposes the current page and a depth-first flattened section list
 

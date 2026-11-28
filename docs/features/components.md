@@ -62,11 +62,10 @@ with colors generated from the facet's configured hue. Undeclared facet groups f
 
 ### PageContents
 
-Renders the sidebar body in `display.toc` order: **Description**, **On This Page**
-(sections), **Related**, **Edit this page**. Each block appears only when it has content
-and is listed in the order. Related merges resolved internal links, external http(s) links,
-and frontmatter `related` entries. Edit links require `repo_url` and point at the source
-file in the repository (`page.source` + `edit` config).
+Renders the description and headings configured by `display.toc`, followed by **Related Pages**,
+**Related Links**, and **Recent Posts** when they have content. Related Pages collects
+internal links and frontmatter recommendations. Related Links includes external article
+links and destinations configured in `related_links`.
 
 At ≥ xl, Nextra may own the section heading list when `sections` is listed in `display.toc`;
 `TocTitle`, `TocExtra`, and `TocHeading` in `theme.config.jsx` adapt to that split.

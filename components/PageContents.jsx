@@ -1,6 +1,5 @@
 /**
- * The right sidebar's body: page description, in-page sections, Related links, and
- * "Edit this page", rendered in the order of the display list handed to it (`display.toc`).
+ * The right sidebar's page metadata, recent posts, and site links.
  *
  * Above the xl breakpoint Nextra owns the sidebar's heading list and its scroll-spy, so
  * the sidebar slots are adapters: TocTitle puts the description above Nextra's "On This
@@ -9,6 +8,7 @@
 import Link from 'next/link'
 import { useSection, find_page } from './SectionContext'
 import siteConfig from '../site.config'
+import siteMeta from '../public/site-meta.json'
 
 
 // Longest entry name rendered in full; past this, Sections and Related elide. Sized to
@@ -21,26 +21,6 @@ export function cap_name(name) {
   const text = String(name || '')
   if (text.length <= NAME_CAP) return text
   return `${text.slice(0, NAME_CAP).replace(/\s+\S*$/, '')}…`
-}
-
-
-export function edit_href(page) {
-  /** Edit target for a page: the repo copy of the file it was built from. Requires
-   *  repo_url; falls back to the repo root for unknown hosts or generated pages. */
-  const { repo_url, edit } = siteConfig
-  if (!repo_url) return ''
-
-  const root = repo_url.replace(/\/+$/, '')
-  const source = (page && page.source) || ''
-  if (!edit || !edit.url || !source) return root
-
-  const file = [edit.path, source].filter(Boolean).join('/')
-  return edit.url
-    .replace('{repo_url}', root)
-    .replace('{branch}', edit.branch)
-    .replace('{path}', edit.path)
-    .replace('{source}', source)
-    .replace('{file}', file)
 }
 
 
@@ -74,23 +54,10 @@ function related_items(page) {
   for (const r of page.related || []) {
     if (!r?.url || seen.has(r.url)) continue
     seen.add(r.url)
-    items.push({ href: r.url, name: r.name, external: false })
+    items.push({ href: r.url, name: r.name, external: /^https?:\/\//i.test(r.url) })
   }
 
   return items
-}
-
-
-export function contents_items(order, page, sections) {
-  /** The listed elements that actually have something to show on this page. */
-  if (!page) return []
-  return order.filter(item => {
-    if (item === 'description') return !!page.desc
-    if (item === 'sections') return !!sections.length
-    if (item === 'related') return !!related_items(page).length
-    if (item === 'edit') return !!edit_href(page)
-    return false
-  })
 }
 
 
@@ -134,12 +101,12 @@ function Sections({ sections, on_navigate }) {
 }
 
 
-function Related({ page }) {
+function SidebarLinks({ label, links }) {
   return (
     <div className="page-contents-block">
-      <Label>Related</Label>
+      <Label>{label}</Label>
       <div className="page-contents-links">
-        {related_items(page).map(({ href, name, external }) => (
+        {links.map(({ href, name, external }) => (
           <div key={href} className="related-link">
             {external
               ? <a href={href} title={name} target="_blank" rel="noopener noreferrer">{cap_name(name)}</a>
@@ -152,38 +119,37 @@ function Related({ page }) {
 }
 
 
-function EditLink({ page }) {
-  return (
-    <div className="page-contents-block">
-      <Label>Source</Label>
-      <a href={edit_href(page)} target="_blank" rel="noopener noreferrer" className="page-contents-edit">
-        Edit this page
-      </a>
-    </div>
-  )
-}
-
-
 export default function PageContents({ order, on_navigate }) {
   const { page, sections } = useSection()
-  const items = contents_items(order, page, sections)
-  if (!items.length) return null
+  if (!page) return null
+
+  const related = order.includes('related') ? related_items(page) : []
+  const relatedPages = related.filter(item => !item.external)
+  const relatedLinks = new Map(related.filter(item => item.external).map(item => [item.href, item]))
+  for (const link of siteConfig.related_links || []) {
+    relatedLinks.set(link.href, { ...link, external: /^https?:\/\//i.test(link.href) })
+  }
+  const posts = siteMeta.recent_posts || []
+  const items = order.flatMap(item => {
+    if (item === 'description' && page.desc) return <Description key={item} page={page} />
+    if (item === 'sections' && sections.length) return <Sections key={item} sections={sections} on_navigate={on_navigate} />
+    if (item === 'related' && relatedPages.length) return <SidebarLinks key={item} label="Related Pages" links={relatedPages} />
+    return []
+  })
+  if (!items.length && !relatedLinks.size && !posts.length) return null
 
   return (
     <div className="page-contents">
-      {items.map(item => {
-        if (item === 'description') return <Description key={item} page={page} />
-        if (item === 'sections') return <Sections key={item} sections={sections} on_navigate={on_navigate} />
-        if (item === 'related') return <Related key={item} page={page} />
-        return <EditLink key={item} page={page} />
-      })}
+      {items}
+      {relatedLinks.size > 0 && <SidebarLinks label="Related Links" links={[...relatedLinks.values()]} />}
+      {posts.length > 0 && <SidebarLinks label="Recent Posts" links={posts} />}
     </div>
   )
 }
 
 
 const TOC_ORDER = siteConfig.display.toc
-const TOC_TAIL = TOC_ORDER.filter(item => item === 'related' || item === 'edit')
+const TOC_TAIL = TOC_ORDER.filter(item => item === 'related')
 const TOC_NO_HEADINGS = TOC_ORDER.filter(item => item !== 'sections')
 
 

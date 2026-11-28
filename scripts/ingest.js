@@ -558,7 +558,10 @@ async function generate(config) {
       delete page.reading_cards
     }
   }
-  const metadata = { browse, pages, ...(config.homepage_feed && { reading_order }) }
+  const recent_posts = (config.feed?.cards || config.rss ? entries : []).slice(0, 3)
+    .map(({ page }) => ({ href: page.url, name: page.name }))
+  const metadata = { browse, pages, ...(config.homepage_feed && { reading_order }),
+    ...(recent_posts.length && { recent_posts }) }
   fs.writeFileSync(TARGET.meta, JSON.stringify(metadata, null, 2) + '\n')
   const search = Object.fromEntries(pages.map(page => {
     const raw = fs.readFileSync(path.join(src, page.source), 'utf8')

@@ -31,7 +31,7 @@ Companion documents: `docs/updates/simplification.md` (pipeline split), `README.
 # ---- Identity (built) -----------------------------------------------------
 title: My Site                 # required
 description: none              # SEO meta description on every page
-repo_url: none                 # GitHub icon + edit link; `none` hides both
+repo_url: none                 # GitHub icon; `none` hides it
 feed_url: none                 # section slug behind the navbar feed icon
 expandable_feed: false         # list expandable posts at the feed_url section
 rss: false                     # opt in with { site_url: https://example.org/site/ }
@@ -90,7 +90,7 @@ display:
   crumbs: true                                  # breadcrumb trail above the title
   sidebar: [pages, Topics, Tags, Versions]      # left-nav views; `pages` is the tree
   header: [date, reading_time, facets]          # metadata line under the title
-  toc: [description, sections, related, edit]   # right sidebar, top to bottom
+  toc: [description, sections, related]   # right sidebar, top to bottom
   navbar: [theme, feed, github]                 # navbar icons; "search" joins at stage 5
                                                 # "theme" is the only theme-toggle switch
 
@@ -100,13 +100,6 @@ search:
   route: /search               # results render in the page body at this route
   index: [title, description, headings, body]
   # one JSON for the whole site; revisit chunking when a site outgrows a single fetch
-
-# ---- Edit links (built) ---------------------------------------------------
-# Used only when repo_url is set; with no repo_url there is no link and this is ignored.
-edit:
-  branch: main                 # branch the link targets
-  path: auto                   # repo-relative content root; `auto` uses the content dir
-  url: auto                    # template override; `auto` derives one from the repo_url host
 
 # ---- Navigation and paths (built) -----------------------------------------
 nav_order: {}                  # directory slug → ordered page slugs
@@ -130,7 +123,6 @@ One mechanism: omit the element from its `display` list. No feature has a second
 | Description in the sidebar | `description` from `display.toc` |
 | Right sidebar entirely | empty `display.toc` |
 | Related list | `related` from `display.toc` |
-| Edit-this-page link | `edit` from `display.toc`, or clear `repo_url` (which disables edit links entirely) |
 | Search | `search.enabled: false`, or `search` from `display.navbar` |
 | Theme toggle | `theme` from `display.navbar` |
 | Left-nav view chips | leave `display.sidebar` at `[pages]` |
@@ -151,7 +143,6 @@ Reordering is the same edit: change list order.
 | History | `versioning.history: true` ingests `vMAJOR.MINOR.PATCH` git tags as `/_history/<version>/` |
 | Chip colors | Generated per facet hue, light and dark; undeclared facets use `chip-custom` |
 | Search index | Separate `public/search-index.json`, fetched on demand — never merged into `site-meta.json` |
-| Edit links | Point at the repo copy of the built-from file, relative to the content root; require `repo_url` |
 
 ## Cut
 
@@ -193,7 +184,7 @@ against the built HTML. It reaches a reader only through a mapping:
 | `frontmatter.description` | Contents panel summary, `<meta name="description">` |
 | `frontmatter.date` / `frontmatter.reading_time` | Metadata line, per `display.header` |
 | `frontmatter.related` | Related list in the right sidebar |
-| `page.source` (recorded by ingest) | Nothing directly — the "Edit this page" target |
+| `page.source` (recorded by ingest) | Feed selection uses the source path |
 | any `frontmatter.facets` entry | Header chips, and value chips in any group listing it |
 | `versioning.key` | Version chips, and the value list of a `versioning` group |
 | anything else | Nothing — available to custom MDX components, invisible otherwise |

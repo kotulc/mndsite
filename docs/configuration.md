@@ -43,6 +43,8 @@ Writing `""` reads the same as the default, so no value in the file ever needs t
 | `rss.site_url` | URL | unset | Absolute deployed site URL, including its base path. Enables RSS at `rss.xml` |
 | `drafts` | list | `[]` | Repository-relative Markdown paths to omit from publication |
 | `footer` | string | `default` | Custom footer credits text; `default` keeps "Powered by mndsite and Nextra" |
+| `support` | object or `false` | off | Optional support banner at the bottom of the viewport |
+| `related_links` | list | `[]` | Site-wide entries in the right sidebar's Related Links section |
 | `theme.color` | string | `"default"` | Named accent palette — see [Theme](#theme) below |
 | `theme.typeset` | string | `"sans"` | Named body font stack — see [Theme](#theme) below |
 | `theme.navbar` | string | `none` | Navbar background: `primary` (theme tint), `background` (match page), or any CSS color |
@@ -51,9 +53,8 @@ Writing `""` reads the same as the default, so no value in the file ever needs t
 | `frontmatter` | object | see below | Frontmatter keys and facet definitions |
 | `display.crumbs` | bool | `true` | Breadcrumb trail above the page title |
 | `display.header` | list | `[date, reading_time, facets]` | Metadata under the title; also accepts facet and frontmatter key names |
-| `display.toc` | list | `[description, sections, related, edit]` | Right sidebar |
+| `display.toc` | list | `[description, sections, related]` | Right sidebar |
 | `display.navbar` | list | `[browse, feed, github, theme]` | Navbar icons, left to right |
-| `edit` | object | see below | "Edit this page" targets — **only used when `repo_url` is set** |
 | `content` | path | `./docs` | Source markdown directory (resolved relative to this file) |
 | `output` | path | `./dist` | Output directory for the built site (resolved relative to this file) |
 | `components` | path | `none` | Optional directory of consumer React components, mirrored into `components/custom/` each build |
@@ -227,7 +228,45 @@ The optional `reading_cards` frontmatter map keys short previews by heading anch
 Existing heading links work with generated or explicit anchors. Search opens the
 matching card and its parent if needed.
 
+## Support banner
+
+Add a Support link in `mndsite.yaml`.
+
+```yaml
+support:
+  enabled: true
+  title: Support the project
+  url: https://example.com/support
+```
+
+Use an HTTP(S) URL or a site-relative path such as `/support/`. The banner stays at the
+bottom of the viewport and sits above the footer as it scrolls into view.
+Set `title` to change the link text. It defaults to **Support**.
+Set `enabled: false` to hide the banner while keeping its URL in the config. You can also
+set `support: false` or omit the setting entirely.
+
+## Related links
+
+Add site-wide destinations to **Related Links** in `mndsite.yaml`.
+
+```yaml
+related_links:
+  - title: Project guide
+    url: /getting-started/
+  - title: Community forum
+    url: https://example.com/forum
+```
+
+Each entry needs a title and an HTTP(S) URL or a site-relative path starting with `/`.
+The sidebar shows **Related Pages**, **Related Links**, and **Recent Posts** in that order
+when they have content. With `related` in `display.toc`, internal article links and
+frontmatter recommendations feed **Related Pages**, and external article links join
+the configured destinations in **Related Links**.
+
 ## Display
+
+The right sidebar shows up to three **Recent Posts** when the
+site has a Feed page or RSS feed with published posts.
 
 `display` lists which elements render in each zone, in order. Omitting an element turns it off — there is no second switch anywhere in the config. `crumbs` is the one boolean: the trail is all-or-nothing.
 
@@ -235,7 +274,7 @@ matching card and its parent if needed.
 display:
   crumbs: true
   header: [date, reading_time, facets]
-  toc: [description, sections, related, edit]
+  toc: [description, sections, related]
   navbar: [browse, feed, github, theme]
 ```
 
@@ -243,51 +282,14 @@ display:
 |------|----------|-----------|
 | `crumbs` | `true` / `false` | `Breadcrumbs` — trail above the title |
 | `header` | `date`, `reading_time`, `facets`, or any facet or frontmatter key name | `PageHeader` + `TagList` |
-| `toc` | `description`, `sections`, `related`, `edit` | `PageContents` in the right sidebar |
+| `toc` | `description`, `sections`, `related` | `PageContents` in the right sidebar |
 | `navbar` | `browse`, `theme`, `feed`, `github` | `ThemeToggle`, `FeedLink`, `GitHubLink` |
 
-When `display.toc` includes `sections`, Nextra owns the heading list and scroll-spy in the sidebar; `PageContents` renders the description above Nextra's label and Related/Edit below. When `sections` is omitted, `PageContents` renders the whole sidebar list.
+When `display.toc` includes `sections`, Nextra owns the heading list and scroll-spy in the sidebar; `PageContents` renders the description above Nextra's label and Related Pages, Related Links, and Recent Posts below. When `sections` is omitted, `PageContents` renders the whole sidebar list.
 
-`theme` in `display.navbar` is the only theme toggle — Nextra's sidebar toggle is disabled. Chips and Related entries render as supplied; nothing is truncated.
+`theme` in `display.navbar` is the only theme toggle — Nextra's sidebar toggle is disabled.
 
 `header` also accepts any facet name. Listing a facet there places its chips at that position — so `header: [date, status, tags]` shows status chips between the date and tag chips. The generic `facets` element expands to every declared facet not already named.
-
-## Edit links
-
-**Nothing in this section applies unless `repo_url` is set.** With no `repo_url` there is
-no "Edit this page" link at all, and the `edit` block is ignored.
-
-When `repo_url` is set, the link points at the repo copy of the file the page was built
-from — `docs/features/overview.md`, not the site root.
-
-```yaml
-repo_url: https://github.com/user/repo
-edit:
-  branch: main     # branch the link targets
-  path: auto       # `auto` uses the content dir, resolved relative to this file
-  url: auto        # `auto` derives a template from the repo_url host
-```
-
-`edit.path` defaults to the content directory resolved relative to `mndsite.yaml` — `docs`
-for a standard layout, `""` when the content root *is* the repo root. If your config file
-does not sit at the repo root, set it explicitly.
-
-`edit.url` is a template over `{repo_url}`, `{branch}`, `{path}`, `{source}`, and `{file}`
-(`path` and `source` joined). Defaults by host:
-
-| Host | Template |
-|------|----------|
-| github.com | `{repo_url}/edit/{branch}/{file}` |
-| gitlab.com | `{repo_url}/-/edit/{branch}/{file}` |
-| bitbucket.org | `{repo_url}/src/{branch}/{file}?mode=edit` |
-| anything else | none — the link falls back to `repo_url` itself |
-
-Pages with no source file (an mndmap-generated landing page, for example) also fall back to
-`repo_url`. To remove the link entirely, drop `edit` from `display.toc`.
-
-In a mndmap workflow, point `repo_url` at the repository that holds the editable docs. If
-it names a repo of generated output, edits made through the link are overwritten on the
-next build.
 
 ## Metadata and tagging
 

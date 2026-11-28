@@ -18,7 +18,7 @@ At build time the CLI generates `site.config.js` from the YAML; both the ingest 
 |-------|------|---------|-------------|
 | `title` | string | — | Site name shown in browser tab and navbar logo |
 | `description` | string | `''` | SEO meta description; per-page frontmatter overrides it |
-| `repo_url` | string | `''` | GitHub repo URL; shows GitHub icon and "Edit this page" link when non-empty |
+| `repo_url` | string | `''` | GitHub repo URL; shows the navbar GitHub icon when non-empty |
 | `feed.path` | string | unset | Public route for the expandable Feed page |
 | `feed.include` | list | all dated content if `feed` is omitted | Content-relative Markdown files and directories shared by Feed and RSS |
 | `rss.site_url` | URL | unset | Public site URL used for RSS discovery and post permalinks |
@@ -26,7 +26,6 @@ At build time the CLI generates `site.config.js` from the YAML; both the ingest 
 | `footer` | string | `''` | Custom footer credits text |
 | `display` | object | see [Configuration](/configuration#display) | Which elements render, in which order |
 | `frontmatter` | object | see [Configuration](/configuration#facets) | Frontmatter keys read, dimensions chipped, optional indexes |
-| `edit` | object | `branch: main` | "Edit this page" targets; used only when `repo_url` is set |
 | `theme` | object | see [Configuration](/configuration#theme) | Color palette, typeset, navbar/footer backgrounds |
 | `nav_order` | object | `{}` | Slug array to pin specific pages first; remaining pages sort alphabetically |
 | `content` / `output` | path | `./docs` / `./dist` | Source and output directories, resolved relative to the YAML file |
