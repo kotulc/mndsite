@@ -6,7 +6,7 @@ import { group_chips } from '../facets'
 import PageLabelFilter, { pageLabelOptions, pageLabelSelection } from '../PageLabelFilter'
 import { usePageSearchIndex } from '../useListingSearch'
 import { useSiteSearch } from '../SiteSearch'
-import { highlight, pageSearchMatch, pageSearchText, searchHighlights, searchPhrase } from '../searchExcerpt'
+import { highlight, matchesPageSearch, pageSearchMatch, searchHighlights, searchPhrase, sectionSearchLabel } from '../searchExcerpt'
 import { FacetChip, FeedCard } from './FeedCard'
 
 const pages = siteMeta.pages.filter(page => page.url !== '/').map(page => {
@@ -47,7 +47,7 @@ export default function PageFeed() {
   const searching = !!term && content === null
   const visible = sortOrders[sort].filter(page =>
     (!selection.key || page.chips.some(chip => chip.name === selection.facet && chip.value === selection.tag)) &&
-    (!term || page.searchable.includes(term) || phrase.test(pageSearchText(content?.[page.url]))))
+    (!term || page.searchable.includes(term) || matchesPageSearch(content?.[page.url], phrase)))
 
   return <section className="page-feed" aria-label="Page feed">
     <div className="feed-controls" role="group" aria-label="Filter page feed">
@@ -76,7 +76,7 @@ export default function PageFeed() {
             open={expanded === page.url}
             toggle={() => setExpanded(current => current === page.url ? null : page.url)}
             meta={<>
-              {match?.card ? <span>{highlight(match.card.title, highlights)}</span> : <>
+              {match?.card ? <span>{highlight(sectionSearchLabel(match.card), highlights)}</span> : <>
                 {page.published && <time className="mnd-feed-publication" dateTime={page.published}>{page.published}</time>}
                 {page.metrics?.reading_time && <span className="mnd-feed-meta-item">{page.metrics.reading_time} min read</span>}
               </>}

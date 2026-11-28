@@ -1,4 +1,4 @@
-import { Children, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Children, cloneElement, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useReadingSectionHighlight } from './ReadingSections'
 
@@ -9,23 +9,36 @@ function fragmentId(hash) {
   catch { return '' }
 }
 
+function cardId(node) {
+  return node?.props?.['data-reading-id']
+}
+
+function cardIds(card) {
+  return [cardId(card), ...Children.toArray(card.props.children).filter(cardId).flatMap(cardIds)]
+}
+
+function cardPath(card) {
+  const path = []
+  for (let node = card; node; node = node.parentElement.closest('[data-reading-card]')) {
+    path.unshift(node.dataset.readingCard)
+  }
+  return path
+}
+
 export default function ReadingArticle({ children, summaries }) {
-  const cards = Children.toArray(children).filter(child => child.props?.['data-reading-id']).map(content => ({
-    id: content.props['data-reading-id'],
-    title: content.props['data-reading-title'],
-    content,
-  }))
+  const cards = Children.toArray(children).filter(cardId)
+  const ids = cards.flatMap(cardIds)
   const article = useRef(null)
   const toolbar = useRef(null)
   const pendingScroll = useRef(null)
   const lastHash = useRef(null)
   const navigationTimer = useRef(null)
-  const first = cards[0]?.id
+  const first = cardId(cards[0])
   const [current, setCurrent] = useState(first)
   const [open, setOpen] = useState(null)
   const [animatedCard, setAnimatedCard] = useState(null)
-  const allOpen = open?.length === cards.length
-  const currentIndex = Math.max(0, cards.findIndex(card => card.id === current))
+  const allOpen = open?.length === ids.length
+  const currentIndex = Math.max(0, cards.findIndex(card => cardId(card) === current))
   useReadingSectionHighlight(open, current)
 
   const finishNavigation = useCallback(() => {
@@ -69,13 +82,13 @@ export default function ReadingArticle({ children, summaries }) {
       const card = target?.closest('[data-reading-card]')
       if (!card || !root.contains(card)) return null
       const summary = card.querySelector('summary')
-      return { id: card.dataset.readingCard, target, summary }
+      return { path: cardPath(card), target, summary }
     }
 
     function reveal(section) {
       setAnimatedCard(null)
-      setCurrent(section.id)
-      setOpen([section.id])
+      setCurrent(section.path[0])
+      setOpen(section.path)
     }
 
     function syncFragment() {
@@ -115,7 +128,7 @@ export default function ReadingArticle({ children, summaries }) {
         if (root.hasAttribute('data-scrolling')) return
         let visible = first
         const line = toolbar.current.getBoundingClientRect().bottom + 24
-        for (const card of root.querySelectorAll('[data-reading-card]')) {
+        for (const card of root.querySelectorAll('.reading-card-list > [data-reading-card]')) {
           if (card.getBoundingClientRect().top > line) break
           visible = card.dataset.readingCard
         }
@@ -145,28 +158,53 @@ export default function ReadingArticle({ children, summaries }) {
     }
   }, [first, finishNavigation, startNavigation])
 
-  function toggleSummary(event, id, isOpen) {
+  function toggleSummary(event, path, isOpen) {
     event.preventDefault()
     if (!isOpen) {
       const anchor = event.currentTarget
       anchor.focus({ preventScroll: true })
       pendingScroll.current = { anchor, focus: true }
     }
-    setAnimatedCard(id)
-    setCurrent(id)
-    setOpen(isOpen ? [] : [id])
+    setAnimatedCard(path.at(-1))
+    setCurrent(path[0])
+    setOpen(isOpen ? path.slice(0, -1) : path)
   }
 
   function setAll(expand) {
-    const anchor = article.current.querySelectorAll('[data-reading-card] > summary')[currentIndex]
+    const anchor = article.current.querySelectorAll('.reading-card-list > [data-reading-card] > summary')[currentIndex]
     const top = anchor.getBoundingClientRect().top
     const inset = toolbar.current.getBoundingClientRect().bottom + 12
     pendingScroll.current = { anchor, top: expand ? top : Math.max(top, inset) }
     setAnimatedCard(null)
-    setOpen(expand ? cards.map(card => card.id) : [])
+    setOpen(expand ? ids : [])
   }
 
   if (!cards.length) return children
+
+  function renderCard(content, ancestors = []) {
+    const id = cardId(content)
+    const path = [...ancestors, id]
+    const title = content.props['data-reading-title']
+    const isOpen = open?.includes(id) ?? false
+    const preview = typeof summaries[id] === 'string' ? summaries[id] : ''
+    const nested = ancestors.length > 0
+    const body = cloneElement(content, {}, Children.map(content.props.children,
+      node => cardId(node) ? renderCard(node, path) : node))
+    return <details key={id} className={nested ? 'reading-card reading-subsection' : 'mnd-feed-entry reading-card'}
+      data-reading-card={id} data-animate={animatedCard === id ? '' : undefined} open={isOpen}>
+      <summary id={id} className="mnd-feed-summary" onClick={event => toggleSummary(event, path, isOpen)}>
+        <span className="mnd-feed-info">
+          <span className="mnd-feed-title">{title}</span>
+          {!isOpen && preview && <span className="mnd-feed-search-excerpt">{preview}</span>}
+        </span>
+        <span className="mnd-feed-chevron" aria-hidden="true" />
+      </summary>
+      <div className="reading-card-panel">
+        {preview && <div className="mnd-feed-context"><p className="mnd-feed-excerpt">{preview}</p></div>}
+        <div className="mnd-feed-body reading-card-body">{body}</div>
+      </div>
+    </details>
+  }
 
   return <div ref={article} className="reading-article">
     <div ref={toolbar} className="reading-controls">
@@ -175,24 +213,7 @@ export default function ReadingArticle({ children, summaries }) {
       </button>
     </div>
     <div className="mnd-feed reading-card-list">
-      {cards.map(({ id, title, content }) => {
-        const isOpen = open?.includes(id) ?? false
-        const preview = typeof summaries[id] === 'string' ? summaries[id] : ''
-        return <details key={id} className="mnd-feed-entry reading-card" data-reading-card={id}
-          data-animate={animatedCard === id ? '' : undefined} open={isOpen}>
-          <summary id={id} className="mnd-feed-summary" onClick={event => toggleSummary(event, id, isOpen)}>
-            <span className="mnd-feed-info">
-              <span className="mnd-feed-title">{title}</span>
-              {!isOpen && preview && <span className="mnd-feed-search-excerpt">{preview}</span>}
-            </span>
-            <span className="mnd-feed-chevron" aria-hidden="true" />
-          </summary>
-          <div className="reading-card-panel">
-            {preview && <div className="mnd-feed-context"><p className="mnd-feed-excerpt">{preview}</p></div>}
-            <div className="mnd-feed-body reading-card-body">{content}</div>
-          </div>
-        </details>
-      })}
+      {cards.map(card => renderCard(card))}
     </div>
   </div>
 }

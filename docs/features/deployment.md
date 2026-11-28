@@ -8,6 +8,7 @@ tags:
   - docker
 readability: 80
 steps: 3
+reading_cards_depth: 3
 related:
   - title: Configuration
     url: /configuration

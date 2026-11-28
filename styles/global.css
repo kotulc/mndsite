@@ -108,7 +108,27 @@ body:has(.reading-sidebar-sections) .nextra-toc p:has(.page-contents-heading):no
   }
 }
 
-.reading-card-body [data-reading-id] > h2:first-child:not(:focus-within) {
+.reading-subsection {
+  margin-block: .5rem;
+  border: 1px solid var(--feed-border);
+  border-radius: .25rem;
+}
+
+.reading-subsection[open] {
+  border-color: var(--feed-edge);
+}
+
+.reading-subsection > summary {
+  min-height: 2.5rem;
+  padding: .45rem .7rem;
+}
+
+.reading-subsection > summary .mnd-feed-title {
+  font-size: .9375rem;
+  white-space: normal;
+}
+
+.reading-card-body [data-reading-id] > :is(h2, h3):first-child:not(:focus-within) {
   position: absolute;
   overflow: hidden;
   clip-path: inset(50%);
@@ -232,7 +252,7 @@ html[data-chrome-footer="background"] footer {
 
 .nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) ul {
   gap: .05rem;
-  margin: .05rem 0 .2rem;
+  margin: 0 0 .2rem;
   margin-inline-start: 1.15rem;
   padding-inline: .5rem 0;
   border-inline-start: 1px solid var(--site-gray-200);
@@ -248,6 +268,32 @@ html[data-chrome-footer="background"] footer {
   font-size: .8125rem;
 }
 
+.nextra-sidebar-container :is(.nextra-menu-desktop li:has(> .reading-sidebar-sections), .nextra-menu-mobile li.active:has(> ul)) {
+  row-gap: 0;
+}
+
+.nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) ul:where(.reading-sidebar-sections, .nextra-menu-mobile li.active > ul) {
+  row-gap: 0;
+}
+
+.nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) ul:where(.reading-sidebar-sections, .nextra-menu-mobile li.active > ul) li > a:where([href^="#"]) {
+  display: block;
+  padding-block: .125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--site-gray-500);
+  font-size: .75rem;
+}
+
+.nextra-sidebar-container .nextra-menu-mobile li.active > ul li > a:where([href^="#"]) {
+  padding-block: .1875rem;
+}
+
+.nextra-sidebar-container .nextra-menu-mobile li.active > ul a[href^="#"]::before {
+  margin-inline-end: .5rem;
+}
+
 .nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) a[data-reading-open] {
   color: var(--site-gray-900);
   font-weight: 650;
@@ -259,6 +305,10 @@ html[data-chrome-footer="background"] footer {
 
 .nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) li:has(> :is(a, button) + div) > :is(a, button) {
   font-weight: 650;
+}
+
+.nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) > li:has(> :is(a, button) + div) > :is(a, button) {
+  padding-block-end: .375rem;
 }
 
 .nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) li:has(> :is(a, button) + div) > :is(a, button) > svg {

@@ -35,12 +35,23 @@ export function pageSearchText(entry) {
   return typeof entry === 'string' ? entry : entry?.text || ''
 }
 
+export function matchesPageSearch(entry, phrase) {
+  return phrase.test(pageSearchText(entry)) || !!entry?.cards?.some(card => phrase.test(card.text))
+}
+
+export function sectionSearchLabel(card) {
+  return [...(card.parents || []), card.title].join(' › ')
+}
+
 export function pageSearchMatch(entry, phrase) {
   if (!phrase) return null
+  let best
   for (const card of entry?.cards || []) {
+    if (best && (best.card.level || 2) >= (card.level || 2)) continue
     const match = phrase.exec(card.text)
-    if (match) return { card, excerpt: matchExcerpt(card.text, match) }
+    if (match) best = { card, excerpt: matchExcerpt(card.text, match) }
   }
+  if (best) return best
   const text = pageSearchText(entry)
   const match = phrase.exec(text)
   return match ? { excerpt: matchExcerpt(text, match) } : null

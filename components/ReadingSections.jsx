@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useConfig } from 'nextra-theme-docs'
 import { useSection } from './SectionContext'
 
 export function useReadingSectionHighlight(open, current) {
@@ -55,15 +54,14 @@ function SectionLinks({ title, sections }) {
   return <>
     <span ref={label}>{title}</span>
     {list && createPortal(sections.map(({ id, name }) => <li key={id}>
-      <a href={`#${encodeURIComponent(id)}`} onClick={event => event.stopPropagation()}>{name}</a>
+      <a href={`#${encodeURIComponent(id)}`} title={name} onClick={event => event.stopPropagation()}>{name}</a>
     </li>), list)}
   </>
 }
 
 export default function SidebarTitle({ title, route }) {
-  const { frontMatter } = useConfig()
   const { page, sections } = useSection()
-  if (!frontMatter?.reading_cards || route !== page?.url) return title
-  const cards = sections.filter(section => section.level === 2)
+  if (!page?.reading_cards || route !== page.url) return title
+  const cards = sections.filter(section => page.reading_cards.includes(section.id))
   return cards.length ? <SectionLinks key={route} title={title} sections={cards} /> : title
 }

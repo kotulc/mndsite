@@ -156,6 +156,41 @@ describe('pages output ordering', () => {
   })
 })
 
+test('reading card indexing uses rendered heading IDs and honors page overrides', async () => {
+  const content = path.join(root, 'reading-sources')
+  const destination = path.join(root, 'reading-output')
+  fs.mkdirSync(content)
+  fs.writeFileSync(path.join(content, 'nested.md'), [
+    '---', 'reading_cards_depth: 3', '---', '', '# Nested', '',
+    'Repeat', '------', '', 'Parent prose.', '', '### Detail', '', 'First child.', '',
+    '```text', '## Example in code', '```', '', '## Repeat', '', '### Detail', '', 'Second child.',
+  ].join('\n'))
+  fs.writeFileSync(path.join(content, 'plain.md'), '---\nreading_cards: false\n---\n\n# Plain\n\n## Stays visible\n')
+  fs.writeFileSync(path.join(content, 'default.md'), '# Default\n\n## Card\n\n### Inline\n\nInline prose.\n')
+  fs.writeFileSync(path.join(content, 'summary.md'), '---\nreading_cards:\n  card: A short preview\n---\n\n# Summary\n\n## Card\n')
+  const config = { ...load_config(ROOT_CFG), content, root: destination, feed: null, homepage_feed: false }
+  await ingest.run(config)
+
+  const search = JSON.parse(fs.readFileSync(path.join(destination, 'public', 'search-index.json'), 'utf8'))
+  expect(search['/nested'].cards.map(({ id, parents }) => [id, parents])).toEqual([
+    ['repeat', []], ['detail', ['Repeat']], ['repeat-1', []], ['detail-1', ['Repeat']],
+  ])
+  expect(search['/nested'].cards[0].text).not.toContain('First child.')
+  expect(search['/nested'].cards[1].text).toContain('## Example in code')
+  expect(search['/default'].cards.map(card => card.id)).toEqual(['card'])
+  expect(search['/default'].cards[0].text).toContain('Inline prose.')
+  expect(typeof search['/plain']).toBe('string')
+  expect(fs.readFileSync(path.join(destination, 'pages', 'plain.mdx'), 'utf8')).not.toContain('MndReadingArticle')
+
+  await ingest.run({ ...config, reading_cards: false })
+
+  const disabledSearch = JSON.parse(fs.readFileSync(path.join(destination, 'public', 'search-index.json'), 'utf8'))
+  for (const slug of ['default', 'nested', 'plain', 'summary']) {
+    expect(typeof disabledSearch[`/${slug}`]).toBe('string')
+    expect(fs.readFileSync(path.join(destination, 'pages', `${slug}.mdx`), 'utf8')).not.toContain('MndReadingArticle')
+  }
+})
+
 
 describe('site meta output', () => {
   const load = () => JSON.parse(fs.readFileSync(path.join(root, 'public', 'site-meta.json'), 'utf8'))

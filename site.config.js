@@ -13,4 +13,5 @@ module.exports = {
   frontmatter: {"title":"title","description":["description","desc"],"date":"date","reading_time":"reading_time","related":"related","facets":{"categories":{"key":["categories"],"label":"Topic","color":"blue","sort":"alpha","hue":210},"tags":{"key":["tags"],"label":"Tags","color":"violet","sort":"alpha","hue":265},"status":{"key":["status"],"label":"Status","color":"amber","sort":"alpha","hue":35}}},
   display: {"crumbs":true,"header":["date","reading_time","facets"],"toc":["description","sections","related","edit"],"navbar":["feed","github","theme"]},
   edit: {"branch":"main","path":"docs","url":"{repo_url}/edit/{branch}/{file}"},
+  reading_cards: {"max_depth":2},
 }

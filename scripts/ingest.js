@@ -17,11 +17,12 @@ const fs = require('fs')
 const path = require('path')
 const os = require('os')
 const { randomUUID } = require('crypto')
+const { execFileSync } = require('child_process')
 const yaml = require('js-yaml')
 const { strip_dir } = require('./fix-exif')
 const meta = require('./meta')
 const { plain_text } = require('./text')
-const { cardSummaries, readingMarkup, indexSections } = require('./reading-cards')
+const { readingDepth, readingMarkup } = require('./reading-cards')
 const { feed_entries, write_rss } = require('./rss')
 
 
@@ -156,7 +157,7 @@ function extract_content(mdx) {
 function toSearchText(markdown) {
   return plain_text(markdown
     .replace(/^\s*(?:```|~~~).*$/gm, ' ')
-    .replace(/^( {0,3}##[ \t]+.*?)\s+\[#[a-z0-9-]+\](?=[ \t]*#*[ \t]*$)/gm, '$1')
+    .replace(/^( {0,3}#{2,6}[ \t]+.*?)\s+\[#[a-z0-9-]+\](?=[ \t]*#*[ \t]*$)/gm, '$1')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'))
 }
 
@@ -272,15 +273,15 @@ function ingest_page(src_entry, dest_dir, rel, slug, base, img_url) {
 
   const dest = path.join(dest_dir, `${slug}.mdx`)
   const body = prepare_body(raw, img_url)
-  const summaries = cardSummaries(fm)
-  const importPath = path.relative(dest_dir, path.join(TARGET.custom, '..', 'ReadingArticle')).split(path.sep).join('/')
-  fs.writeFileSync(dest, set_fm_title(fm_block(raw), title) + readingMarkup(body, summaries, importPath))
-
   const parts = [...(rel ? rel.split('/') : []), ...(slug === 'index' ? [] : [slug])]
   const url   = '/' + parts.join('/') || '/'
+  const listing = (url === '/' && config.homepage_feed) || (config.feed?.cards && url === config.feed.path)
+  const depth = listing ? 0 : readingDepth(fm, config)
+  const importPath = path.relative(dest_dir, path.join(TARGET.custom, '..', 'ReadingArticle')).split(path.sep).join('/')
+  fs.writeFileSync(dest, set_fm_title(fm_block(raw), title) + readingMarkup(body, depth, fm.reading_cards, importPath))
   check_refs(body, url)
 
-  return meta.build_page({
+  const page = meta.build_page({
     slug,
     title,
     url,
@@ -289,6 +290,8 @@ function ingest_page(src_entry, dest_dir, rel, slug, base, img_url) {
     created: fs.statSync(src_entry).mtime.toISOString().slice(0, 10),
     fm,
   }, config)
+  if (depth) page.reading_cards = true
+  return page
 }
 
 
@@ -539,14 +542,30 @@ async function generate(config) {
   const browse = write_browse_page(config)
   pages.sort((a, b) => a.url.localeCompare(b.url))
   fs.mkdirSync(TARGET.public, { recursive: true })
+  const readingPages = pages.filter(page => page.reading_cards)
+  const readingFiles = readingPages.map(page => path.join(TARGET.pages, path.dirname(page.source), page.slug + '.mdx'))
+  const sectionIndexes = readingFiles.length ? JSON.parse(execFileSync(
+    process.execPath, [path.join(__dirname, 'index-reading-cards.mjs')],
+    { input: JSON.stringify(readingFiles), encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+  )) : []
+  const sectionsByPage = new Map()
+  for (const [index, page] of readingPages.entries()) {
+    const cards = sectionIndexes[index]
+    if (cards.length) {
+      page.reading_cards = cards.filter(card => card.level === 2).map(card => card.id)
+      sectionsByPage.set(page.url, cards)
+    } else {
+      delete page.reading_cards
+    }
+  }
   const metadata = { browse, pages, ...(config.homepage_feed && { reading_order }) }
   fs.writeFileSync(TARGET.meta, JSON.stringify(metadata, null, 2) + '\n')
   const search = Object.fromEntries(pages.map(page => {
     const raw = fs.readFileSync(path.join(src, page.source), 'utf8')
     const body = extract_content(raw)
     const text = toSearchText(body)
-    const cards = indexSections(body, cardSummaries(parse_fm(raw)), toSearchText)
-    return [page.url, cards.length ? { text, cards } : text]
+    const cards = sectionsByPage.get(page.url)
+    return [page.url, cards ? { text, cards } : text]
   }))
   fs.writeFileSync(path.join(TARGET.public, 'search-index.json'), JSON.stringify(search) + '\n')
   await write_expandable_feed(config, entries)

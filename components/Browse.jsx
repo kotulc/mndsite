@@ -5,7 +5,7 @@ import { group_chips } from './facets'
 import PageLabelFilter, { pageLabelOptions, pageLabelSelection } from './PageLabelFilter'
 import { usePageSearchIndex } from './useListingSearch'
 import { useSiteSearch } from './SiteSearch'
-import { highlight, pageSearchMatch, pageSearchText, searchHighlights, searchPhrase } from './searchExcerpt'
+import { highlight, matchesPageSearch, pageSearchMatch, searchHighlights, searchPhrase, sectionSearchLabel } from './searchExcerpt'
 
 const pages = siteMeta.pages.map(page => {
   const chips = group_chips(page.facets)
@@ -30,6 +30,7 @@ function SearchResult({ page, chips, body, phrase, highlights }) {
   const renderLabel = value => highlight(value, highlights)
   return <li className="browse-result">
     <Link href={match?.card ? { pathname: page.url, hash: match.card.id } : page.url}>{renderLabel(page.name)}</Link>
+    {match?.card && <p>{renderLabel(sectionSearchLabel(match.card))}</p>}
     {showPath && <p>{renderLabel(page.url)}</p>}
     {excerpt && <p>{renderLabel(excerpt)}</p>}
     <TagList tags={chips} renderLabel={highlights ? renderLabel : undefined} />
@@ -45,7 +46,7 @@ export default function Browse() {
   const phrase = searchPhrase(term)
   const highlights = searchHighlights(term)
   const matches = pages.filter(row => (!selection.key || row.filters.has(selection.key)) &&
-    (!phrase || phrase.test(row.searchable) || phrase.test(pageSearchText(content?.[row.page.url]))))
+    (!phrase || phrase.test(row.searchable) || matchesPageSearch(content?.[row.page.url], phrase)))
 
   return <section aria-label="Pages">
     <div className="feed-controls">

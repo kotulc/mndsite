@@ -142,3 +142,23 @@ test('reading cards keep article content, navigation, and search anchors in sync
   expect(entry.cards[1].text).toContain('npm run ingest')
   expect(typeof search['/features/overview']).toBe('string')
 })
+
+test('site defaults fold H2 sections and the Components pilot also folds H3', () => {
+  const parse = route => new DOMParser().parseFromString(
+    fs.readFileSync(path.join(OUT, route, 'index.html'), 'utf8'), 'text/html',
+  )
+  const search = JSON.parse(fs.readFileSync(path.join(OUT, 'search-index.json'), 'utf8'))
+  const about = parse('about')
+  const components = parse('features/components')
+  const child = components.getElementById('taglist')
+  const details = child.closest('details')
+
+  expect(about.querySelectorAll('.reading-card-list > details').length).toBeGreaterThan(0)
+  expect(about.querySelector('.reading-subsection')).toBeNull()
+  expect(parse('features/overview').querySelector('.reading-article')).toBeNull()
+  expect(details.classList.contains('reading-subsection')).toBe(true)
+  expect(details.parentElement.closest('details').dataset.readingCard).toBe('component-reference')
+  expect(search['/features/components'].cards.find(card => card.id === 'taglist').parents)
+    .toEqual(['Component reference'])
+  expect(components.querySelectorAll('#taglist')).toHaveLength(1)
+})

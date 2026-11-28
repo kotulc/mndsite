@@ -205,6 +205,28 @@ If your content already uses `/browse/`, the generated listing uses `/browse-pag
 
 The sidebar follows the content directory. Existing configurations can remove `frontmatter.groups` and `display.sidebar`. An old `versioning.key` is accepted as an ordinary facet for authored values. Builds no longer infer editions from Git or package metadata or export tagged snapshots. To keep historical pages online, include them in the content tree.
 
+## Reading cards
+
+Set a site-wide default in `mndsite.yaml`:
+
+```yaml
+reading_cards:
+  max_depth: 2
+```
+
+Depth 2 folds each `##` section into a card. Depth 3 also folds `###` subsections inside
+their parent card. The page introduction and the Pages and Feed listings stay visible.
+In page frontmatter, set `reading_cards_depth: 3` to try nested folding or
+`reading_cards: false` to show the whole article.
+
+Set `reading_cards: false` in `mndsite.yaml` to disable reading cards for every page,
+including pages with a depth or summary map in their frontmatter. To enable cards only
+on selected pages, omit the site-wide setting and give those pages a depth or summary map.
+
+The optional `reading_cards` frontmatter map keys short previews by heading anchor.
+Existing heading links work with generated or explicit anchors. Search opens the
+matching card and its parent if needed.
+
 ## Display
 
 `display` lists which elements render in each zone, in order. Omitting an element turns it off — there is no second switch anywhere in the config. `crumbs` is the one boolean: the trail is all-or-nothing.

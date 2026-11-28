@@ -319,6 +319,11 @@ function load_config(yaml_path) {
   if (cfg.homepage_feed !== true && cfg.homepage_feed !== false) {
     throw new Error("mndsite.yaml: 'homepage_feed' must be true or false")
   }
+  const readingCards = raw.reading_cards
+  if (readingCards != null && readingCards !== false &&
+    (typeof readingCards !== 'object' || ![2, 3].includes(readingCards.max_depth))) {
+    throw new Error("mndsite.yaml: 'reading_cards.max_depth' must be 2 or 3")
+  }
 
   const theme = { ...DEFAULTS.theme, ...(raw.theme || {}) }
   theme.navbar = optional(theme.navbar)
@@ -356,6 +361,7 @@ function write_site_config(config, dest_dir) {
     'title', 'icon', 'repo_url', 'feed', 'homepage_feed', 'rss', 'description', 'footer',
     'theme', 'nav_order', 'frontmatter',
     'display', 'edit',
+    ...(config.reading_cards != null ? ['reading_cards'] : []),
   ]
   const values = Object.fromEntries(keys.map(k => [k, config[k]]))
   const body = Object.entries(values)

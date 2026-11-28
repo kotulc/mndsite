@@ -11,6 +11,8 @@ feed:
   path: /updates/
   include: [updates/]
 homepage_feed: true
+reading_cards:
+  max_depth: 2
 rss:
   site_url: https://kotulc.github.io/mndsite/
 drafts:

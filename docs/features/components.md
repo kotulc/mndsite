@@ -7,6 +7,7 @@ tags:
   - react
   - customization
 components: 10
+reading_cards_depth: 3
 related:
   - title: Styling
     url: /features/styling

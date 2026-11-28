@@ -115,7 +115,7 @@ node scripts/cli.js build --config mndsite.yaml
 - `_assets/` at the content root → copied to `public/_assets/`
 - `images/` next to markdown → copied and path-rewritten for legacy layouts
 - Internal links and MDX imports should already resolve in publication-ready content (rewritten by mndmap when used); ingest warns on remaining `.md` links and `_assets/` imports
-- To present a page as reading cards, add a `reading_cards` map to its frontmatter. Use each section's anchor as the key and a short preview as its value. Give each H2 a matching explicit anchor, such as `[#source-layout-rules]`, so search can link to the right card.
+- Reading cards use the same heading anchors as the article. A page can add an optional `reading_cards` frontmatter map with heading anchors as keys and short previews as values. See [Reading cards](/configuration#reading-cards) for the site setting and page overrides.
 
 ## Cross-project contract [#cross-project-contract]
 
