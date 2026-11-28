@@ -3,19 +3,21 @@ import { createPortal } from 'react-dom'
 import { useConfig } from 'nextra-theme-docs'
 import { useSection } from './SectionContext'
 
-export function useReadingSectionHighlight(id) {
+export function useReadingSectionHighlight(open, current) {
   useEffect(() => {
     const sidebar = document.querySelector('.nextra-sidebar-container')
-    if (!sidebar || !id) return
-    const href = `#${encodeURIComponent(id)}`
+    if (!sidebar || !open?.length) return
+    const openLinks = new Set(open.map(id => `#${encodeURIComponent(id)}`))
+    const currentLink = `#${encodeURIComponent(current)}`
     const marked = new Set()
 
     function markSection() {
       for (const link of sidebar.querySelectorAll(
         '.reading-sidebar-sections a[href^="#"], .nextra-menu-mobile li.active > ul a[href^="#"]',
       )) {
-        if (link.hash !== href) continue
-        link.setAttribute('aria-current', 'location')
+        if (!openLinks.has(link.hash)) continue
+        link.setAttribute('data-reading-open', '')
+        if (link.hash === currentLink) link.setAttribute('aria-current', 'location')
         marked.add(link)
       }
     }
@@ -26,9 +28,12 @@ export function useReadingSectionHighlight(id) {
     markSection()
     return () => {
       observer.disconnect()
-      for (const link of marked) link.removeAttribute('aria-current')
+      for (const link of marked) {
+        link.removeAttribute('data-reading-open')
+        link.removeAttribute('aria-current')
+      }
     }
-  }, [id])
+  }, [open, current])
 }
 
 function SectionLinks({ title, sections }) {

@@ -26,8 +26,7 @@ export default function ReadingArticle({ children, summaries }) {
   const [animatedCard, setAnimatedCard] = useState(null)
   const allOpen = open?.length === cards.length
   const currentIndex = Math.max(0, cards.findIndex(card => card.id === current))
-  const activeSection = open?.includes(current) ? current : null
-  useReadingSectionHighlight(activeSection)
+  useReadingSectionHighlight(open, current)
 
   const finishNavigation = useCallback(() => {
     clearTimeout(navigationTimer.current)
@@ -87,6 +86,9 @@ export default function ReadingArticle({ children, summaries }) {
       if (section) {
         pendingScroll.current = { anchor: section.target }
         reveal(section)
+      } else if (!hash) {
+        setAnimatedCard(null)
+        setOpen([])
       }
     }
 
@@ -122,7 +124,7 @@ export default function ReadingArticle({ children, summaries }) {
     }
 
     syncFragment()
-    setOpen(previous => previous ?? [first])
+    setOpen(previous => previous ?? [])
     document.addEventListener('click', onLink, true)
     window.addEventListener('hashchange', syncFragment)
     window.addEventListener('popstate', syncFragment)
@@ -174,7 +176,7 @@ export default function ReadingArticle({ children, summaries }) {
     </div>
     <div className="mnd-feed reading-card-list">
       {cards.map(({ id, title, content }) => {
-        const isOpen = open === null ? id === first : open.includes(id)
+        const isOpen = open?.includes(id) ?? false
         const preview = typeof summaries[id] === 'string' ? summaries[id] : ''
         return <details key={id} className="mnd-feed-entry reading-card" data-reading-card={id}
           data-animate={animatedCard === id ? '' : undefined} open={isOpen}>

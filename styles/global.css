@@ -205,7 +205,7 @@ html[data-chrome-footer="background"] footer {
 }
 
 .nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) {
-  gap: .2rem;
+  gap: .15rem;
 }
 
 .nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) li > :is(a, button) {
@@ -231,8 +231,8 @@ html[data-chrome-footer="background"] footer {
 }
 
 .nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) ul {
-  gap: .15rem;
-  margin: .1rem 0 .35rem;
+  gap: .05rem;
+  margin: .05rem 0 .2rem;
   margin-inline-start: 1.15rem;
   padding-inline: .5rem 0;
   border-inline-start: 1px solid var(--site-gray-200);
@@ -243,14 +243,18 @@ html[data-chrome-footer="background"] footer {
 }
 
 .nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) ul li > :is(a, button) {
-  padding: .35rem .48rem;
+  padding: .24rem .48rem;
   color: var(--site-gray-600);
   font-size: .8125rem;
 }
 
-.nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) a[href^="#"][aria-current="location"] {
-  text-decoration: underline;
-  text-underline-offset: .18em;
+.nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) a[data-reading-open] {
+  color: var(--site-gray-900);
+  font-weight: 650;
+}
+
+.nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) li > div > .nx-pt-1:has(> ul) {
+  padding-top: 0;
 }
 
 .nextra-sidebar-container :is(.nextra-menu-desktop, .nextra-menu-mobile) li:has(> :is(a, button) + div) > :is(a, button) {

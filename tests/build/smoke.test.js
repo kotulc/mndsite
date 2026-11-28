@@ -132,7 +132,7 @@ test('reading cards keep article content, navigation, and search anchors in sync
     .toEqual(['Expand sections'])
   expect(page.querySelector('.reading-controls').textContent).toBe('Expand sections')
   expect(ids.every(id => page.querySelector(`.nextra-toc a[href="#${id}"]`))).toBe(true)
-  expect(cards.every((card, index) => card.open === (index === 0) &&
+  expect(cards.every((card, index) => !card.open &&
     card.querySelector('summary') === page.getElementById(ids[index]))).toBe(true)
   expect(cards[0].contains(page.getElementById('mndsite-owns'))).toBe(true)
   expect(cards[1].querySelector('pre').textContent).toContain('npm run ingest')
