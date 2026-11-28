@@ -7,7 +7,7 @@ module.exports = {
   homepage_feed: true,
   rss: {"site_url":"https://kotulc.github.io/mndsite/"},
   description: "Static documentation sites from plain markdown",
-  footer: "MIT licensed · built with MndSite",
+  footer: "Powered by MndSite · MIT Licensed",
   theme: {"color":"default","typeset":"sans","navbar":"background","footer":"background","hue":{"light":212,"dark":204},"saturation":100,"font_stack":""},
   nav_order: {"":["about","getting-started","configuration"],"features":["overview","components"],"specifications":["format"]},
   frontmatter: {"title":"title","description":["description","desc"],"date":"date","reading_time":"reading_time","related":"related","facets":{"categories":{"key":["categories"],"label":"Topic","color":"blue","sort":"alpha","hue":210},"tags":{"key":["tags"],"label":"Tags","color":"violet","sort":"alpha","hue":265},"status":{"key":["status"],"label":"Status","color":"amber","sort":"alpha","hue":35}}},

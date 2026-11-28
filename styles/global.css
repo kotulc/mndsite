@@ -120,14 +120,14 @@ body:has(.reading-sidebar-sections) .nextra-toc p:has(.page-contents-heading):no
 
 /* Nextra renders page navigation after a separate vertical spacer. */
 .nextra-content > main > .nx-mt-16:has(+ .nx-border-t.nx-pt-8 > a[title]) {
-  margin-top: 1.5rem;
+  margin-top: 3rem;
 }
 
 .nextra-content > main > .nx-border-t.nx-pt-8:has(> a[title]) {
   align-items: baseline;
   gap: 1rem;
   padding-top: 0.75rem;
-  border-color: var(--site-gray-200);
+  border-top-width: 0;
 }
 
 .nextra-content > main > .nx-border-t.nx-pt-8 > a[title] {
